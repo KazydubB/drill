@@ -734,14 +734,15 @@ public abstract class DrillRelOptUtil {
   public static class RexFieldsTransformer {
     private final RexBuilder rexBuilder;
     private final List<String> leftFields;
-    private final List<RelDataTypeField> leftFieldTypes;
     private final List<String> rightFields;
     private final List<RelDataTypeField> rightFieldTypes;
+    private final int startIndex;
 
     public RexFieldsTransformer(
             RexBuilder rexBuilder,
             RelDataType leftType,
-            RelDataType rightType) {
+            RelDataType rightType,
+            int startIndex) {
       this.rexBuilder = rexBuilder;
       this.leftFields = Lists.newArrayList();
       this.rightFields = Lists.newArrayList();
@@ -751,8 +752,8 @@ public abstract class DrillRelOptUtil {
       for (RelDataTypeField fld : rightType.getFieldList()) {
         this.rightFields.add(fld.getName());
       }
-      this.leftFieldTypes = leftType.getFieldList();
       this.rightFieldTypes = rightType.getFieldList();
+      this.startIndex = startIndex;
     }
 
     public RexNode go(RexNode rex) {
@@ -767,7 +768,7 @@ public abstract class DrillRelOptUtil {
       } else if (rex instanceof RexInputRef) {
         RexInputRef var = (RexInputRef) rex;
         int index = var.getIndex();
-        int rightIndex = rightFields.indexOf(leftFields.get(index));
+        int rightIndex = startIndex + index;
         return rexBuilder.makeInputRef(rightFieldTypes.get(rightIndex).getType(), rightIndex);
       } else {
         return rex;
