@@ -395,10 +395,12 @@ public class DrillOptiq {
         case "BINARY":
           castType = Types.required(MinorType.VARBINARY);
           break;
+        case "VARBINARY":
+          castType = Types.required(MinorType.VARBINARY);
+          break;
         case "ANY":
           return arg; // Type will be same as argument.
-        default:
-          castType = Types.required(MinorType.valueOf(call.getType().getSqlTypeName().getName()));
+        default: castType = Types.required(MinorType.valueOf(call.getType().getSqlTypeName().getName()));
       }
       return FunctionCallFactory.createCast(castType, ExpressionPosition.UNKNOWN, arg);
     }
