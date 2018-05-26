@@ -28,8 +28,8 @@ import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 import org.apache.drill.exec.ops.OptimizerRulesContext;
 import org.apache.drill.exec.planner.index.rules.DbScanToIndexScanPrule;
-import org.apache.drill.exec.planner.index.rules.FlattenToIndexScanPrule;
 import org.apache.drill.exec.planner.index.rules.DbScanSortRemovalRule;
+import org.apache.drill.exec.planner.index.rules.SemiJoinFullTableScanPrule;
 import org.apache.drill.exec.planner.index.rules.SemiJoinIndexScanPrule;
 import org.apache.drill.exec.planner.logical.DrillAggregateRule;
 import org.apache.drill.exec.planner.logical.DrillCorrelateRule;
@@ -416,8 +416,9 @@ public enum PlannerPhase {
    */
   static RuleSet getIndexRules(OptimizerRulesContext optimizerRulesContext) {
     final PlannerSettings ps = optimizerRulesContext.getPlannerSettings();
+
     if (!ps.isIndexPlanningEnabled()) {
-      return RuleSets.ofList(ImmutableSet.<RelOptRule>builder().build());
+        return getComplexTypeFTSRules(ps);
     }
 
     final ImmutableSet<RelOptRule> indexRules = ImmutableSet.<RelOptRule>builder()
@@ -435,10 +436,21 @@ public enum PlannerPhase {
             DbScanSortRemovalRule.INDEX_SORT_PROJ_SCAN,
             SemiJoinIndexScanPrule.JOIN_FILTER_PROJECT_FILTER_SCAN,
             SemiJoinIndexScanPrule.JOIN_FILTER_PROJECT_FILTER_PROJECT_SCAN,
-            SemiJoinIndexScanPrule.JOIN_FILTER_PROJECT_SCAN
-        )
+            SemiJoinIndexScanPrule.JOIN_FILTER_PROJECT_SCAN)
+        .addAll(getComplexTypeFTSRules(ps))
         .build();
     return RuleSets.ofList(indexRules);
+  }
+
+  static RuleSet getComplexTypeFTSRules(PlannerSettings ps) {
+    if (ps.isComplexFTSEnabled()) {
+      return RuleSets.ofList(ImmutableSet.<RelOptRule>builder()
+              .add(SemiJoinFullTableScanPrule.JOIN_FILTER_PROJECT_FILTER_PROJECT_SCAN,
+                      SemiJoinFullTableScanPrule.JOIN_FILTER_PROJECT_SCAN,
+                      SemiJoinFullTableScanPrule.JOIN_FILTER_PROJECT_FILTER_SCAN).build());
+    } else {
+      return RuleSets.ofList(ImmutableSet.<RelOptRule>builder().build());
+    }
   }
 
   /**
