@@ -19,7 +19,6 @@ package org.apache.drill.exec.planner.physical;
 
 import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.drill.exec.planner.logical.DrillAggregateRel;
 import org.apache.drill.exec.planner.logical.RelOptHelper;
 import org.apache.drill.exec.planner.physical.AggPrelBase.OperatorPhase;
@@ -27,14 +26,11 @@ import org.apache.calcite.rel.InvalidRelException;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
-import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.util.trace.CalciteTrace;
 
 import org.apache.drill.shaded.guava.com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
-
-import java.util.List;
 
 public class HashAggPrule extends AggPruleBase {
   public static final RelOptRule INSTANCE = new HashAggPrule();
@@ -139,21 +135,24 @@ public class HashAggPrule extends AggPruleBase {
     }
   }
 
+  public static RelNode singlePhaseHashAgg(RelOptRuleCall call, DrillAggregateRel aggregate, RelTraitSet traits, RelNode input) throws InvalidRelException {
+    final RelNode convertedInput = convert(input, PrelUtil.fixTraits(call, traits));
+
+    return new HashAggPrel(
+            aggregate.getCluster(),
+            traits,
+            convertedInput,
+            aggregate.indicator,
+            aggregate.getGroupSet(),
+            aggregate.getGroupSets(),
+            aggregate.getAggCallList(),
+            OperatorPhase.PHASE_1of1);
+  }
+
   private void createTransformRequest(RelOptRuleCall call, DrillAggregateRel aggregate,
                                       RelNode input, RelTraitSet traits) throws InvalidRelException {
 
-    final RelNode convertedInput = convert(input, PrelUtil.fixTraits(call, traits));
-
-    HashAggPrel newAgg = new HashAggPrel(
-        aggregate.getCluster(),
-        traits,
-        convertedInput,
-        aggregate.indicator,
-        aggregate.getGroupSet(),
-        aggregate.getGroupSets(),
-        aggregate.getAggCallList(),
-        OperatorPhase.PHASE_1of1);
-
+    RelNode newAgg = singlePhaseHashAgg(call, aggregate, traits, input);
     call.transformTo(newAgg);
   }
 }

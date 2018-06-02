@@ -26,12 +26,18 @@ import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.RelSubset;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 public abstract class SubsetTransformer<T extends RelNode, E extends Exception> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SubsetTransformer.class);
 
   public abstract RelNode convertChild(T current, RelNode child) throws E;
+
+  public List<RelNode> convertChildMulti(T current, RelNode child) throws E {
+    return new ArrayList<>();
+  }
 
   public boolean forceConvert() {
     return false;
@@ -97,6 +103,66 @@ public abstract class SubsetTransformer<T extends RelNode, E extends Exception> 
         call.transformTo(out);
         transform = true;
       }
+    }
+
+    return transform;
+  }
+
+  public boolean goMulti(T n, RelNode candidateSet) throws E {
+    if (!(candidateSet instanceof RelSubset)) {
+      return false;
+    }
+
+    boolean transform;
+    Set<RelNode> transformedRels = Sets.newIdentityHashSet();
+    Set<RelTraitSet> traitSets = Sets.newHashSet();
+
+    //1, get all the target traitsets from candidateSet's rel list,
+    for (RelNode rel : ((RelSubset) candidateSet).getRelList()) {
+      if (isPhysical(rel)) {
+        final RelTraitSet relTraitSet = rel.getTraitSet();
+        if (!traitSets.contains(relTraitSet)) {
+          traitSets.add(relTraitSet);
+          logger.trace("{}.convertChild get traitSet {}", this.getClass().getSimpleName(), relTraitSet);
+        }
+      }
+    }
+
+    //2, convert the candidateSet to targeted taitSets
+    if (traitSets.size() == 0 && forceConvert()) {
+      List<RelNode> convertedChildren = convertChildMulti(n, null);
+      if (convertedChildren != null && convertedChildren.size() > 0) {
+        for (RelNode out : convertedChildren) {
+          call.transformTo(out);
+        }
+        return true;
+      }
+      return false;
+    }
+
+    List<RelNode> convertedChildren = new ArrayList<>();
+    for (RelTraitSet traitSet : traitSets) {
+      RelNode newRel = RelOptRule.convert(candidateSet, traitSet.simplify());
+      if (transformedRels.contains(newRel)) {
+        continue;
+      }
+      transformedRels.add(newRel);
+
+      logger.trace("{}.convertChild to convert NODE {} ,AND {}", this.getClass().getSimpleName(), n, newRel);
+
+      List<RelNode> children = convertChildMulti(n, newRel);
+      if (children != null && children.size() > 0) {
+        convertedChildren.addAll(children);
+      }
+    }
+
+    if (convertedChildren.size() > 0) {
+      for (RelNode out : convertedChildren) {
+        call.transformTo(out);
+      }
+      transform = true;
+    } else {
+      transform = false;
     }
 
     return transform;
