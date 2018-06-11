@@ -38,13 +38,14 @@ public class LogicalExpressionParser {
    * @param expr expression to be parsed
    * @return logical expression instance
    */
-  public static LogicalExpression parse(String expr) {
+  public static LogicalExpression parse(String expr, boolean allowNoIndexArray) {
     ExprLexer lexer = new ExprLexer(CharStreams.fromString(expr));
     lexer.removeErrorListeners(); // need to remove since default listener will output warning
     lexer.addErrorListener(ErrorListener.INSTANCE);
     CommonTokenStream tokens = new CommonTokenStream(lexer);
 
     ExprParser parser = new ExprParser(tokens);
+    parser.setAllowArrayWithNoIndex(allowNoIndexArray);
     parser.removeErrorListeners(); // need to remove since default listener will output warning
     parser.addErrorListener(ErrorListener.INSTANCE);
     ExprParser.ParseContext parseContext = parser.parse();
@@ -52,4 +53,7 @@ public class LogicalExpressionParser {
     return parseContext.e;
   }
 
+  public static LogicalExpression parse(String expr) {
+    return parse(expr, false);
+  }
 }
