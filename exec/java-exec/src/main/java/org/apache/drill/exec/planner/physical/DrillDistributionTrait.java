@@ -116,7 +116,7 @@ public class DrillDistributionTrait implements RelTrait {
   private boolean arePartitionFunctionsSame(PartitionFunction f1, PartitionFunction f2) {
     if (f1 != null && f2 != null) {
       return f1.equals(f2);
-    } else if (f2 == null && f2 == null) {
+    } else if (f1 == null && f2 == null) {
       return true;
     }
     return false;
