@@ -123,7 +123,9 @@ public class RestrictedJsonTableGroupScan extends JsonTableGroupScan {
   @JsonIgnore
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) {
     Preconditions.checkArgument(children.isEmpty());
-    return new RestrictedJsonTableGroupScan(this);
+    RestrictedJsonTableGroupScan groupScan = new RestrictedJsonTableGroupScan(this);
+    groupScan.setComplexFilterPushDown(this.supportsComplexFilterPushDown());
+    return groupScan;
   }
 
   @Override

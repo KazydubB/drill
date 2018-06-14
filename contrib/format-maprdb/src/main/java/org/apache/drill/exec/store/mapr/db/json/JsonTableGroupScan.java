@@ -101,6 +101,7 @@ public class JsonTableGroupScan extends MapRDBGroupScan implements IndexGroupSca
   protected JsonScanSpec scanSpec;
   protected double fullTableRowCount;
   protected double fullTableEstimatedSize;
+  private boolean complexFilterCanBePushed = false;
 
   /**
    * need only read maxRecordsToRead records.
@@ -418,7 +419,9 @@ public class JsonTableGroupScan extends MapRDBGroupScan implements IndexGroupSca
   @JsonIgnore
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) {
     Preconditions.checkArgument(children.isEmpty());
-    return new JsonTableGroupScan(this);
+    JsonTableGroupScan groupScan = new JsonTableGroupScan(this);
+    groupScan.setComplexFilterPushDown(this.complexFilterCanBePushed);
+    return groupScan;
   }
 
   @Override
@@ -477,6 +480,7 @@ public class JsonTableGroupScan extends MapRDBGroupScan implements IndexGroupSca
             this.getScanSpec(),
             this.getColumns(),
             this.getStatistics());
+    newScan.setComplexFilterPushDown(this.complexFilterCanBePushed);
     newScan.columns = columns;
     return newScan;
   }
@@ -760,4 +764,14 @@ public class JsonTableGroupScan extends MapRDBGroupScan implements IndexGroupSca
       logger.debug("Forced parallelization width = {}", width);
     }
   }
+
+  @Override
+  @JsonIgnore
+  public void setComplexFilterPushDown(boolean complexFilterPushDown) {
+    complexFilterCanBePushed = complexFilterPushDown;
+  }
+
+  @Override
+  @JsonIgnore
+  public boolean supportsComplexFilterPushDown() { return complexFilterCanBePushed; }
 }

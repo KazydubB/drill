@@ -240,5 +240,4 @@ public class BinaryTableGroupScan extends MapRDBGroupScan implements DrillHBaseC
   public boolean isIndexScan() {
     return false;
   }
-
 }
