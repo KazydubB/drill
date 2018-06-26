@@ -109,9 +109,7 @@ public static class ${type.inputType}${aggrtype.className} implements DrillAggFu
 
   @Override
   public void reset() {
-  <#if aggrtype.funcName == "any_value">
     nonNullCount.value = 0;
-  </#if>
   }
 }
 </#if>
