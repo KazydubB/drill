@@ -29,7 +29,6 @@ import org.ojai.Value;
 import org.ojai.store.QueryCondition;
 import org.ojai.store.QueryCondition.Op;
 
-import org.apache.drill.shaded.guava.com.google.common.collect.ImmutableList;
 import com.mapr.db.impl.MapRDBImpl;
 
 import java.util.ArrayList;
