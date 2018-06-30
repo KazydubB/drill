@@ -85,6 +85,7 @@ public class JsonConditionBuilder extends AbstractExprVisitor<JsonScanSpec, Void
   private String getEmptyArrayPrefix(SchemaPath schemaPath) {
     String arrayPrefixPath = "";
     final String brackets = "[]";
+    final String dot = ".";
     if (schemaPath.isArray()) {
       NameSegment nameSegment = schemaPath.getRootSegment();
       while (nameSegment!= null) {
@@ -97,6 +98,8 @@ public class JsonConditionBuilder extends AbstractExprVisitor<JsonScanSpec, Void
         }
         if (nameSegment == null || nameSegment.isLastPath()) {
           return arrayPrefixPath;
+        } else {
+          arrayPrefixPath = arrayPrefixPath + dot;
         }
       }
     }
