@@ -158,8 +158,8 @@ public abstract class MapRDBPushFilterIntoScan extends StoragePluginOptimizerRul
         return;
       }
       JsonConditionBuilder jsonConditionBuilder = new JsonConditionBuilder(groupScan, conditionExp);
-      allExpressionsConverted = jsonConditionBuilder.isAllExpressionsConverted() && allExpressionsConverted;
       JsonScanSpec scanSpec = jsonConditionBuilder.parseTree();
+      allExpressionsConverted = jsonConditionBuilder.isAllExpressionsConverted() && allExpressionsConverted;
       if (newScanSpec == null) {
         newScanSpec = scanSpec;
       } else {
