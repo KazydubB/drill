@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
@@ -149,6 +150,11 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
   private RecordBatch buildBatch;
   private RecordBatch probeBatch;
 
+  /**
+   * Flag indicating whether or not the first data holding batch needs to be fetched.
+   */
+  private boolean prefetched;
+
   // For handling spilling
   private SpillSet spillSet;
   HashJoinPOP popConfig;
@@ -174,7 +180,7 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
   /**
    * Queue of spilled partitions to process.
    */
-  private ArrayList<HJSpilledPartition> spilledPartitionsList;
+  private ArrayList<HJSpilledPartition> spilledPartitionsList = new ArrayList<>();
   private HJSpilledPartition spilledInners[]; // for the outer to find the partition
 
   public enum Metric implements MetricDef {
@@ -213,86 +219,185 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
 
   @Override
   protected void buildSchema() throws SchemaChangeException {
-    if (! prefetchFirstBatchFromBothSides()) {
-      return;
+    // We must first get the schemas from upstream operators before we can build
+    // our schema.
+    boolean validSchema = sniffNewSchemas();
+
+    if (validSchema) {
+      // We are able to construct a valid schema from the upstream data.
+      // Setting the state here makes sure AbstractRecordBatch returns OK_NEW_SCHEMA
+      state = BatchState.BUILD_SCHEMA;
+    } else {
+      // We were not able to build a valid schema, so we need to set our termination state.
+      final Optional<BatchState> batchStateOpt = getBatchStateTermination();
+      state = batchStateOpt.get(); // There should be a state here.
     }
 
+    // If we have a valid schema, this will build a valid container. If we were unable to obtain a valid schema,
+    // we still need to build a dummy schema. These code handles both cases for us.
+    setupOutputContainerSchema();
+    container.buildSchema(BatchSchema.SelectionVectorMode.NONE);
+
     // Initialize the hash join helper context
-    if (rightUpstream != IterOutcome.NONE) {
+    if (rightUpstream == IterOutcome.OK_NEW_SCHEMA) {
+      // We only need the hash tables if we have data on the build side.
       setupHashTable();
     }
-    setupOutputContainerSchema();
+
     try {
       hashJoinProbe = setupHashJoinProbe();
     } catch (IOException | ClassTransformationException e) {
       throw new SchemaChangeException(e);
     }
-
-    container.buildSchema(BatchSchema.SelectionVectorMode.NONE);
   }
 
   @Override
   protected boolean prefetchFirstBatchFromBothSides() {
-    leftUpstream = sniffNonEmptyBatch(0, left);
-    rightUpstream = sniffNonEmptyBatch(1, right);
+    if (leftUpstream != IterOutcome.NONE) {
+      // We can only get data if there is data available
+      leftUpstream = sniffNonEmptyBatch(leftUpstream, LEFT_INDEX, left);
+    }
 
-    // For build side, use aggregate i.e. average row width across batches
-    batchMemoryManager.update(LEFT_INDEX, 0);
-    batchMemoryManager.update(RIGHT_INDEX, 0, true);
+    if (rightUpstream != IterOutcome.NONE) {
+      // We can only get data if there is data available
+      rightUpstream = sniffNonEmptyBatch(rightUpstream, RIGHT_INDEX, right);
+    }
 
-    logger.debug("BATCH_STATS, incoming left: {}", batchMemoryManager.getRecordBatchSizer(LEFT_INDEX));
-    logger.debug("BATCH_STATS, incoming right: {}", batchMemoryManager.getRecordBatchSizer(RIGHT_INDEX));
+    buildSideIsEmpty = rightUpstream == IterOutcome.NONE;
 
+    final Optional<BatchState> batchStateOpt = getBatchStateTermination();
+
+    if (batchStateOpt.isPresent()) {
+      // We reached a termination state
+      state = batchStateOpt.get();
+
+      switch (state) {
+        case STOP:
+        case OUT_OF_MEMORY:
+          // Terminate processing now
+          return false;
+        case DONE:
+          // No more data but take operation to completion
+          return true;
+        default:
+          throw new IllegalStateException();
+      }
+    } else {
+      // For build side, use aggregate i.e. average row width across batches
+      batchMemoryManager.update(LEFT_INDEX, 0);
+      batchMemoryManager.update(RIGHT_INDEX, 0, true);
+
+      logger.debug("BATCH_STATS, incoming left: {}", batchMemoryManager.getRecordBatchSizer(LEFT_INDEX));
+      logger.debug("BATCH_STATS, incoming right: {}", batchMemoryManager.getRecordBatchSizer(RIGHT_INDEX));
+
+      // Got our first batche(s)
+      state = BatchState.FIRST;
+      return true;
+    }
+  }
+
+  /**
+   * Checks if a termination state has been reached, and returns the appropriate termination state if it has been reached.
+   * @return The termination state if it has been reached. Otherwise empty.
+   */
+  private Optional<BatchState> getBatchStateTermination() {
     if (leftUpstream == IterOutcome.STOP || rightUpstream == IterOutcome.STOP) {
-      state = BatchState.STOP;
-      return false;
+      return Optional.of(BatchState.STOP);
     }
 
     if (leftUpstream == IterOutcome.OUT_OF_MEMORY || rightUpstream == IterOutcome.OUT_OF_MEMORY) {
-      state = BatchState.OUT_OF_MEMORY;
-      return false;
+      return Optional.of(BatchState.OUT_OF_MEMORY);
     }
 
     if (checkForEarlyFinish(leftUpstream, rightUpstream)) {
-      state = BatchState.DONE;
-      return false;
+      return Optional.of(BatchState.DONE);
     }
 
-    state = BatchState.FIRST;  // Got our first batches on both sides
-    return true;
+    return Optional.empty();
+  }
+
+  /**
+   * Sniffs all data necessary to construct a schema.
+   * @return True if all the data necessary to construct a schema has been retrieved. False otherwise.
+   */
+  private boolean sniffNewSchemas() {
+    do {
+      // Ask for data until we get a valid result.
+      leftUpstream = next(LEFT_INDEX, probeBatch);
+    } while (leftUpstream == IterOutcome.NOT_YET);
+
+    switch (leftUpstream) {
+      case OK_NEW_SCHEMA:
+        probeSchema = probeBatch.getSchema();
+        break;
+      case OK:
+      case EMIT:
+        throw new IllegalStateException("Unsupported outcome while building schema " + leftUpstream);
+      default:
+        // Termination condition
+    }
+
+    do {
+      // Ask for data until we get a valid result.
+      rightUpstream = next(RIGHT_INDEX, buildBatch);
+    } while (rightUpstream == IterOutcome.NOT_YET);
+
+    switch (rightUpstream) {
+      case OK_NEW_SCHEMA:
+        // We need to have the schema of the build side even when the build side is empty
+        rightSchema = buildBatch.getSchema();
+        break;
+      case OK:
+      case EMIT:
+        throw new IllegalStateException("Unsupported outcome while building schema " + leftUpstream);
+      default:
+        // Termination condition
+    }
+
+    if (rightUpstream == IterOutcome.OK_NEW_SCHEMA) {
+      // position of the new "column" for keeping the hash values (after the real columns)
+      rightHVColPosition = buildBatch.getContainer().getNumberOfColumns();
+    }
+
+    return (validSchemaOutcome(leftUpstream, rightUpstream) || validSchemaOutcome(rightUpstream, leftUpstream));
+  }
+
+  /**
+   * True if the given set of left and right outcomes allow a valid schema to be built.
+   * @param left The left operator outcome.
+   * @param right The right operator outcome.
+   * @return True if all the data necessary to construct a schema has been retrieved. False otherwise.
+   */
+  private boolean validSchemaOutcome(IterOutcome left, IterOutcome right) {
+    return left == IterOutcome.OK_NEW_SCHEMA && (right == IterOutcome.OK_NEW_SCHEMA || right == IterOutcome.NONE);
   }
 
   /**
    * Currently in order to accurately predict memory usage for spilling, the first non-empty build side and probe side batches are needed. This method
    * fetches the first non-empty batch from the left or right side.
+   * @param curr The current outcome.
    * @param inputIndex Index specifying whether to work with the left or right input.
    * @param recordBatch The left or right record batch.
    * @return The {@link org.apache.drill.exec.record.RecordBatch.IterOutcome} for the left or right record batch.
    */
-  private IterOutcome sniffNonEmptyBatch(int inputIndex, RecordBatch recordBatch) {
+  private IterOutcome sniffNonEmptyBatch(IterOutcome curr, int inputIndex, RecordBatch recordBatch) {
     while (true) {
-      IterOutcome outcome = next(inputIndex, recordBatch);
+      if (recordBatch.getRecordCount() != 0) {
+        return curr;
+      }
 
-      switch (outcome) {
-        case OK_NEW_SCHEMA:
-          if ( inputIndex == 0 ) {
-            // Indicate that a schema was seen (in case probe side is empty)
-            probeSchema = probeBatch.getSchema();
-          } else {
-            // We need to have the schema of the build side even when the build side is empty
-            rightSchema = buildBatch.getSchema();
-            // position of the new "column" for keeping the hash values (after the real columns)
-            rightHVColPosition = buildBatch.getContainer().getNumberOfColumns();
-            // new schema can also contain records
-          }
+      curr = next(inputIndex, recordBatch);
+
+      switch (curr) {
         case OK:
-          if (recordBatch.getRecordCount() == 0) {
-            continue;
-          }
-          // We got a non empty batch
+          // We got a data batch
+          break;
+        case NOT_YET:
+          // We need to try again
+          break;
         default:
           // Other cases termination conditions
-          return outcome;
+          return curr;
       }
     }
   }
@@ -317,7 +422,25 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
 
   @Override
   public IterOutcome innerNext() {
-    // In case incoming was killed before, just cleanup and return
+    if (!prefetched) {
+      // If we didn't retrieve our first data hold batch, we need to do it now.
+      prefetched = true;
+      prefetchFirstBatchFromBothSides();
+
+      // Handle emitting the correct outcome for termination conditions
+      // Use the state set by prefetchFirstBatchFromBothSides to emit the correct termination outcome.
+      switch (state) {
+        case DONE:
+          return IterOutcome.NONE;
+        case STOP:
+          return IterOutcome.STOP;
+        case OUT_OF_MEMORY:
+          return IterOutcome.OUT_OF_MEMORY;
+        default:
+          // No termination condition so continue processing.
+      }
+    }
+
     if ( wasKilled ) {
       this.cleanup();
       super.close();
@@ -504,13 +627,8 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
     partitionMask = numPartitions - 1; // e.g. 32 --> 0x1F
     bitsInMask = Integer.bitCount(partitionMask); // e.g. 0x1F -> 5
 
-    // Create the FIFO list of spilled partitions (pairs - inner/outer)
-    spilledPartitionsList = new ArrayList<>();
-
     // Create array for the partitions
     partitions = new HashPartition[numPartitions];
-
-    buildSideIsEmpty = false;
   }
 
   /**
