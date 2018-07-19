@@ -43,9 +43,20 @@ public class JsonConditionBuilder extends AbstractExprVisitor<JsonScanSpec, Void
 
   private boolean allExpressionsConverted = true;
 
+  // After splitting the array field into prefix and suffix, if the suffix is null use $ as suffix. For ex, if the
+  // condition is on a[]. The prefix will be a[] and suffix will be $.
   private static final String defaultField = "$";
 
+  // If the path should be split into prefix and suffix to group same array prefix elements while applying elementAnd.
+  // ElementAnd takes array prefix as arg
   private boolean splitArrayPath = false;
+
+  // If the index is part of indexed fields don't use elementAnd. In all other cases elementAnd is used.
+  private boolean useElementAnd = true;
+
+  public void setUseElementAnd(boolean useElementAnd) {
+    this.useElementAnd = useElementAnd;
+  }
 
   public JsonConditionBuilder(JsonTableGroupScan groupScan,
       LogicalExpression conditionExp) {
@@ -184,7 +195,7 @@ public class JsonConditionBuilder extends AbstractExprVisitor<JsonScanSpec, Void
     for (LogicalExpression f : args ) {
       try {
         if (f instanceof FunctionCall) {
-          if ("booleanOr".equals(((FunctionCall) f).getName())) {
+          if ("booleanOr".equals(((FunctionCall) f).getName()) && useElementAnd) {
             arrayPrefix = compareAndGetNestedArgsArrayPrefix((FunctionCall) f);
             if (arrayPrefix != null) {
               addToarrayExprsMap(arrayPrefix, f, arrayExprsMap);
@@ -194,7 +205,7 @@ public class JsonConditionBuilder extends AbstractExprVisitor<JsonScanSpec, Void
           } else {
             FunctionCall f1 = (FunctionCall) f;
             SchemaPath schemaPath = (SchemaPath) f1.args.get(0);
-            if (schemaPath.isArray()) {
+            if (schemaPath.isArray() && useElementAnd) {
               arrayPrefix = getEmptyArrayPrefix(schemaPath);
               addToarrayExprsMap(arrayPrefix, f, arrayExprsMap);
             } else {
