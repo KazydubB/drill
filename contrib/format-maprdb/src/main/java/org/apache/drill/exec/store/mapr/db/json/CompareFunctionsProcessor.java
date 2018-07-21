@@ -315,6 +315,10 @@ class CompareFunctionsProcessor extends AbstractExprVisitor<Boolean, LogicalExpr
         .put("greater_than", "less_than")
         .put("less_than_or_equal_to", "greater_than_or_equal_to")
         .put("less_than", "greater_than")
+        .put("isfalse", "isnotfalse")
+        .put("istrue", "isnottrue")
+        .put("isnotfalse", "isfalse")
+        .put("isnottrue", "istrue")
         .build();
   }
 
