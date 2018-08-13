@@ -51,6 +51,7 @@ import org.apache.drill.exec.planner.logical.DrillFilterRel;
 import org.apache.drill.exec.planner.logical.DrillProjectRel;
 import org.apache.drill.exec.planner.logical.DrillSortRel;
 import org.apache.drill.exec.planner.physical.DrillDistributionTrait;
+import org.apache.drill.exec.planner.physical.DrillDistributionTraitDef;
 import org.apache.drill.exec.planner.physical.HashToMergeExchangePrel;
 import org.apache.drill.exec.planner.physical.LimitPrel;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
@@ -134,6 +135,18 @@ public abstract class AbstractIndexPlanGenerator extends SubsetTransformer<RelNo
                                          final RelDataTypeField rightRowKeyField,
                                          final DbGroupScan origDbGroupScan) {
 
+    return createRangeDistRight(rightPrel, rightRowKeyField, origDbGroupScan, IndexPlanUtils.scanIsPartition(origDbGroupScan));
+  }
+
+  private boolean isDistributed(final RelNode rel) {
+    return rel.getTraitSet().getTrait(DrillDistributionTraitDef.INSTANCE).getType() != DrillDistributionTrait.SINGLETON.getType();
+  }
+
+  // Range distribute the right side of the join, on row keys using a range partitioning function
+  protected RelNode createRangeDistRight(final RelNode rightPrel,
+                                         final RelDataTypeField rightRowKeyField,
+                                         final DbGroupScan origDbGroupScan, boolean isDistributed) {
+
     List<DrillDistributionTrait.DistributionField> rangeDistFields =
         Lists.newArrayList(new DrillDistributionTrait.DistributionField(0 /* rowkey ordinal on the right side */));
 
@@ -142,7 +155,9 @@ public abstract class AbstractIndexPlanGenerator extends SubsetTransformer<RelNo
     rangeDistRefList.add(rangeDistRef);
 
     final DrillDistributionTrait distRight;
-    if (IndexPlanUtils.scanIsPartition(origDbGroupScan)) {
+
+    if (isDistributed) {
+
       distRight = new DrillDistributionTrait(
           DrillDistributionTrait.DistributionType.RANGE_DISTRIBUTED,
           ImmutableList.copyOf(rangeDistFields),
@@ -161,7 +176,8 @@ public abstract class AbstractIndexPlanGenerator extends SubsetTransformer<RelNo
   protected List<RelNode> buildRangePartitioners(List<RelNode> aggRels) {
     List<RelNode> rangePartitioners = new ArrayList<>();
     for (RelNode aggRel : aggRels) {
-      rangePartitioners.add(createRangeDistRight(aggRel,aggRel.getRowType().getFieldList().get(0), (DbGroupScan) IndexPlanUtils.getGroupScan(origScan)));
+      rangePartitioners.add(createRangeDistRight(aggRel,aggRel.getRowType().getFieldList().get(0),
+              (DbGroupScan) IndexPlanUtils.getGroupScan(origScan), isDistributed(aggRel)));
     }
     return rangePartitioners;
   }
@@ -177,10 +193,7 @@ public abstract class AbstractIndexPlanGenerator extends SubsetTransformer<RelNo
   }
 
   protected static boolean toRemoveSort(RelCollation sortCollation, RelCollation inputCollation) {
-    if ( (inputCollation != null) && inputCollation.satisfies(sortCollation)) {
-      return true;
-    }
-    return false;
+    return (inputCollation != null) && inputCollation.satisfies(sortCollation);
   }
 
   public static RelNode getExchange(RelOptCluster cluster, boolean isSingleton, boolean isExchangeRequired,
