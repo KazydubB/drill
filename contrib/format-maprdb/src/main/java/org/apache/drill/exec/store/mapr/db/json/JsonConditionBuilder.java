@@ -55,7 +55,7 @@ public class JsonConditionBuilder extends AbstractExprVisitor<JsonScanSpec, Void
   private boolean splitArrayPath = false;
 
   public Set<String> includedFields = new HashSet<>();
-  
+
   public JsonConditionBuilder(JsonTableGroupScan groupScan,
       LogicalExpression conditionExp) {
     this.groupScan = groupScan;
