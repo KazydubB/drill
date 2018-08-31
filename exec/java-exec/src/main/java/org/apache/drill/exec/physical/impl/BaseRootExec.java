@@ -124,6 +124,21 @@ public abstract class BaseRootExec implements RootExec {
   }
 
   @Override
+  public void dumpOperators() {
+    if (!operators.isEmpty()) {
+      logger.info("Operator dump started.");
+      for (CloseableRecordBatch batch : operators) {
+        batch.dump();
+        if (batch.isFailed()) {
+          // No need to proceed further as this batch is the one that failed
+          return;
+        }
+      }
+      logger.info("Operator dump completed.");
+    }
+  }
+
+  @Override
   public void close() throws Exception {
     // We want to account for the time spent waiting here as Wait time in the operator profile
     try {

@@ -44,4 +44,9 @@ public interface RootExec extends AutoCloseable {
    * @param handle The handle pointing to the downstream receiver that does not need anymore data.
    */
   void receivingFragmentFinished(FragmentHandle handle);
+
+  /**
+   * Perform dump of operators' state to logs. Invoked when there is a failure during fragment execution.
+   */
+  void dumpOperators();
 }

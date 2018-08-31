@@ -107,4 +107,14 @@ public class SchemalessBatch implements CloseableRecordBatch {
 
   @Override
   public VectorContainer getContainer() { return null; }
+
+  @Override
+  public boolean isFailed() {
+    return false;
+  }
+
+  @Override
+  public void dump() {
+    logger.info("SchemalessBatch[]");
+  }
 }

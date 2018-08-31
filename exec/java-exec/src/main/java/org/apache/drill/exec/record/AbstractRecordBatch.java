@@ -47,6 +47,9 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
   protected final boolean unionTypeEnabled;
   protected BatchState state;
 
+  // In case of Exception will be IterOutcome.STOP
+  private IterOutcome lastOutcome;
+
   protected AbstractRecordBatch(final T popConfig, final FragmentContext context) throws OutOfMemoryException {
     this(popConfig, context, true, context.newOperatorContext(popConfig));
   }
@@ -117,9 +120,15 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
     stats.stopProcessing();
     try{
       if (!context.getExecutorState().shouldContinue()) {
+        lastOutcome = IterOutcome.STOP;
         return IterOutcome.STOP;
       }
       next = b.next();
+      lastOutcome = next;
+    } catch (Exception e) {
+      // mark batch as failed
+      lastOutcome = IterOutcome.STOP;
+      throw e;
     } finally {
       stats.startProcessing();
     }
@@ -243,6 +252,11 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
   @Override
   public VectorContainer getContainer() {
     return  container;
+  }
+
+  @Override
+  public boolean isFailed() {
+    return lastOutcome == IterOutcome.STOP;
   }
 
   public RecordBatchStatsContext getRecordBatchStatsContext() {

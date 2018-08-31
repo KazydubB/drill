@@ -898,4 +898,10 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
     wasNone = true;
     return IterOutcome.OK_NEW_SCHEMA;
   }
+
+  @Override
+  public void dump() {
+    logger.info("ProjectRecordBatch[projector={}, hasRemainder={}, remainderIndex={}, recordCount={}]",
+        projector, hasRemainder, remainderIndex, recordCount);
+  }
 }

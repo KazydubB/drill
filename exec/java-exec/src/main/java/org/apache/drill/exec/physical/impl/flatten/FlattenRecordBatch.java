@@ -532,4 +532,10 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     updateStats();
     super.close();
   }
+
+  @Override
+  public void dump() {
+    logger.info("FlattenRecordbatch[hasRemainder={}, remainderIndex={}, recordCount={}, flattener={}]",
+        hasRemainder, remainderIndex, recordCount, flattener);
+  }
 }

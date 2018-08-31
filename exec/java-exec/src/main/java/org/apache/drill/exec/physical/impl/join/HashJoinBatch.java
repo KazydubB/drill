@@ -1276,4 +1276,10 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
     return hj;
   }
 
+  @Override
+  public void dump() {
+    logger.info("HashJoinBatch[left={}, right={}, leftOutcome={}, rightOutcome={}, joinType={}, hashJoinProbe={}," +
+            " rightExpr={}, canSpill={}, buildSchema={}, probeSchema={}]", left, right, leftUpstream, rightUpstream,
+        joinType, hashJoinProbe, rightExpr, canSpill, buildSchema, probeSchema);
+  }
 }

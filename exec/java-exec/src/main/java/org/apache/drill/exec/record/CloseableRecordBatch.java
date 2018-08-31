@@ -19,4 +19,12 @@ package org.apache.drill.exec.record;
 
 public interface CloseableRecordBatch extends RecordBatch, AutoCloseable {
 
+  /**
+   * Use this method to see if the batch was successful. Currently used when logging {@code CloseableRecordBatch}'s
+   * state using {@link #dump()} method.
+   *
+   * @return {@code true} if either {@link org.apache.drill.exec.record.RecordBatch.IterOutcome#STOP}
+   * was returned by {@link #next()} invocation or there was an {@code Exception} thrown during execution of the batch.
+   */
+  boolean isFailed();
 }

@@ -133,11 +133,15 @@ class UserExceptionContext {
    * generate a context message
    * @return string containing all context information concatenated
    */
-  String generateContextMessage(boolean includeErrorIdAndIdentity) {
+  String generateContextMessage(boolean includeErrorIdAndIdentity, boolean includeSeeLogsMessage) {
     StringBuilder sb = new StringBuilder();
 
     for (String context : contextList) {
       sb.append(context).append("\n");
+    }
+
+    if (includeSeeLogsMessage) {
+      sb.append("Please, refer to logs for more information.\n");
     }
 
     if (includeErrorIdAndIdentity) {

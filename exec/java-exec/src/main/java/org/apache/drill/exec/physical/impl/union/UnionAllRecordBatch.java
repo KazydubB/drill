@@ -440,4 +440,9 @@ public class UnionAllRecordBatch extends AbstractBinaryRecordBatch<UnionAll> {
       batchMemoryManager.getAvgOutputRowWidth(), batchMemoryManager.getTotalOutputRecords());
   }
 
+  @Override
+  public void dump() {
+    logger.info("UnionAllRecordBatch[left={}, right={}, leftOutcome={}, rightOutcome={}, recordCount={}]",
+        left, right, leftUpstream, rightUpstream, recordCount);
+  }
 }

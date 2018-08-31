@@ -106,6 +106,11 @@ public class SimpleRootExec implements RootExec, Iterable<ValueVector> {
   }
 
   @Override
+  public void dumpOperators() {
+    screenRoot.dumpOperators();
+  }
+
+  @Override
   public void close() throws Exception {
     screenRoot.close();
   }

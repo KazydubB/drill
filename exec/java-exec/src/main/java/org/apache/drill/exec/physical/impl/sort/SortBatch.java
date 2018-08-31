@@ -213,4 +213,8 @@ public class SortBatch extends AbstractRecordBatch<Sort> {
     incoming.kill(sendUpstream);
   }
 
+  @Override
+  public void dump() {
+    logger.info("SortBatch[popConfig={}, container={}, sorter={}, schema={}]", popConfig, container, sorter, schema);
+  }
 }

@@ -102,6 +102,10 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
    */
   private boolean validateBatches;
 
+  // Used to track whether this batch failed or not. Difference between this field and batchState is
+  // that this one will be assigned IterOutcome.STOP when there is an Exception thrown in next()
+  private IterOutcome lastOutcome;
+
   public IteratorValidatorBatchIterator(RecordBatch incoming) {
     this.incoming = incoming;
     batchTypeName = incoming.getClass().getSimpleName();
@@ -227,6 +231,7 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
 
       // Now get result from upstream next().
       batchState = incoming.next();
+      lastOutcome = batchState;
 
       logger.trace("[#{}; on {}]: incoming next() return: ({} ->) {}",
                    instNum, batchTypeName, prevBatchState, batchState);
@@ -324,10 +329,15 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
       return batchState;
     }
     catch (RuntimeException | Error e) {
+      lastOutcome = STOP;
       exceptionState = e;
       logger.trace("[#{}, on {}]: incoming next() exception: ({} ->) {}",
                    instNum, batchTypeName, prevBatchState, exceptionState,
                    exceptionState);
+      throw e;
+    } catch (Exception e) {
+      // mark batch as failed
+      lastOutcome = STOP;
       throw e;
     }
   }
@@ -366,4 +376,14 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
 
   public RecordBatch getIncoming() { return incoming; }
 
+  @Override
+  public boolean isFailed() {
+    return lastOutcome == STOP;
+  }
+
+  @Override
+  public void dump() {
+    logger.info("IteratorValidatorBatchIterator[instNum={}, batchTypeName={}, lastSchema={}, + lastNewSchema={}]",
+        instNum, batchTypeName, lastSchema, lastNewSchema);
+  }
 }

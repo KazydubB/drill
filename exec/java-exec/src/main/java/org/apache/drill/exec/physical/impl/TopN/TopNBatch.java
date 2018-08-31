@@ -693,4 +693,10 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
       return sv4;
     }
   }
+
+  @Override
+  public void dump() {
+    logger.info("TopNBatch[container={}, config={}, schema={}, sv4={}, countSincePurge={}, " +
+        "batchCount={}, recordCount={}]", container, config, schema, sv4, countSincePurge, batchCount, recordCount);
+  }
 }

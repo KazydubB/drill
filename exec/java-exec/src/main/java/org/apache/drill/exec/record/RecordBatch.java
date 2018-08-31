@@ -320,4 +320,9 @@ public interface RecordBatch extends VectorAccessible {
    * buffers.
    */
   WritableBatch getWritableBatch();
+
+  /**
+   * Perform dump of this batch's state to logs.
+   */
+  void dump();
 }

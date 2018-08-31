@@ -37,7 +37,7 @@ import static org.apache.drill.exec.record.RecordBatch.IterOutcome.EMIT;
 import static org.apache.drill.exec.record.RecordBatch.IterOutcome.NONE;
 
 public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
-  // private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LimitRecordBatch.class);
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LimitRecordBatch.class);
 
   private SelectionVector2 outgoingSv;
   private SelectionVector2 incomingSv;
@@ -265,5 +265,11 @@ public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
     numberOfRecords = (popConfig.getLast() == null) ?
       Integer.MIN_VALUE : Math.max(0, popConfig.getLast()) - recordStartOffset;
     first = true;
+  }
+
+  @Override
+  public void dump() {
+    logger.info("LimitRecordBatch[offset={}, numberOfRecords={}, incomingSV={}, outgoingSV={}]",
+        recordStartOffset, numberOfRecords, incomingSv, outgoingSv);
   }
 }

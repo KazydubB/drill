@@ -824,4 +824,8 @@ public class ExternalSortBatch extends AbstractRecordBatch<ExternalSort> {
     incoming.kill(sendUpstream);
   }
 
+  @Override
+  public void dump() {
+    logger.info("ExternalSortBatch[schema={}, sorter={}, mSorter={}]", schema, sorter, mSorter);
+  }
 }

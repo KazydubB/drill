@@ -1603,6 +1603,26 @@ public abstract class HashAggTemplate implements HashAggregator {
     }
   }
 
+  @Override
+  public String toString() {
+    return "HashAggTemplate[numPartitions=" + numPartitions
+        + ", nextPartitionToReturn=" + nextPartitionToReturn
+        + ", rowsInPartition=" + rowsInPartition
+        + ", rowsNotSpilled=" + rowsNotSpilled
+        + ", rowsSpilled=" + rowsSpilled
+        + ", rowsSpilledReturned=" + rowsSpilledReturned
+        + ", isTwoPhase=" + isTwoPhase
+        + ", is2ndPhase=" + is2ndPhase
+        + ", is1stPhase=" + is1stPhase
+        + ", canSpill=" + canSpill
+        + ", earlyOutput=" + earlyOutput
+        + ", earlyPartition=" + earlyPartition
+        + ", estValuesBatchSize=" + estValuesBatchSize
+        + ", estOutgoingAllocSize=" + estOutgoingAllocSize
+        + ", plannedBatches=" + plannedBatches
+        + "]";
+  }
+
   // Code-generated methods (implemented in HashAggBatch)
   public abstract void doSetup(@Named("incoming") RecordBatch incoming) throws SchemaChangeException;
 

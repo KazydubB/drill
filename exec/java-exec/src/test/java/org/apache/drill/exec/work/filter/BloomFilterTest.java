@@ -121,6 +121,10 @@ public class BloomFilterTest {
     public Iterator<VectorWrapper<?>> iterator() {
       return null;
     }
+
+    @Override
+    public void dump() {
+    }
   }
 
 

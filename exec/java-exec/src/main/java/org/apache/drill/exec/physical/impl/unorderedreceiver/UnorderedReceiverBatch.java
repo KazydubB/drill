@@ -64,6 +64,7 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
   private boolean first = true;
   private final UnorderedReceiver config;
   private final OperatorContext oContext;
+  private IterOutcome lastOutcome;
 
   public enum Metric implements MetricDef {
     BYTES_RECEIVED,
@@ -174,14 +175,17 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
       first = false;
 
       if (batch == null) {
+        IterOutcome outcome = IterOutcome.NONE;
         batchLoader.zero();
         if (!context.getExecutorState().shouldContinue()) {
-          return IterOutcome.STOP;
+          outcome = IterOutcome.STOP;
         }
-        return IterOutcome.NONE;
+        lastOutcome = outcome;
+        return outcome;
       }
 
       if (context.getAllocator().isOverLimit()) {
+        lastOutcome = IterOutcome.OUT_OF_MEMORY;
         return IterOutcome.OUT_OF_MEMORY;
       }
 
@@ -191,18 +195,26 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
       // SchemaChangeException, so check/clean catch clause below.
       stats.addLongStat(Metric.BYTES_RECEIVED, batch.getByteCount());
 
+      IterOutcome outcome;
       batch.release();
       if(schemaChanged) {
         this.schema = batchLoader.getSchema();
         stats.batchReceived(0, rbd.getRecordCount(), true);
-        return IterOutcome.OK_NEW_SCHEMA;
+        outcome = IterOutcome.OK_NEW_SCHEMA;
       } else {
         stats.batchReceived(0, rbd.getRecordCount(), false);
-        return IterOutcome.OK;
+        outcome = IterOutcome.OK;
       }
+      lastOutcome = outcome;
+      return outcome;
     } catch(SchemaChangeException | IOException ex) {
       context.getExecutorState().fail(ex);
+      lastOutcome = IterOutcome.STOP;
       return IterOutcome.STOP;
+    } catch (Exception e) {
+      // mark batch as failed
+      lastOutcome = IterOutcome.STOP;
+      throw e;
     } finally {
       stats.stopProcessing();
     }
@@ -269,5 +281,15 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
         context.getExecutorState().fail(new RpcException(errMsg, e));
       }
     }
+  }
+
+  @Override
+  public void dump() {
+    logger.info("UnorderedReceiverBatch[batchLoader={}, schema={}]", batchLoader, schema);
+  }
+
+  @Override
+  public boolean isFailed() {
+    return lastOutcome == IterOutcome.STOP;
   }
 }
