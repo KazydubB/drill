@@ -39,15 +39,26 @@ import org.apache.drill.exec.record.RecordBatch;
 /*
  * This class is generated using freemarker and the ${.template_name} template.
  */
-
-@FunctionTemplate(name = "to_${type?lower_case}" , scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
+@FunctionTemplate(name = "to_${type?lower_case}" , scope = FunctionTemplate.FunctionScope.SIMPLE,
+        <#if type == "TimeStamp">
+        nulls = NullHandling.INTERNAL)
+        <#else>
+        nulls = NullHandling.NULL_IF_NULL)
+        </#if>
 public class GTo${type} implements DrillSimpleFunc {
 
-
+    <#if type == "TimeStamp">
+    @Param  NullableVarCharHolder left;
+    <#else>
     @Param  VarCharHolder left;
+    </#if>
     @Param  VarCharHolder right;
     @Workspace org.joda.time.format.DateTimeFormatter format;
+    <#if type == "TimeStamp">
+    @Output Nullable${type}Holder out;
+    <#else>
     @Output ${type}Holder out;
+    </#if>
 
     public void setup() {
         // Get the desired output format
@@ -67,7 +78,12 @@ public class GTo${type} implements DrillSimpleFunc {
         <#if type == "Date">
         out.value = (org.joda.time.DateMidnight.parse(input, format).withZoneRetainFields(org.joda.time.DateTimeZone.UTC)).getMillis();
         <#elseif type == "TimeStamp">
-        out.value = org.joda.time.DateTime.parse(input, format).withZoneRetainFields(org.joda.time.DateTimeZone.UTC).getMillis();
+        if (left.isSet == 0 || input.isEmpty()) {
+            out.isSet = 0;
+        } else {
+            out.value=org.joda.time.DateTime.parse(input,format).withZoneRetainFields(org.joda.time.DateTimeZone.UTC).getMillis();
+            out.isSet = 1;
+        }
         <#elseif type == "Time">
         out.value = (int) ((format.parseDateTime(input)).withZoneRetainFields(org.joda.time.DateTimeZone.UTC).getMillis());
         </#if>
