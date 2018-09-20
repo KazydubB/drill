@@ -148,6 +148,7 @@ public class WindowFrameRecordBatch extends AbstractRecordBatch<WindowPOP> {
     } catch (DrillException e) {
       context.getExecutorState().fail(e);
       cleanup();
+      failed = true;
       return IterOutcome.STOP;
     }
 
@@ -430,7 +431,7 @@ public class WindowFrameRecordBatch extends AbstractRecordBatch<WindowPOP> {
 
   @Override
   public void dump() {
-    logger.info("WindowFrameRecordBatch[container={}, popConfig={}, framers={}, schema={}]",
+    logger.error("WindowFrameRecordBatch[container={}, popConfig={}, framers={}, schema={}]",
         container, popConfig, Arrays.toString(framers), schema);
   }
 }

@@ -58,4 +58,9 @@ public abstract class AbstractSingleRecordBatch<T extends PhysicalOperator> exte
     }
     return IterOutcome.OK;
   }
+
+  @Override
+  public boolean isFailed() {
+    return super.isFailed() || incoming.isFailed();
+  }
 }

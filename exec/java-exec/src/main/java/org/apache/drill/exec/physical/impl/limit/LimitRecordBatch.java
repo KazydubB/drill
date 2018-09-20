@@ -19,6 +19,8 @@ package org.apache.drill.exec.physical.impl.limit;
 
 import java.util.List;
 
+import org.apache.drill.exec.testing.ControlsInjector;
+import org.apache.drill.exec.testing.ControlsInjectorFactory;
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.drill.exec.exception.OutOfMemoryException;
 import org.apache.drill.exec.exception.SchemaChangeException;
@@ -38,6 +40,7 @@ import static org.apache.drill.exec.record.RecordBatch.IterOutcome.NONE;
 
 public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LimitRecordBatch.class);
+  private static final ControlsInjector injector = ControlsInjectorFactory.getInjector(LimitRecordBatch.class);
 
   private SelectionVector2 outgoingSv;
   private SelectionVector2 incomingSv;
@@ -168,6 +171,8 @@ public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
 
   @Override
   protected IterOutcome doWork() {
+    injector.injectUnchecked(context.getExecutionControls(), "limit-do-work");
+
     if (first) {
       first = false;
     }
@@ -269,7 +274,7 @@ public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
 
   @Override
   public void dump() {
-    logger.info("LimitRecordBatch[offset={}, numberOfRecords={}, incomingSV={}, outgoingSV={}]",
-        recordStartOffset, numberOfRecords, incomingSv, outgoingSv);
+    logger.error("LimitRecordBatch[container={}, offset={}, numberOfRecords={}, incomingSV={}, outgoingSV={}]",
+        container, recordStartOffset, numberOfRecords, incomingSv, outgoingSv);
   }
 }

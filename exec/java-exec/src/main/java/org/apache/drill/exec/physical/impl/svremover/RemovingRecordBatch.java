@@ -66,6 +66,7 @@ public class RemovingRecordBatch extends AbstractSingleRecordBatch<SelectionVect
     try {
       copier.copyRecords(0, incoming.getRecordCount());
     } catch (Exception e) {
+      failed = true;
       throw new IllegalStateException(e);
     } finally {
       if (incoming.getSchema().getSelectionVectorMode() != SelectionVectorMode.FOUR_BYTE) {
@@ -95,6 +96,6 @@ public class RemovingRecordBatch extends AbstractSingleRecordBatch<SelectionVect
 
   @Override
   public void dump() {
-    logger.info("RemovingRecordBatch[state={}, copier={}]", state, copier);
+    logger.error("RemovingRecordBatch[container={}, state={}, copier={}]", container, state, copier);
   }
 }

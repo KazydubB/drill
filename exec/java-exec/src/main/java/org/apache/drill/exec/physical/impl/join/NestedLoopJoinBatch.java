@@ -462,8 +462,9 @@ public class NestedLoopJoinBatch extends AbstractBinaryRecordBatch<NestedLoopJoi
 
   @Override
   public void dump() {
-    logger.info("NestedLoopJoinBatch[left={}, right={}, leftOutcome={}, rightOutcome={}, leftSchema={}, " +
-            "rightSchema={}, outputRecords={}, rightContainer={}, rightCounts={}]",
-        left, right, leftUpstream, rightUpstream, leftSchema, rightSchema, outputRecords, rightContainer, rightCounts);
+    logger.error("NestedLoopJoinBatch[container={}, left={}, right={}, leftOutcome={}, rightOutcome={}, "
+            + "leftSchema={}, rightSchema={}, outputRecords={}, rightContainer={}, rightCounts={}]",
+        container, left, right, leftUpstream, rightUpstream,
+        leftSchema, rightSchema, outputRecords, rightContainer, rightCounts);
   }
 }

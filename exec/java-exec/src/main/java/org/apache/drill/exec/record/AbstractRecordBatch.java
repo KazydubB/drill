@@ -47,7 +47,8 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
   protected final boolean unionTypeEnabled;
   protected BatchState state;
 
-  // In case of Exception will be IterOutcome.STOP
+  // Used for state dump
+  protected boolean failed;
   private IterOutcome lastOutcome;
 
   protected AbstractRecordBatch(final T popConfig, final FragmentContext context) throws OutOfMemoryException {
@@ -110,7 +111,8 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
 
   public final IterOutcome next(final RecordBatch b) {
     if(!context.getExecutorState().shouldContinue()) {
-      return IterOutcome.STOP;
+      lastOutcome = IterOutcome.STOP;
+      return lastOutcome;
     }
     return next(0, b);
   }
@@ -126,8 +128,7 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
       next = b.next();
       lastOutcome = next;
     } catch (Exception e) {
-      // mark batch as failed
-      lastOutcome = IterOutcome.STOP;
+      failed = true;
       throw e;
     } finally {
       stats.startProcessing();
@@ -181,10 +182,15 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
           return IterOutcome.NONE;
         }
         default:
-          return innerNext();
+          lastOutcome = innerNext();
+          return lastOutcome;
       }
     } catch (final SchemaChangeException e) {
+      failed = true;
       throw new DrillRuntimeException(e);
+    } catch (Exception e) {
+      failed = true;
+      throw e;
     } finally {
       stats.stopProcessing();
     }
@@ -256,7 +262,7 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
 
   @Override
   public boolean isFailed() {
-    return lastOutcome == IterOutcome.STOP;
+    return failed || lastOutcome == IterOutcome.STOP;
   }
 
   public RecordBatchStatsContext getRecordBatchStatsContext() {

@@ -199,7 +199,11 @@ public class UnnestRecordBatch extends AbstractTableFunctionRecordBatch<UnnestPO
         kill(false);
         logger.error("Failure during query", ex);
         context.getExecutorState().fail(ex);
+        failed = true;
         return IterOutcome.STOP;
+      } catch (Exception e) {
+        failed = true;
+        throw e;
       } finally {
         stats.stopSetup();
       }
@@ -234,7 +238,11 @@ public class UnnestRecordBatch extends AbstractTableFunctionRecordBatch<UnnestPO
           kill(false);
           logger.error("Failure during query", ex);
           context.getExecutorState().fail(ex);
+          failed = true;
           return IterOutcome.STOP;
+        } catch (Exception e) {
+          failed = true;
+          throw e;
         }
       }
       return doWork();
@@ -448,7 +456,7 @@ public class UnnestRecordBatch extends AbstractTableFunctionRecordBatch<UnnestPO
 
   @Override
   public void dump() {
-    logger.info("UnnestRecordBatch[container={}, unnest={}, hasRemainder={}, remainderIndex={}, " +
+    logger.error("UnnestRecordBatch[container={}, unnest={}, hasRemainder={}, remainderIndex={}, " +
             "unnestFieldMetadata={}]", container, unnest, hasRemainder, remainderIndex, unnestFieldMetadata);
   }
 }

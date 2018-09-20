@@ -701,7 +701,7 @@ public class ExternalSortBatch extends AbstractRecordBatch<ExternalSort> {
 
   @Override
   public void dump() {
-    logger.info("ExternalSortBatch[schema={}, sortState={}, sortConfig={}, outputWrapperContainer={}, outputSV4={}]",
-        schema, sortState, sortConfig, outputWrapperContainer, outputSV4);
+    logger.error("ExternalSortBatch[schema={}, sortState={}, sortConfig={}, outputWrapperContainer={}, outputSV4={}, container={}]",
+        schema, sortState, sortConfig, outputWrapperContainer, outputSV4, container);
   }
 }

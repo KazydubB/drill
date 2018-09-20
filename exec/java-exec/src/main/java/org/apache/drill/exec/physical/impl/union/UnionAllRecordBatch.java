@@ -143,6 +143,7 @@ public class UnionAllRecordBatch extends AbstractBinaryRecordBatch<UnionAll> {
     } catch (ClassTransformationException | IOException | SchemaChangeException ex) {
       context.getExecutorState().fail(ex);
       killIncoming(false);
+      failed = true;
       return IterOutcome.STOP;
     }
   }
@@ -442,7 +443,7 @@ public class UnionAllRecordBatch extends AbstractBinaryRecordBatch<UnionAll> {
 
   @Override
   public void dump() {
-    logger.info("UnionAllRecordBatch[left={}, right={}, leftOutcome={}, rightOutcome={}, recordCount={}]",
-        left, right, leftUpstream, rightUpstream, recordCount);
+    logger.error("UnionAllRecordBatch[container={}, left={}, right={}, leftOutcome={}, rightOutcome={}, "
+            + "recordCount={}]", container, left, right, leftUpstream, rightUpstream, recordCount);
   }
 }

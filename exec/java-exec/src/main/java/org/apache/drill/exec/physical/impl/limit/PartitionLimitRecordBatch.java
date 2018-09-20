@@ -253,8 +253,9 @@ public class PartitionLimitRecordBatch extends AbstractSingleRecordBatch<Partiti
 
   @Override
   public void dump() {
-    logger.info("PartitionLimitRecordBatch[popConfig={}, incomingSV={}, outgoingSV={}, recordStartOffset={}," +
-            " numberOfRecords={}, partitionId={}, unionTypeEnabled={}, state={}]",
-        popConfig, incomingSv, outgoingSv, recordStartOffset, numberOfRecords, partitionId, unionTypeEnabled, state);
+    logger.error("PartitionLimitRecordBatch[container={}, popConfig={}, incomingSV={}, outgoingSV={},"
+            + " recordStartOffset={}, numberOfRecords={}, partitionId={}, unionTypeEnabled={}, state={}]",
+        container, popConfig, incomingSv, outgoingSv, recordStartOffset, numberOfRecords,
+        partitionId, unionTypeEnabled, state);
   }
 }

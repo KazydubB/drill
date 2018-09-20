@@ -826,6 +826,6 @@ public class ExternalSortBatch extends AbstractRecordBatch<ExternalSort> {
 
   @Override
   public void dump() {
-    logger.info("ExternalSortBatch[schema={}, sorter={}, mSorter={}]", schema, sorter, mSorter);
+    logger.error("ExternalSortBatch[schema={}, sorter={}, mSorter={}, container={}]", schema, sorter, mSorter, container);
   }
 }

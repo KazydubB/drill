@@ -81,7 +81,11 @@ public class FilterRecordBatch extends AbstractSingleRecordBatch<Filter> {
     try {
       filter.filterBatch(recordCount);
     } catch (SchemaChangeException e) {
+      failed = true;
       throw new UnsupportedOperationException(e);
+    } catch (Exception e) {
+      failed = true;
+      throw e;
     }
 
     return getFinalOutcome(false);
@@ -202,6 +206,6 @@ public class FilterRecordBatch extends AbstractSingleRecordBatch<Filter> {
 
   @Override
   public void dump() {
-    logger.info("FilterRecordBatch[container={}, selectionVector2={}, filter={}]", container, sv2, filter);
+    logger.error("FilterRecordBatch[container={}, selectionVector2={}, filter={}, popConfig={}]", container, sv2, filter, popConfig);
   }
 }

@@ -215,6 +215,7 @@ public class MergingRecordBatch extends AbstractRecordBatch<MergingReceiverPOP> 
             rawBatch = getNext(p);
           } catch (final IOException e) {
             context.getExecutorState().fail(e);
+            failed = true;
             return IterOutcome.STOP;
           }
         }
@@ -830,9 +831,9 @@ public class MergingRecordBatch extends AbstractRecordBatch<MergingReceiverPOP> 
 
   @Override
   public void dump() {
-    logger.info("MergingRecordBatch[outgoingPosition={}, incomingBatches={}, batchOffsets={}, tempBatchHolder={}, " +
-            "inputCounts={}, outputCounts={}]",
-        outgoingPosition, Arrays.toString(incomingBatches), Arrays.toString(batchOffsets),
+    logger.error("MergingRecordBatch[container={}, outgoingPosition={}, incomingBatches={}, batchOffsets={}, "
+            + "tempBatchHolder={}, inputCounts={}, outputCounts={}]",
+        container, outgoingPosition, Arrays.toString(incomingBatches), Arrays.toString(batchOffsets),
         Arrays.toString(tempBatchHolder), Arrays.toString(inputCounts), Arrays.toString(outputCounts));
   }
 }

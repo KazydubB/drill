@@ -327,8 +327,7 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
       }
 
       return batchState;
-    }
-    catch (RuntimeException | Error e) {
+    } catch (RuntimeException | Error e) {
       lastOutcome = STOP;
       exceptionState = e;
       logger.trace("[#{}, on {}]: incoming next() exception: ({} ->) {}",
@@ -383,7 +382,7 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
 
   @Override
   public void dump() {
-    logger.info("IteratorValidatorBatchIterator[instNum={}, batchTypeName={}, lastSchema={}, + lastNewSchema={}]",
-        instNum, batchTypeName, lastSchema, lastNewSchema);
+    logger.error("IteratorValidatorBatchIterator[container={}, instNum={}, batchTypeName={}, lastSchema={}, "
+           + "lastNewSchema={}]", getContainer(), instNum, batchTypeName, lastSchema, lastNewSchema);
   }
 }

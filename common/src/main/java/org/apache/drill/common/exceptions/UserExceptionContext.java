@@ -141,7 +141,7 @@ class UserExceptionContext {
     }
 
     if (includeSeeLogsMessage) {
-      sb.append("Please, refer to logs for more information.\n");
+      sb.append("\nPlease, refer to logs for more information.\n");
     }
 
     if (includeErrorIdAndIdentity) {

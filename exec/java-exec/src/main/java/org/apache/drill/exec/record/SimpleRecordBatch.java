@@ -105,6 +105,11 @@ public class SimpleRecordBatch implements RecordBatch {
 
   @Override
   public void dump() {
-    logger.info("SimpleRecordBatch[container=" + container + "]");
+    logger.error("SimpleRecordBatch[container=" + container + "]");
+  }
+
+  @Override
+  public boolean isFailed() {
+    return false;
   }
 }

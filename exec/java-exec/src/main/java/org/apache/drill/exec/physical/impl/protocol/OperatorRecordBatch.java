@@ -172,6 +172,6 @@ public class OperatorRecordBatch implements CloseableRecordBatch {
 
   @Override
   public void dump() {
-    logger.info("OperatorRecordBatch[]");
+    logger.error("OperatorRecordBatch[batchAccessor={}, lastOutcome={}]", batchAccessor, lastOutcome);
   }
 }

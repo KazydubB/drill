@@ -651,7 +651,7 @@ public class StreamingAggBatch extends AbstractRecordBatch<StreamingAggregate> {
 
   @Override
   public void dump() {
-    logger.info("StreamingAggBatch[container={}, popConfig={}, aggregator={}, incomingSchema={}]",
+    logger.error("StreamingAggBatch[container={}, popConfig={}, aggregator={}, incomingSchema={}]",
         container, popConfig, aggregator, incomingSchema);
   }
 }

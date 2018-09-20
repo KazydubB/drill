@@ -1208,9 +1208,9 @@ public class LateralJoinBatch extends AbstractBinaryRecordBatch<LateralJoinPOP> 
 
   @Override
   public void dump() {
-    logger.info("LateralJoinBatch[left={}, right={}, leftOutcome={}, rightOutcome={}, leftSchema={}, " +
+    logger.error("LateralJoinBatch[container={}, left={}, right={}, leftOutcome={}, rightOutcome={}, leftSchema={}, " +
             "rightSchema={}, outputIndex={}, leftJoinIndex={}, rightJoinIndex={}, hasRemainderForLeftJoin={}]",
-        left, right, leftUpstream, rightUpstream, leftSchema, rightSchema, outputIndex,
+        container, left, right, leftUpstream, rightUpstream, leftSchema, rightSchema, outputIndex,
         leftJoinIndex, rightJoinIndex, hasRemainderForLeftJoin);
   }
 }

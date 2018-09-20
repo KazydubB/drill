@@ -143,6 +143,7 @@ public class SortBatch extends AbstractRecordBatch<Sort> {
       kill(false);
       logger.error("Failure during query", ex);
       context.getExecutorState().fail(ex);
+      failed = true;
       return IterOutcome.STOP;
     }
   }
@@ -215,6 +216,6 @@ public class SortBatch extends AbstractRecordBatch<Sort> {
 
   @Override
   public void dump() {
-    logger.info("SortBatch[popConfig={}, container={}, sorter={}, schema={}]", popConfig, container, sorter, schema);
+    logger.error("SortBatch[popConfig={}, container={}, sorter={}, schema={}]", popConfig, container, sorter, schema);
   }
 }

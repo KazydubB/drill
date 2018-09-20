@@ -74,6 +74,7 @@ import static org.apache.drill.exec.record.RecordBatch.IterOutcome.EMIT;
 import static org.apache.drill.exec.record.RecordBatch.IterOutcome.NONE;
 import static org.apache.drill.exec.record.RecordBatch.IterOutcome.OK;
 import static org.apache.drill.exec.record.RecordBatch.IterOutcome.OK_NEW_SCHEMA;
+import static org.apache.drill.exec.record.RecordBatch.IterOutcome.STOP;
 
 /**
  * Operator Batch which implements the TopN functionality. It is more efficient than (sort + limit) since unlike sort
@@ -196,6 +197,7 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
           break;
         }
         case FOUR_BYTE: {
+          failed = true;
           throw new SchemaChangeException("TopN doesn't support incoming with SV4 mode");
         }
         default:
@@ -322,6 +324,7 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
       kill(false);
       logger.error("Failure during query", ex);
       context.getExecutorState().fail(ex);
+      failed = true;
       return IterOutcome.STOP;
     }
   }
@@ -696,7 +699,12 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
 
   @Override
   public void dump() {
-    logger.info("TopNBatch[container={}, config={}, schema={}, sv4={}, countSincePurge={}, " +
+    logger.error("TopNBatch[container={}, config={}, schema={}, sv4={}, countSincePurge={}, " +
         "batchCount={}, recordCount={}]", container, config, schema, sv4, countSincePurge, batchCount, recordCount);
+  }
+
+  @Override
+  public boolean isFailed() {
+    return super.isFailed() || lastKnownOutcome == STOP;
   }
 }

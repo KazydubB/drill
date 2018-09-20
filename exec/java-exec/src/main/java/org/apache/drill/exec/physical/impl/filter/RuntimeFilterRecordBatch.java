@@ -91,7 +91,11 @@ public class RuntimeFilterRecordBatch extends AbstractSingleRecordBatch<RuntimeF
     try {
       applyRuntimeFilter();
     } catch (SchemaChangeException e) {
+      failed = true;
       throw new UnsupportedOperationException(e);
+    } catch (Exception e) {
+      failed = true;
+      throw e;
     }
     return getFinalOutcome(false);
   }
@@ -250,7 +254,8 @@ public class RuntimeFilterRecordBatch extends AbstractSingleRecordBatch<RuntimeF
 
   @Override
   public void dump() {
-    logger.info("RuntimeFilterRecordBatch[selectionVector={}, toFilterFields={}, originalRecordCount={}, " +
-        "batchSchema={}]", sv2, toFilterFields, originalRecordCount, incoming.getSchema());
+    logger.error("RuntimeFilterRecordBatch[container={}, selectionVector={}, toFilterFields={}, "
+        + "originalRecordCount={}, batchSchema={}]",
+        container, sv2, toFilterFields, originalRecordCount, incoming.getSchema());
   }
 }

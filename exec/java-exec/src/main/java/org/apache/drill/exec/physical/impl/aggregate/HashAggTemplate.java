@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Named;
 
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.drill.common.exceptions.RetryAfterSpillException;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.expression.ExpressionPosition;
@@ -1605,22 +1606,10 @@ public abstract class HashAggTemplate implements HashAggregator {
 
   @Override
   public String toString() {
-    return "HashAggTemplate[numPartitions=" + numPartitions
-        + ", nextPartitionToReturn=" + nextPartitionToReturn
-        + ", rowsInPartition=" + rowsInPartition
-        + ", rowsNotSpilled=" + rowsNotSpilled
-        + ", rowsSpilled=" + rowsSpilled
-        + ", rowsSpilledReturned=" + rowsSpilledReturned
-        + ", isTwoPhase=" + isTwoPhase
-        + ", is2ndPhase=" + is2ndPhase
-        + ", is1stPhase=" + is1stPhase
-        + ", canSpill=" + canSpill
-        + ", earlyOutput=" + earlyOutput
-        + ", earlyPartition=" + earlyPartition
-        + ", estValuesBatchSize=" + estValuesBatchSize
-        + ", estOutgoingAllocSize=" + estOutgoingAllocSize
-        + ", plannedBatches=" + plannedBatches
-        + "]";
+    // The fields are excluded because they are passed from HashAggBatch
+    String[] excludedFields = new String[] {
+        "baseHashTable", "incoming", "outgoing", "context", "oContext", "allocator", "htables", "newIncoming"};
+    return ReflectionToStringBuilder.toStringExclude(this, excludedFields);
   }
 
   // Code-generated methods (implemented in HashAggBatch)

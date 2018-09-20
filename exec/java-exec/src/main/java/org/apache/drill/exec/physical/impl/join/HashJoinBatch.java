@@ -23,6 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.drill.exec.testing.ControlsInjector;
+import org.apache.drill.exec.testing.ControlsInjectorFactory;
 import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 import org.apache.drill.shaded.guava.com.google.common.collect.Sets;
 
@@ -108,6 +110,8 @@ import static org.apache.drill.exec.record.RecordBatch.IterOutcome.OK_NEW_SCHEMA
  */
 public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
   protected static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(HashJoinBatch.class);
+
+  private static final ControlsInjector injector = ControlsInjectorFactory.getInjector(HashJoinBatch.class);
 
   /**
    * The maximum number of records within each internal batch.
@@ -271,6 +275,7 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
       try {
         hashJoinProbe = setupHashJoinProbe();
       } catch (IOException | ClassTransformationException e) {
+        failed = true;
         throw new SchemaChangeException(e);
       }
     }
@@ -435,6 +440,8 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
         // Build the hash table, using the build side record batches.
         final IterOutcome buildExecuteTermination = executeBuildPhase();
 
+        injector.injectUnchecked(context.getExecutionControls(), "hashjoin-innerNext");
+
         if (buildExecuteTermination != null) {
           // A termination condition was reached while executing the build phase.
           // We need to terminate.
@@ -592,6 +599,7 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
     } catch (SchemaChangeException e) {
       context.getExecutorState().fail(e);
       killIncoming(false);
+      failed = true;
       return IterOutcome.STOP;
     }
   }
@@ -1278,8 +1286,8 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> {
 
   @Override
   public void dump() {
-    logger.info("HashJoinBatch[left={}, right={}, leftOutcome={}, rightOutcome={}, joinType={}, hashJoinProbe={}," +
-            " rightExpr={}, canSpill={}, buildSchema={}, probeSchema={}]", left, right, leftUpstream, rightUpstream,
+    logger.error("HashJoinBatch[container={}, left={}, right={}, leftOutcome={}, rightOutcome={}, joinType={}, hashJoinProbe={}," +
+            " rightExpr={}, canSpill={}, buildSchema={}, probeSchema={}]", container, left, right, leftUpstream, rightUpstream,
         joinType, hashJoinProbe, rightExpr, canSpill, buildSchema, probeSchema);
   }
 }

@@ -204,6 +204,7 @@ public class MergeJoinBatch extends AbstractBinaryRecordBatch<MergeJoinPOP> {
           status.left.clearInflightBatches();
           status.right.clearInflightBatches();
           kill(false);
+          failed = true;
           return IterOutcome.STOP;
         case WAITING:
           return IterOutcome.NOT_YET;
@@ -221,6 +222,7 @@ public class MergeJoinBatch extends AbstractBinaryRecordBatch<MergeJoinPOP> {
         } catch (ClassTransformationException | IOException | SchemaChangeException e) {
           context.getExecutorState().fail(new SchemaChangeException(e));
           kill(false);
+          failed = true;
           return IterOutcome.STOP;
         } finally {
           stats.stopSetup();
@@ -550,8 +552,8 @@ public class MergeJoinBatch extends AbstractBinaryRecordBatch<MergeJoinPOP> {
 
   @Override
   public void dump() {
-    logger.info("MergeJoinBatch[left={}, right={}, leftOutcome={}, rightOutcome={}, joinType={}, leftIterator={}," +
+    logger.error("MergeJoinBatch[container={}, left={}, right={}, leftOutcome={}, rightOutcome={}, joinType={}, leftIterator={}," +
             " rightIterator={}, joinStatus={}, joinType={}]",
-        left, right, leftUpstream, rightUpstream, joinType, leftIterator, rightIterator, status, joinType);
+        container, left, right, leftUpstream, rightUpstream, joinType, leftIterator, rightIterator, status, joinType);
   }
 }

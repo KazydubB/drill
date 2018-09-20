@@ -488,6 +488,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
       this.flattener = context.getImplementationClass(cg.getCodeGenerator());
       flattener.setup(context, incoming, this, transfers);
     } catch (ClassTransformationException | IOException e) {
+      failed = true;
       throw new SchemaChangeException("Failure while attempting to load generated class", e);
     }
     return true;
@@ -535,7 +536,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
 
   @Override
   public void dump() {
-    logger.info("FlattenRecordbatch[hasRemainder={}, remainderIndex={}, recordCount={}, flattener={}]",
-        hasRemainder, remainderIndex, recordCount, flattener);
+    logger.error("FlattenRecordbatch[hasRemainder={}, remainderIndex={}, recordCount={}, flattener={}, container={}]",
+        hasRemainder, remainderIndex, recordCount, flattener, container);
   }
 }

@@ -54,6 +54,7 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
   VectorAccessibleSerializable vas;
   private IterOutcome initialOutcome;
   private IterOutcome lastOutcome;
+  private boolean failed;
 
   public SpilledRecordbatch(String spillFile, int spilledBatches, FragmentContext context, BatchSchema schema, OperatorContext oContext, SpillSet spillSet) {
     this.context = context;
@@ -67,6 +68,7 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
     try {
       this.spillStream = this.spillSet.openForInput(spillFile);
     } catch (IOException e) {
+      failed = true;
       throw UserException.resourceError(e).build(HashAggBatch.logger);
     }
 
@@ -141,7 +143,7 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
     }
 
     if ( spillStream == null ) {
-      lastOutcome = IterOutcome.STOP;
+      failed = true;
       throw new IllegalStateException("Spill stream was null");
     }
 
@@ -160,10 +162,10 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
         container = vas.get();
       }
     } catch (IOException e) {
-      lastOutcome = IterOutcome.STOP;
+      failed = true;
       throw UserException.dataReadError(e).addContext("Failed reading from a spill file").build(HashAggTemplate.logger);
     } catch (Exception e) {
-      lastOutcome = IterOutcome.STOP;
+      failed = true;
       throw e;
     }
 
@@ -179,13 +181,13 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
 
   @Override
   public void dump() {
-    logger.info("SpilledRecordbatch[container={}, spilledBatches={}, schema={}, spillFile={}]",
-        container, spilledBatches, schema, spillFile);
+    logger.error("SpilledRecordbatch[container={}, spilledBatches={}, schema={}, spillFile={}, spillSet={}]",
+        container, spilledBatches, schema, spillFile, spillSet);
   }
 
   @Override
   public boolean isFailed() {
-    return lastOutcome == IterOutcome.STOP;
+    return failed || lastOutcome == IterOutcome.STOP;
   }
 
   /**

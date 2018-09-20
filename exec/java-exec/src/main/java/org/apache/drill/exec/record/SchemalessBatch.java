@@ -115,6 +115,6 @@ public class SchemalessBatch implements CloseableRecordBatch {
 
   @Override
   public void dump() {
-    logger.info("SchemalessBatch[]");
+    logger.error("SchemalessBatch[]");
   }
 }

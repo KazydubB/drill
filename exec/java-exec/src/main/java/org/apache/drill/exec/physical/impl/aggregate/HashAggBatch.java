@@ -504,7 +504,7 @@ public class HashAggBatch extends AbstractRecordBatch<HashAggregate> {
 
   @Override
   public void dump() {
-    logger.info("HashAggBatch[container={}, aggregator={}, groupByOutFieldIds={}, aggrOutFieldIds={}, " +
+    logger.error("HashAggBatch[container={}, aggregator={}, groupByOutFieldIds={}, aggrOutFieldIds={}, " +
             "incomingSchema={}, wasKilled={}, numGroupByExprs={}, numAggrExprs={}, popConfig={}]",
         container, aggregator, Arrays.toString(groupByOutFieldIds), Arrays.toString(aggrOutFieldIds), incomingSchema,
         wasKilled, numGroupByExprs, numAggrExprs, popConfig);

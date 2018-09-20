@@ -124,6 +124,7 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
       logger.error("Failure during query", ex);
       kill(false);
       context.getExecutorState().fail(ex);
+      failed = true;
       return IterOutcome.STOP;
     }
 
@@ -212,7 +213,7 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
 
   @Override
   public void dump() {
-    logger.info("WriterRecordBatch[container={}, popConfig={}, counter={}, fragmentUniqueId={}, schema={}]",
+    logger.error("WriterRecordBatch[container={}, popConfig={}, counter={}, fragmentUniqueId={}, schema={}]",
         container, popConfig, counter, fragmentUniqueId, schema);
   }
 }

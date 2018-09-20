@@ -325,4 +325,14 @@ public interface RecordBatch extends VectorAccessible {
    * Perform dump of this batch's state to logs.
    */
   void dump();
+
+  /**
+   * Use this method to see if the batch was failed. Currently used when logging {@code RecordBatch}'s
+   * state using {@link #dump()} method.
+   *
+   * @return {@code true} if either {@link org.apache.drill.exec.record.RecordBatch.IterOutcome#STOP}
+   * was returned by its or child's {@link #next()} invocation or there was an {@code Exception} thrown
+   * during execution of the batch; {@code false} otherwise
+   */
+  boolean isFailed();
 }

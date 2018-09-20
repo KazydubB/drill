@@ -125,6 +125,11 @@ public class BloomFilterTest {
     @Override
     public void dump() {
     }
+
+    @Override
+    public boolean isFailed() {
+      return false;
+    }
   }
 
 

@@ -65,6 +65,7 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
   private final UnorderedReceiver config;
   private final OperatorContext oContext;
   private IterOutcome lastOutcome;
+  private boolean failed;
 
   public enum Metric implements MetricDef {
     BYTES_RECEIVED,
@@ -209,11 +210,11 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
       return outcome;
     } catch(SchemaChangeException | IOException ex) {
       context.getExecutorState().fail(ex);
-      lastOutcome = IterOutcome.STOP;
+      failed = true;
       return IterOutcome.STOP;
     } catch (Exception e) {
       // mark batch as failed
-      lastOutcome = IterOutcome.STOP;
+      failed = true;
       throw e;
     } finally {
       stats.stopProcessing();
@@ -285,11 +286,11 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
 
   @Override
   public void dump() {
-    logger.info("UnorderedReceiverBatch[batchLoader={}, schema={}]", batchLoader, schema);
+    logger.error("UnorderedReceiverBatch[batchLoader={}, schema={}]", batchLoader, schema);
   }
 
   @Override
   public boolean isFailed() {
-    return lastOutcome == IterOutcome.STOP;
+    return failed || lastOutcome == IterOutcome.STOP;
   }
 }
