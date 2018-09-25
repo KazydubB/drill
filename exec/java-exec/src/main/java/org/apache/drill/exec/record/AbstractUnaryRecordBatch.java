@@ -183,9 +183,4 @@ public abstract class AbstractUnaryRecordBatch<T extends PhysicalOperator> exten
   protected void setLastKnownOutcome(IterOutcome outcome) {
     lastKnownOutcome = outcome;
   }
-
-  @Override
-  public boolean isFailed() {
-    return super.isFailed() || lastKnownOutcome == IterOutcome.STOP;
-  }
 }

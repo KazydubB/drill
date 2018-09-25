@@ -127,7 +127,7 @@ public class BloomFilterTest {
     }
 
     @Override
-    public boolean isFailed() {
+    public boolean hasFailed() {
       return false;
     }
   }

@@ -199,11 +199,7 @@ public class UnnestRecordBatch extends AbstractTableFunctionRecordBatch<UnnestPO
         kill(false);
         logger.error("Failure during query", ex);
         context.getExecutorState().fail(ex);
-        failed = true;
         return IterOutcome.STOP;
-      } catch (Exception e) {
-        failed = true;
-        throw e;
       } finally {
         stats.stopSetup();
       }
@@ -238,11 +234,7 @@ public class UnnestRecordBatch extends AbstractTableFunctionRecordBatch<UnnestPO
           kill(false);
           logger.error("Failure during query", ex);
           context.getExecutorState().fail(ex);
-          failed = true;
           return IterOutcome.STOP;
-        } catch (Exception e) {
-          failed = true;
-          throw e;
         }
       }
       return doWork();

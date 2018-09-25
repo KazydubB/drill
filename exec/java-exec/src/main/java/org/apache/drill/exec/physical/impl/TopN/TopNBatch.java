@@ -186,7 +186,7 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
     // Reset the TopN state for next iteration
     resetTopNState();
 
-    try{
+    try {
       boolean incomingHasSv2 = false;
       switch (incoming.getSchema().getSelectionVectorMode()) {
         case NONE: {
@@ -197,7 +197,6 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
           break;
         }
         case FOUR_BYTE: {
-          failed = true;
           throw new SchemaChangeException("TopN doesn't support incoming with SV4 mode");
         }
         default:
@@ -324,7 +323,6 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
       kill(false);
       logger.error("Failure during query", ex);
       context.getExecutorState().fail(ex);
-      failed = true;
       return IterOutcome.STOP;
     }
   }
@@ -701,10 +699,5 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
   public void dump() {
     logger.error("TopNBatch[container={}, config={}, schema={}, sv4={}, countSincePurge={}, " +
         "batchCount={}, recordCount={}]", container, config, schema, sv4, countSincePurge, batchCount, recordCount);
-  }
-
-  @Override
-  public boolean isFailed() {
-    return super.isFailed() || lastKnownOutcome == STOP;
   }
 }

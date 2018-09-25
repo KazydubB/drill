@@ -91,11 +91,7 @@ public class RuntimeFilterRecordBatch extends AbstractSingleRecordBatch<RuntimeF
     try {
       applyRuntimeFilter();
     } catch (SchemaChangeException e) {
-      failed = true;
       throw new UnsupportedOperationException(e);
-    } catch (Exception e) {
-      failed = true;
-      throw e;
     }
     return getFinalOutcome(false);
   }

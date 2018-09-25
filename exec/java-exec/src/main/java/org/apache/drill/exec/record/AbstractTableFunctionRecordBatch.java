@@ -59,11 +59,5 @@ public abstract class AbstractTableFunctionRecordBatch<T extends PhysicalOperato
     setIncoming(incoming.getIncoming());
     lateral = incoming;
   }
-
-  @Override
-  public boolean isFailed() {
-    return super.isFailed()
-        || (incoming != null && incoming.isFailed());
-  }
 }
 

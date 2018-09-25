@@ -215,7 +215,6 @@ public class MergingRecordBatch extends AbstractRecordBatch<MergingReceiverPOP> 
             rawBatch = getNext(p);
           } catch (final IOException e) {
             context.getExecutorState().fail(e);
-            failed = true;
             return IterOutcome.STOP;
           }
         }

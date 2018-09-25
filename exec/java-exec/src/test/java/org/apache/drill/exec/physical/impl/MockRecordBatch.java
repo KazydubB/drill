@@ -289,7 +289,7 @@ public class MockRecordBatch implements CloseableRecordBatch {
   }
 
   @Override
-  public boolean isFailed() {
+  public boolean hasFailed() {
     return false;
   }
 

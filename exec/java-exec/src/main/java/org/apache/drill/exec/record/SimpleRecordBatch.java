@@ -109,7 +109,7 @@ public class SimpleRecordBatch implements RecordBatch {
   }
 
   @Override
-  public boolean isFailed() {
+  public boolean hasFailed() {
     return false;
   }
 }

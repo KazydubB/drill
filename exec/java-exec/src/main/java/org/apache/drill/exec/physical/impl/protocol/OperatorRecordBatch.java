@@ -166,7 +166,7 @@ public class OperatorRecordBatch implements CloseableRecordBatch {
   }
 
   @Override
-  public boolean isFailed() {
+  public boolean hasFailed() {
     return lastOutcome == IterOutcome.STOP;
   }
 

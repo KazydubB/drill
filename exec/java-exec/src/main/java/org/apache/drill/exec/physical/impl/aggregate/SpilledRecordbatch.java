@@ -134,12 +134,15 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
   @Override
   public IterOutcome next() {
 
-    if ( ! context.getExecutorState().shouldContinue() ) { return IterOutcome.STOP; }
+    if (!context.getExecutorState().shouldContinue()) {
+      lastOutcome = IterOutcome.STOP;
+      return lastOutcome;
+    }
 
     if ( spilledBatches <= 0 ) { // no more batches to read in this partition
       this.close();
       lastOutcome = IterOutcome.NONE;
-      return IterOutcome.NONE;
+      return lastOutcome;
     }
 
     if ( spillStream == null ) {
@@ -171,7 +174,7 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
 
     spilledBatches--; // one less batch to read
     lastOutcome = IterOutcome.OK;
-    return IterOutcome.OK;
+    return lastOutcome;
   }
 
   /**
@@ -186,7 +189,7 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
   }
 
   @Override
-  public boolean isFailed() {
+  public boolean hasFailed() {
     return failed || lastOutcome == IterOutcome.STOP;
   }
 

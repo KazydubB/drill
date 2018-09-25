@@ -163,7 +163,7 @@ public class MockLateralJoinBatch implements LateralContract, CloseableRecordBat
   }
 
   @Override
-  public boolean isFailed() {
+  public boolean hasFailed() {
     return false;
   }
 

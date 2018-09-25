@@ -22,8 +22,7 @@ import ch.qos.logback.core.ConsoleAppender;
 import org.apache.drill.common.exceptions.UserRemoteException;
 import org.apache.drill.exec.exception.OutOfMemoryException;
 import org.apache.drill.exec.physical.impl.ScanBatch;
-import org.apache.drill.exec.physical.impl.join.HashJoinBatch;
-import org.apache.drill.exec.physical.impl.limit.LimitRecordBatch;
+import org.apache.drill.exec.physical.impl.xsort.managed.ExternalSortBatch;
 import org.apache.drill.exec.testing.Controls;
 import org.apache.drill.exec.testing.ControlsInjectionUtil;
 import org.apache.drill.test.ClusterFixture;
@@ -51,7 +50,7 @@ public class TestOperatorDump extends ClusterTest {
   private static final String ENTRY_DUMP_STARTED = "Operator dump started";
 
   private LogFixture logFixture;
-  private TestAppender appender;
+  private EventAwareContextAppender appender;
 
   @BeforeClass
   public static void setupFiles() {
@@ -61,7 +60,7 @@ public class TestOperatorDump extends ClusterTest {
   @Before
   public void setup() throws Exception {
     ClusterFixtureBuilder builder = ClusterFixture.builder(dirTestWatcher);
-    appender = new TestAppender();
+    appender = new EventAwareContextAppender();
     logFixture = LogFixture.builder()
         .toConsole(appender, LogFixture.DEFAULT_CONSOLE_FORMAT)
         .build();
@@ -69,7 +68,7 @@ public class TestOperatorDump extends ClusterTest {
   }
 
   @After
-  public void tearUp(){
+  public void tearDown(){
     logFixture.close();
   }
 
@@ -93,40 +92,20 @@ public class TestOperatorDump extends ClusterTest {
   }
 
   @Test(expected = UserRemoteException.class)
-  public void testLimitRecordBatchUnchecked() throws Exception {
-    String exceptionDesc = "limit-do-work";
+  public void testExternalSortUnchecked() throws Exception {
+    Class<?> siteClass = org.apache.drill.exec.physical.impl.xsort.ExternalSortBatch.class;
     final String controls = Controls.newBuilder()
-        .addException(LimitRecordBatch.class, exceptionDesc, IndexOutOfBoundsException.class, 0, 1)
+        .addException(siteClass, ExternalSortBatch.INTERRUPTION_AFTER_SORT, RuntimeException.class)
         .build();
     ControlsInjectionUtil.setControls(client.client(), controls);
-    String query = "select * from dfs.`multilevel/parquet` limit 5";
+    String query = "select n_name from cp.`tpch/lineitem.parquet` order by n_name";
     try {
       client.queryBuilder().sql(query).run();
     } catch (UserRemoteException e) {
-      assertTrue(e.getMessage().contains(exceptionDesc));
+      assertTrue(e.getMessage().contains(ExternalSortBatch.INTERRUPTION_AFTER_SORT));
 
       String[] expectedEntries = new String[] {ENTRY_DUMP_STARTED, ENTRY_DUMP_COMPLETED};
-      validateContainsEntries(expectedEntries, LimitRecordBatch.class.getName());
-      throw e;
-    }
-  }
-
-  @Test(expected = UserRemoteException.class)
-  public void testHashJoinBatchUnchecked() throws Exception {
-    String exceptionDesc = "hashjoin-innerNext";
-    final String controls = Controls.newBuilder()
-        .addException(HashJoinBatch.class, exceptionDesc, RuntimeException.class, 0, 1)
-        .build();
-    ControlsInjectionUtil.setControls(client.client(), controls);
-    String query = "select e.employee_id from cp.`employee.json` e " +
-        "left join cp.`employee.json` e1 on e1.position_id = e.employee_id";
-    try {
-      client.queryBuilder().sql(query).run();
-    } catch (UserRemoteException e) {
-      assertTrue(e.getMessage().contains(exceptionDesc));
-
-      String[] expectedEntries = new String[] {ENTRY_DUMP_STARTED, ENTRY_DUMP_COMPLETED};
-      validateContainsEntries(expectedEntries, HashJoinBatch.class.getName());
+      validateContainsEntries(expectedEntries, ExternalSortBatch.class.getName());
       throw e;
     }
   }
@@ -156,7 +135,7 @@ public class TestOperatorDump extends ClusterTest {
   }
 
   // ConsoleAppender which stores logged events
-  private static class TestAppender extends ConsoleAppender<ILoggingEvent> {
+  private static class EventAwareContextAppender extends ConsoleAppender<ILoggingEvent> {
 
     private List<ILoggingEvent> events = new ArrayList<>();
 

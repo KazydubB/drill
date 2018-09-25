@@ -143,7 +143,6 @@ public class UnionAllRecordBatch extends AbstractBinaryRecordBatch<UnionAll> {
     } catch (ClassTransformationException | IOException | SchemaChangeException ex) {
       context.getExecutorState().fail(ex);
       killIncoming(false);
-      failed = true;
       return IterOutcome.STOP;
     }
   }

@@ -83,7 +83,9 @@ public class ScanBatch implements CloseableRecordBatch {
   private final List<Map<String, String>> implicitColumnList;
   private String currentReaderClassName;
   private final RecordBatchStatsContext batchStatsContext;
-  // If set to IterOutcome.STOP then the batch is failed
+  // Shows whether an Exception was thrown during next() invocation
+  private boolean failed;
+  // Shows last outcome of next() invocation
   private IterOutcome lastOutcome;
 
   /**
@@ -211,7 +213,7 @@ public class ScanBatch implements CloseableRecordBatch {
       }
     } catch (OutOfMemoryException ex) {
       clearFieldVectorMap();
-      lastOutcome = IterOutcome.STOP;
+      failed = true;
       throw UserException.memoryError(ex).build(logger);
     } catch (ExecutionSetupException e) {
       if (currentReader != null) {
@@ -221,15 +223,15 @@ public class ScanBatch implements CloseableRecordBatch {
           logger.error("Close failed for reader " + currentReaderClassName, e2);
         }
       }
-      lastOutcome = IterOutcome.STOP;
+      failed = true;
       throw UserException.internalError(e)
           .addContext("Setup failed for", currentReaderClassName)
           .build(logger);
     } catch (UserException ex) {
-      lastOutcome = IterOutcome.STOP;
+      failed = true;
       throw ex;
     } catch (Exception ex) {
-      lastOutcome = IterOutcome.STOP;
+      failed = true;
       throw UserException.internalError(ex).build(logger);
     } finally {
       oContext.getStats().stopProcessing();
@@ -572,8 +574,8 @@ public class ScanBatch implements CloseableRecordBatch {
   }
 
   @Override
-  public boolean isFailed() {
-    return lastOutcome == IterOutcome.STOP;
+  public boolean hasFailed() {
+    return failed || lastOutcome == IterOutcome.STOP;
   }
 
   @Override

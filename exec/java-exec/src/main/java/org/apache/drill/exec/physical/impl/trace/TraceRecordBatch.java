@@ -116,11 +116,7 @@ public class TraceRecordBatch extends AbstractSingleRecordBatch<Trace> {
     try {
       wrap.writeToStreamAndRetain(fos);
     } catch (IOException e) {
-      failed = true;
       throw new RuntimeException(e);
-    } catch (Exception e) {
-      failed = true;
-      throw e;
     }
     batch.reconstructContainer(localAllocator, container);
     if (incomingHasSv2) {

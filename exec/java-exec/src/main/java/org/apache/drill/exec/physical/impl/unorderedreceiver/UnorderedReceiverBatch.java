@@ -64,8 +64,10 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
   private boolean first = true;
   private final UnorderedReceiver config;
   private final OperatorContext oContext;
-  private IterOutcome lastOutcome;
+  // Shows whether an Exception was thrown during next() invocation
   private boolean failed;
+  // Shows last outcome of next() invocation
+  private IterOutcome lastOutcome;
 
   public enum Metric implements MetricDef {
     BYTES_RECEIVED,
@@ -158,7 +160,7 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
   public IterOutcome next() {
     batchLoader.resetRecordCount();
     stats.startProcessing();
-    try{
+    try {
       RawFragmentBatch batch;
       try {
         stats.startWait();
@@ -176,18 +178,17 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
       first = false;
 
       if (batch == null) {
-        IterOutcome outcome = IterOutcome.NONE;
+        lastOutcome = IterOutcome.NONE;
         batchLoader.zero();
         if (!context.getExecutorState().shouldContinue()) {
-          outcome = IterOutcome.STOP;
+          lastOutcome = IterOutcome.STOP;
         }
-        lastOutcome = outcome;
-        return outcome;
+        return lastOutcome;
       }
 
       if (context.getAllocator().isOverLimit()) {
         lastOutcome = IterOutcome.OUT_OF_MEMORY;
-        return IterOutcome.OUT_OF_MEMORY;
+        return lastOutcome;
       }
 
       final RecordBatchDef rbd = batch.getHeader().getDef();
@@ -196,24 +197,21 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
       // SchemaChangeException, so check/clean catch clause below.
       stats.addLongStat(Metric.BYTES_RECEIVED, batch.getByteCount());
 
-      IterOutcome outcome;
       batch.release();
       if(schemaChanged) {
         this.schema = batchLoader.getSchema();
         stats.batchReceived(0, rbd.getRecordCount(), true);
-        outcome = IterOutcome.OK_NEW_SCHEMA;
+        lastOutcome = IterOutcome.OK_NEW_SCHEMA;
       } else {
         stats.batchReceived(0, rbd.getRecordCount(), false);
-        outcome = IterOutcome.OK;
+        lastOutcome = IterOutcome.OK;
       }
-      lastOutcome = outcome;
-      return outcome;
-    } catch(SchemaChangeException | IOException ex) {
+      return lastOutcome;
+    } catch (SchemaChangeException | IOException ex) {
       context.getExecutorState().fail(ex);
-      failed = true;
-      return IterOutcome.STOP;
+      lastOutcome = IterOutcome.STOP;
+      return lastOutcome;
     } catch (Exception e) {
-      // mark batch as failed
       failed = true;
       throw e;
     } finally {
@@ -290,7 +288,7 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
   }
 
   @Override
-  public boolean isFailed() {
+  public boolean hasFailed() {
     return failed || lastOutcome == IterOutcome.STOP;
   }
 }

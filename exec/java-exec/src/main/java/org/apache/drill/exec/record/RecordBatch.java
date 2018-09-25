@@ -334,5 +334,5 @@ public interface RecordBatch extends VectorAccessible {
    * was returned by its or child's {@link #next()} invocation or there was an {@code Exception} thrown
    * during execution of the batch; {@code false} otherwise
    */
-  boolean isFailed();
+  boolean hasFailed();
 }

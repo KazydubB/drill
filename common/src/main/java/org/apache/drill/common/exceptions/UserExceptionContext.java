@@ -29,6 +29,8 @@ import org.apache.drill.exec.proto.CoordinationProtos;
  */
 class UserExceptionContext {
 
+  private static final String NEW_LINE = System.lineSeparator();
+
   private final String errorId;
   private final List<String> contextList;
 
@@ -137,17 +139,21 @@ class UserExceptionContext {
     StringBuilder sb = new StringBuilder();
 
     for (String context : contextList) {
-      sb.append(context).append("\n");
+      sb.append(context).append(NEW_LINE);
     }
 
     if (includeSeeLogsMessage) {
-      sb.append("\nPlease, refer to logs for more information.\n");
+      sb.append(NEW_LINE)
+          .append("Please, refer to logs for more information.")
+          .append(NEW_LINE);
     }
 
     if (includeErrorIdAndIdentity) {
       // add identification infos
-      sb.append("\n[Error Id: ");
-      sb.append(errorId).append(" ");
+      sb.append(NEW_LINE)
+          .append("[Error Id: ")
+          .append(errorId)
+          .append(" ");
       if (endpoint != null) {
         sb.append("on ")
             .append(endpoint.getAddress())

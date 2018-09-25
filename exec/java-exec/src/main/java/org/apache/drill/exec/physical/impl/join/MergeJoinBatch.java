@@ -204,7 +204,6 @@ public class MergeJoinBatch extends AbstractBinaryRecordBatch<MergeJoinPOP> {
           status.left.clearInflightBatches();
           status.right.clearInflightBatches();
           kill(false);
-          failed = true;
           return IterOutcome.STOP;
         case WAITING:
           return IterOutcome.NOT_YET;
@@ -222,7 +221,6 @@ public class MergeJoinBatch extends AbstractBinaryRecordBatch<MergeJoinPOP> {
         } catch (ClassTransformationException | IOException | SchemaChangeException e) {
           context.getExecutorState().fail(new SchemaChangeException(e));
           kill(false);
-          failed = true;
           return IterOutcome.STOP;
         } finally {
           stats.stopSetup();

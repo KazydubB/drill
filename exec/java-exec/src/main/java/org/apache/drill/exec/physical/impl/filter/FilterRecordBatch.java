@@ -81,11 +81,7 @@ public class FilterRecordBatch extends AbstractSingleRecordBatch<Filter> {
     try {
       filter.filterBatch(recordCount);
     } catch (SchemaChangeException e) {
-      failed = true;
       throw new UnsupportedOperationException(e);
-    } catch (Exception e) {
-      failed = true;
-      throw e;
     }
 
     return getFinalOutcome(false);

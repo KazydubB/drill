@@ -210,11 +210,7 @@ public class LogFixture implements AutoCloseable {
     ple.setContext(lc);
     ple.start();
 
-    if (builder.appender == null) {
-      appender = new ConsoleAppender<>( );
-    } else {
-      appender = builder.appender;
-    }
+    appender = builder.appender == null ? new ConsoleAppender<>() : builder.appender;
     appender.setContext(lc);
     appender.setName("Console");
     appender.setEncoder(ple);

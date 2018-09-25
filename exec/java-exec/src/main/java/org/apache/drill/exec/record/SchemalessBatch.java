@@ -109,7 +109,7 @@ public class SchemalessBatch implements CloseableRecordBatch {
   public VectorContainer getContainer() { return null; }
 
   @Override
-  public boolean isFailed() {
+  public boolean hasFailed() {
     return false;
   }
 

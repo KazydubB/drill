@@ -126,21 +126,21 @@ public abstract class BaseRootExec implements RootExec {
 
   @Override
   public void dumpOperators() {
-    final int numberOfOperatorsToDump = 2;
-    logger.error("Operator dump started: dumping last {} failed operators", numberOfOperatorsToDump);
+    final int numberOfBatchesToDump = 2;
+    logger.error("Operator dump started: dumping last {} failed batches", numberOfBatchesToDump);
     // As operators are stored in a 'flat' List there is a need to filter out the failed batch
     // and a few of its parent (actual number of batches is set by a constant defined above)
-    List<CloseableRecordBatch> operatorStack = new LinkedList<>();
+    List<CloseableRecordBatch> failedBatchStack = new LinkedList<>();
     for (int i = operators.size() - 1; i >= 0; i--) {
       CloseableRecordBatch batch = operators.get(i);
-      if (batch.isFailed()) {
-        operatorStack.add(0, batch);
-        if (operatorStack.size() == numberOfOperatorsToDump) {
+      if (batch.hasFailed()) {
+        failedBatchStack.add(0, batch);
+        if (failedBatchStack.size() == numberOfBatchesToDump) {
           break;
         }
       }
     }
-    for (CloseableRecordBatch batch : operatorStack) {
+    for (CloseableRecordBatch batch : failedBatchStack) {
       batch.dump();
     }
     logger.error("Operator dump completed.");

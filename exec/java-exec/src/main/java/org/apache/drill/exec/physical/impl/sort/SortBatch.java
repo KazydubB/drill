@@ -143,7 +143,6 @@ public class SortBatch extends AbstractRecordBatch<Sort> {
       kill(false);
       logger.error("Failure during query", ex);
       context.getExecutorState().fail(ex);
-      failed = true;
       return IterOutcome.STOP;
     }
   }

@@ -488,7 +488,6 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
       this.flattener = context.getImplementationClass(cg.getCodeGenerator());
       flattener.setup(context, incoming, this, transfers);
     } catch (ClassTransformationException | IOException e) {
-      failed = true;
       throw new SchemaChangeException("Failure while attempting to load generated class", e);
     }
     return true;

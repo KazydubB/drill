@@ -199,7 +199,6 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
             try {
               setupNewSchema();
             } catch (final SchemaChangeException e) {
-              failed = true;
               throw new RuntimeException(e);
             }
           }
@@ -212,7 +211,6 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
     }
 
     if (complexWriters != null && getLastKnownOutcome() == EMIT) {
-      failed = true;
       throw new UnsupportedOperationException("Currently functions producing complex types as output is not " +
         "supported in project list for subquery between LATERAL and UNNEST. Please re-write the query using this " +
         "function in the projection list of outermost query.");
