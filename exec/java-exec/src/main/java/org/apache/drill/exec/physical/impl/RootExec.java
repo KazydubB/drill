@@ -46,8 +46,8 @@ public interface RootExec extends AutoCloseable {
   void receivingFragmentFinished(FragmentHandle handle);
 
   /**
-   * Dump failed operator's state preceeded by its parent's state to logs. Invoked when there is a
+   * Dump failed batches' state preceded by its parent's state to logs. Invoked when there is a
    * failure during fragment execution.
    */
-  void dumpOperators();
+  void dumpBatches();
 }

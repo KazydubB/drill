@@ -64,9 +64,8 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
   private boolean first = true;
   private final UnorderedReceiver config;
   private final OperatorContext oContext;
-  // Shows whether an Exception was thrown during next() invocation
-  private boolean failed;
-  // Shows last outcome of next() invocation
+  // Represents last outcome of next(). If an Exception is thrown
+  // during the method's execution a value IterOutcome.STOP will be assigned.
   private IterOutcome lastOutcome;
 
   public enum Metric implements MetricDef {
@@ -212,7 +211,7 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
       lastOutcome = IterOutcome.STOP;
       return lastOutcome;
     } catch (Exception e) {
-      failed = true;
+      lastOutcome = IterOutcome.STOP;
       throw e;
     } finally {
       stats.stopProcessing();
@@ -289,6 +288,6 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
 
   @Override
   public boolean hasFailed() {
-    return failed || lastOutcome == IterOutcome.STOP;
+    return lastOutcome == IterOutcome.STOP;
   }
 }

@@ -139,7 +139,8 @@ class UserExceptionContext {
     StringBuilder sb = new StringBuilder();
 
     for (String context : contextList) {
-      sb.append(context).append(NEW_LINE);
+      sb.append(context)
+          .append(NEW_LINE);
     }
 
     if (includeSeeLogsMessage) {

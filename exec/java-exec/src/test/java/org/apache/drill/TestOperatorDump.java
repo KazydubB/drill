@@ -46,8 +46,8 @@ import static org.junit.Assert.assertTrue;
 
 public class TestOperatorDump extends ClusterTest {
 
-  private static final String ENTRY_DUMP_COMPLETED = "Operator dump completed";
-  private static final String ENTRY_DUMP_STARTED = "Operator dump started";
+  private static final String ENTRY_DUMP_COMPLETED = "Batch dump completed";
+  private static final String ENTRY_DUMP_STARTED = "Batch dump started";
 
   private LogFixture logFixture;
   private EventAwareContextAppender appender;

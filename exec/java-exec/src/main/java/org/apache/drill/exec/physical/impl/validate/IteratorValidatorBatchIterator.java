@@ -102,11 +102,6 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
    */
   private boolean validateBatches;
 
-  /**
-   * If set to {@code true} then there was an {@code Exception} thrown during invocation of next()
-   */
-  private boolean failed;
-
   public IteratorValidatorBatchIterator(RecordBatch incoming) {
     this.incoming = incoming;
     batchTypeName = incoming.getClass().getSimpleName();
@@ -328,14 +323,10 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
 
       return batchState;
     } catch (RuntimeException | Error e) {
-      failed = true;
       exceptionState = e;
       logger.trace("[#{}, on {}]: incoming next() exception: ({} ->) {}",
                    instNum, batchTypeName, prevBatchState, exceptionState,
                    exceptionState);
-      throw e;
-    } catch (Exception e) {
-      failed = true;
       throw e;
     }
   }
@@ -376,7 +367,7 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
 
   @Override
   public boolean hasFailed() {
-    return failed || batchState == STOP;
+    return exceptionState != null || batchState == STOP;
   }
 
   @Override

@@ -125,10 +125,10 @@ public abstract class BaseRootExec implements RootExec {
   }
 
   @Override
-  public void dumpOperators() {
+  public void dumpBatches() {
     final int numberOfBatchesToDump = 2;
-    logger.error("Operator dump started: dumping last {} failed batches", numberOfBatchesToDump);
-    // As operators are stored in a 'flat' List there is a need to filter out the failed batch
+    logger.error("Batch dump started: dumping last {} failed batches", numberOfBatchesToDump);
+    // As batches are stored in a 'flat' List there is a need to filter out the failed batch
     // and a few of its parent (actual number of batches is set by a constant defined above)
     List<CloseableRecordBatch> failedBatchStack = new LinkedList<>();
     for (int i = operators.size() - 1; i >= 0; i--) {
@@ -143,7 +143,7 @@ public abstract class BaseRootExec implements RootExec {
     for (CloseableRecordBatch batch : failedBatchStack) {
       batch.dump();
     }
-    logger.error("Operator dump completed.");
+    logger.error("Batch dump completed.");
   }
 
   @Override

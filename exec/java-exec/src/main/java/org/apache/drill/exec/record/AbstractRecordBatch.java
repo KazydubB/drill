@@ -47,9 +47,8 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
   protected final boolean unionTypeEnabled;
   protected BatchState state;
 
-  // Shows whether an Exception was thrown during next() invocation
-  private boolean failed;
-  // Shows last outcome of next() invocation
+  // Represents last outcome of next(). If an Exception is thrown
+  // during the method's execution a value IterOutcome.STOP will be assigned.
   private IterOutcome lastOutcome;
 
   protected AbstractRecordBatch(final T popConfig, final FragmentContext context) throws OutOfMemoryException {
@@ -187,10 +186,10 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
       }
       return lastOutcome;
     } catch (final SchemaChangeException e) {
-      failed = true;
+      lastOutcome = IterOutcome.STOP;
       throw new DrillRuntimeException(e);
     } catch (Exception e) {
-      failed = true;
+      lastOutcome = IterOutcome.STOP;
       throw e;
     } finally {
       stats.stopProcessing();
@@ -263,7 +262,7 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
 
   @Override
   public boolean hasFailed() {
-    return failed || lastOutcome == IterOutcome.STOP;
+    return lastOutcome == IterOutcome.STOP;
   }
 
   public RecordBatchStatsContext getRecordBatchStatsContext() {

@@ -53,8 +53,9 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
   private String spillFile;
   VectorAccessibleSerializable vas;
   private IterOutcome initialOutcome;
+  // Represents last outcome of next(). If an Exception is thrown
+  // during the method's execution a value IterOutcome.STOP will be assigned.
   private IterOutcome lastOutcome;
-  private boolean failed;
 
   public SpilledRecordbatch(String spillFile, int spilledBatches, FragmentContext context, BatchSchema schema, OperatorContext oContext, SpillSet spillSet) {
     this.context = context;
@@ -68,7 +69,6 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
     try {
       this.spillStream = this.spillSet.openForInput(spillFile);
     } catch (IOException e) {
-      failed = true;
       throw UserException.resourceError(e).build(HashAggBatch.logger);
     }
 
@@ -146,7 +146,7 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
     }
 
     if ( spillStream == null ) {
-      failed = true;
+      lastOutcome = IterOutcome.STOP;
       throw new IllegalStateException("Spill stream was null");
     }
 
@@ -165,10 +165,10 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
         container = vas.get();
       }
     } catch (IOException e) {
-      failed = true;
+      lastOutcome = IterOutcome.STOP;
       throw UserException.dataReadError(e).addContext("Failed reading from a spill file").build(HashAggTemplate.logger);
     } catch (Exception e) {
-      failed = true;
+      lastOutcome = IterOutcome.STOP;
       throw e;
     }
 
@@ -190,7 +190,7 @@ public class SpilledRecordbatch implements CloseableRecordBatch {
 
   @Override
   public boolean hasFailed() {
-    return failed || lastOutcome == IterOutcome.STOP;
+    return lastOutcome == IterOutcome.STOP;
   }
 
   /**
