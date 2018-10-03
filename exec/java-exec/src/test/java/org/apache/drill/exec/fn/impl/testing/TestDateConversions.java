@@ -30,6 +30,10 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertThat;
 
@@ -204,6 +208,102 @@ public class TestDateConversions extends BaseTestQuery {
     } catch (UserException e) {
       assertThat("No expected current \"FUNCTION ERROR\"", e.getMessage(), startsWith("FUNCTION ERROR"));
       throw e;
+    }
+  }
+
+  @Test
+  public void testToDateWithEmptyString() throws Exception {
+    try {
+      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
+      Object[] nullObj = new Object[] {null};
+      testBuilder().sqlQuery("SELECT to_date(dateCol, 'yyyy-MM-dd') d from cp.`dateWithEmptyStrings.json`")
+          .unOrdered()
+          .baselineColumns("d")
+          .baselineValues(nullObj)
+          .baselineValues(nullObj)
+          .baselineValues(LocalDate.of(1997, 12, 10))
+          .go();
+    } finally {
+      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
+    }
+  }
+
+  @Test
+  public void testToTimeWithEmptyString() throws Exception {
+    try {
+      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
+      Object[] nullObj = new Object[] {null};
+      testBuilder().sqlQuery("SELECT to_time(timeCol, 'hh:mm:ss') t from cp.`dateWithEmptyStrings.json`")
+          .unOrdered()
+          .baselineColumns("t")
+          .baselineValues(nullObj)
+          .baselineValues(nullObj)
+          .baselineValues(LocalTime.of(7, 21, 39))
+          .go();
+    } finally {
+      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
+    }
+  }
+
+  @Test
+  public void testToTimeStampWithEmptyString() throws Exception {
+    try {
+      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
+      Object[] nullObj = new Object[] {null};
+      testBuilder().sqlQuery("SELECT to_timestamp(timestampCol, 'yyyy-MM-dd hh:mm:ss') t from cp.`dateWithEmptyStrings.json`")
+          .unOrdered()
+          .baselineColumns("t")
+          .baselineValues(nullObj)
+          .baselineValues(nullObj)
+          .baselineValues(LocalDateTime.of(2003, 9, 11, 10, 1, 37))
+          .go();
+    } finally {
+      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
+    }
+  }
+
+  @Test
+  public void testToDateWithLiteralEmptyString() throws Exception {
+    try {
+      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
+      Object[] nullObj = new Object[] {null};
+      testBuilder().sqlQuery("SELECT to_date('', 'yyyy-MM-dd') d from (values(1))")
+          .unOrdered()
+          .baselineColumns("d")
+          .baselineValues(nullObj)
+          .go();
+    } finally {
+      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
+    }
+  }
+
+  @Test
+  public void testToTimeWithLiteralEmptyString() throws Exception {
+    try {
+      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
+      Object[] nullObj = new Object[] {null};
+      testBuilder().sqlQuery("SELECT to_time('', 'hh:mm:ss') d from (values(1))")
+          .unOrdered()
+          .baselineColumns("d")
+          .baselineValues(nullObj)
+          .go();
+    } finally {
+      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
+    }
+  }
+
+  @Test
+  public void testToTimeStampWithLiteralEmptyString() throws Exception {
+    try {
+      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
+      Object[] nullObj = new Object[] {null};
+      testBuilder().sqlQuery("SELECT to_timestamp('', 'yyyy-MM-dd hh:mm:ss') d from (values(1))")
+          .unOrdered()
+          .baselineColumns("d")
+          .baselineValues(nullObj)
+          .go();
+    } finally {
+      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
     }
   }
 }

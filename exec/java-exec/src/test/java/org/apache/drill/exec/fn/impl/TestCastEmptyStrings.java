@@ -92,4 +92,36 @@ public class TestCastEmptyStrings extends BaseTestQuery {
 
     test("alter system set `drill.exec.functions.cast_empty_string_to_null` = false;");
   }
+
+  @Test
+  public void testCastInputTypeNonNullableVarCharToDateTime() throws Exception {
+    // Enable the new cast functions (cast empty string "" to null)
+    test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
+    // Test Required VarChar
+    test("select cast('' as date) from cp.`emptyStrings.csv`");
+    test("select cast('' as time) from cp.`emptyStrings.csv`");
+    test("select cast('' as timestamp) from cp.`emptyStrings.csv`");
+    test("alter system set `drill.exec.functions.cast_empty_string_to_null` = false;");
+  }
+
+  @Test
+  public void testCastInputTypeNullableVarCharToDateTime() throws Exception {
+    // Enable the new cast functions (cast empty string "" to null)
+    test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
+    // Test Optional VarChar
+    test("select cast(dateCol as date) from cp.`dateWithEmptyStrings.json`");
+    test("select cast(timeCol as time) from cp.`dateWithEmptyStrings.json`");
+    test("select cast(timestampCol as timestamp) from cp.`dateWithEmptyStrings.json`");
+    test("alter system set `drill.exec.functions.cast_empty_string_to_null` = false;");
+  }
+
+  @Test
+  public void testCastInputTypeNonNullableVarCharToInterval() throws Exception {
+    // Enable the new cast functions (cast empty string "" to null)
+    test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
+    // Test Required VarChar
+    test("select cast('' as interval year) from cp.`emptyStrings.csv`");
+    test("select cast('' as interval day) from cp.`emptyStrings.csv`");
+    test("alter system set `drill.exec.functions.cast_empty_string_to_null` = false;");
+  }
 }

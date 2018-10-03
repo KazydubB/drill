@@ -69,6 +69,7 @@ public class CastFunctions {
     TYPE2FUNC.put(MinorType.DECIMAL38DENSE, "castDECIMAL38DENSE");
     TYPE2FUNC.put(MinorType.VARDECIMAL, "castVARDECIMAL");
 
+    // Numeric types
     CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.INT));
     CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.BIGINT));
     CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.FLOAT4));
@@ -78,66 +79,46 @@ public class CastFunctions {
     CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.DECIMAL28SPARSE));
     CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.DECIMAL38SPARSE));
     CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.VARDECIMAL));
+    // Date types
+    CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.DATE));
+    CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.TIME));
+    CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.TIMESTAMP));
+    // Interval types
+    CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.INTERVAL));
+    CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.INTERVALDAY));
+    CAST_FUNC_REPLACEMENT_NEEDED.add(TYPE2FUNC.get(MinorType.INTERVALYEAR));
 
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.INT), "castEmptyStringVarCharToNullableINT");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.BIGINT), "castEmptyStringVarCharToNullableBIGINT");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.FLOAT4), "castEmptyStringVarCharToNullableFLOAT4");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.FLOAT8), "castEmptyStringVarCharToNullableFLOAT8");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.DECIMAL9), "castEmptyStringVarCharToNullableDECIMAL9");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.DECIMAL18), "castEmptyStringVarCharToNullableDECIMAL18");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.DECIMAL28SPARSE), "castEmptyStringVarCharToNullableDECIMAL28SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.DECIMAL38SPARSE), "castEmptyStringVarCharToNullableDECIMAL38SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.VARDECIMAL), "castEmptyStringVarCharToNullableVARDECIMAL");
+    setupReplacementFunctions(MinorType.INT, "NullableINT");
+    setupReplacementFunctions(MinorType.BIGINT, "NullableBIGINT");
+    setupReplacementFunctions(MinorType.FLOAT4, "NullableFLOAT4");
+    setupReplacementFunctions(MinorType.FLOAT8, "NullableFLOAT8");
+    setupReplacementFunctions(MinorType.DECIMAL9, "NullableDECIMAL9");
+    setupReplacementFunctions(MinorType.DECIMAL18, "NullableDECIMAL18");
+    setupReplacementFunctions(MinorType.DECIMAL28SPARSE, "NullableDECIMAL28SPARSE");
+    setupReplacementFunctions(MinorType.DECIMAL38SPARSE, "NullableDECIMAL38SPARSE");
+    setupReplacementFunctions(MinorType.VARDECIMAL, "NullableVARDECIMAL");
 
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.INT), "castEmptyStringVar16CharToNullableINT");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.BIGINT), "castEmptyStringVar16CharToNullableBIGINT");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.FLOAT4), "castEmptyStringVar16CharToNullableFLOAT4");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.FLOAT8), "castEmptyStringVar16CharToNullableFLOAT8");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.DECIMAL9), "castEmptyStringVar16CharToNullableDECIMAL9");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.DECIMAL18), "castEmptyStringVar16CharToNullableDECIMAL18");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.DECIMAL28SPARSE), "castEmptyStringVar16CharToNullableDECIMAL28SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.DECIMAL38SPARSE), "castEmptyStringVar16CharToNullableDECIMAL38SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.VARDECIMAL), "castEmptyStringVar16CharToNullableVARDECIMAL");
+    setupReplacementFunctions(MinorType.DATE, "NULLABLEDATE");
+    setupReplacementFunctions(MinorType.TIME, "NULLABLETIME");
+    setupReplacementFunctions(MinorType.TIMESTAMP, "NULLABLETIMESTAMP");
 
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.INT), "castEmptyStringVarBinaryToNullableINT");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.BIGINT), "castEmptyStringVarBinaryToNullableBIGINT");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.FLOAT4), "castEmptyStringVarBinaryToNullableFLOAT4");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.FLOAT8), "castEmptyStringVarBinaryToNullableFLOAT8");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.DECIMAL9), "castEmptyStringVarBinaryToNullableDECIMAL9");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.DECIMAL18), "castEmptyStringVarBinaryToNullableDECIMAL18");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.DECIMAL28SPARSE), "castEmptyStringVarBinaryToNullableDECIMAL28SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.DECIMAL38SPARSE), "castEmptyStringVarBinaryToNullableDECIMAL38SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.VARDECIMAL), "castEmptyStringVarBinaryToNullableVARDECIMAL");
+    setupReplacementFunctions(MinorType.INTERVAL, "NullableINTERVAL");
+    setupReplacementFunctions(MinorType.INTERVALDAY, "NullableINTERVALDAY");
+    setupReplacementFunctions(MinorType.INTERVALYEAR, "NullableINTERVALYEAR");
+  }
 
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.INT), "castEmptyStringNullableVarCharToNullableINT");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.BIGINT), "castEmptyStringNullableVarCharToNullableBIGINT");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.FLOAT4), "castEmptyStringNullableVarCharToNullableFLOAT4");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.FLOAT8), "castEmptyStringNullableVarCharToNullableFLOAT8");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.DECIMAL9), "castEmptyStringNullableVarCharToNullableDECIMAL9");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.DECIMAL18), "castEmptyStringNullableVarCharToNullableDECIMAL18");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.DECIMAL28SPARSE), "castEmptyStringNullableVarCharToNullableDECIMAL28SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.DECIMAL38SPARSE), "castEmptyStringNullableVarCharToNullableDECIMAL38SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARCHAR.put(TYPE2FUNC.get(MinorType.VARDECIMAL), "castEmptyStringNullableVarCharToNullableVARDECIMAL");
+  private static void setupReplacementFunctions(MinorType type, String toType) {
+    String functionName = TYPE2FUNC.get(type);
 
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.INT), "castEmptyStringNullableVar16CharToNullableINT");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.BIGINT), "castEmptyStringNullableVar16CharToNullableBIGINT");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.FLOAT4), "castEmptyStringNullableVar16CharToNullableFLOAT4");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.FLOAT8), "castEmptyStringNullableVar16CharToNullableFLOAT8");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.DECIMAL9), "castEmptyStringNullableVar16CharToNullableDECIMAL9");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.DECIMAL18), "castEmptyStringNullableVar16CharToNullableDECIMAL18");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.DECIMAL28SPARSE), "castEmptyStringNullableVar16CharToNullableDECIMAL28SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.DECIMAL38SPARSE), "castEmptyStringNullableVar16CharToNullableDECIMAL38SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VAR16CHAR.put(TYPE2FUNC.get(MinorType.VARDECIMAL), "castEmptyStringNullableVar16CharToNullableVARDECIMAL");
+    CAST_FUNC_REPLACEMENT_NEEDED.add(functionName);
 
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.INT), "castEmptyStringNullableVarBinaryToNullableINT");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.BIGINT), "castEmptyStringNullableVarBinaryToNullableBIGINT");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.FLOAT4), "castEmptyStringNullableVarBinaryToNullableFLOAT4");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.FLOAT8), "castEmptyStringNullableVarBinaryToNullableFLOAT8");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.DECIMAL9), "castEmptyStringNullableVarBinaryToNullableDECIMAL9");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.DECIMAL18), "castEmptyStringNullableVarBinaryToNullableDECIMAL18");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.DECIMAL28SPARSE), "castEmptyStringNullableVarBinaryToNullableDECIMAL28SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.DECIMAL38SPARSE), "castEmptyStringNullableVarBinaryToNullableDECIMAL38SPARSE");
-    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARBINARY.put(TYPE2FUNC.get(MinorType.VARDECIMAL), "castEmptyStringNullableVarBinaryToNullableVARDECIMAL");
+    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARCHAR.put(functionName, "castEmptyStringVarCharTo" + toType);
+    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VAR16CHAR.put(functionName, "castEmptyStringVar16CharTo" + toType);
+    CAST_FUNC_REPLACEMENT_FROM_NONNULLABLE_VARBINARY.put(functionName, "castEmptyStringVarBinaryTo" + toType);
+
+    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARCHAR.put(functionName, "castEmptyStringNullableVarCharTo" + toType);
+    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VAR16CHAR.put(functionName, "castEmptyStringNullableVar16CharTo" + toType);
+    CAST_FUNC_REPLACEMENT_FROM_NULLABLE_VARBINARY.put(functionName, "castEmptyStringNullableVarBinaryTo" + toType);
   }
 
   /**

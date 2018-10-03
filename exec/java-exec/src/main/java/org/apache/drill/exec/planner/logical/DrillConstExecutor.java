@@ -17,6 +17,11 @@
  */
 package org.apache.drill.exec.planner.logical;
 
+import org.apache.calcite.avatica.util.TimeUnit;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.drill.shaded.guava.com.google.common.base.Function;
 import org.apache.drill.shaded.guava.com.google.common.collect.ImmutableList;
 import io.netty.buffer.DrillBuf;
@@ -159,7 +164,19 @@ public class DrillConstExecutor implements RexExecutor {
             .message(message)
             .build(logger);
         }
-        reducedValues.add(rexBuilder.makeNullLiteral(typeFactory.createSqlType(sqlTypeName)));
+
+        RelDataType type;
+        if (sqlTypeName.getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
+          type = typeFactory.createSqlIntervalType(
+              new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.MINUTE, SqlParserPos.ZERO));
+        } else if (sqlTypeName.getFamily() == SqlTypeFamily.INTERVAL_YEAR_MONTH) {
+          type = typeFactory.createSqlIntervalType(
+              new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO));
+        } else {
+          type = typeFactory.createSqlType(sqlTypeName);
+        }
+
+        reducedValues.add(rexBuilder.makeNullLiteral(type));
         continue;
       }
 

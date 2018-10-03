@@ -61,9 +61,29 @@
     {from: "VarChar", to: "TimeStamp", major: "VarCharDate", alias: "timestamptype"},
     {from: "VarChar", to: "Time", major: "VarCharDate", alias: "timetype"},
 
+    {from: "VarChar", to: "NullableDate", major: "EmptyStringVarCharDateComplex"},
+    {from: "VarChar", to: "NullableTimeStamp", major: "EmptyStringVarCharDateComplex"},
+    {from: "VarChar", to: "NullableTime", major: "EmptyStringVarCharDateComplex"},
+
+    {from: "NullableVarChar", to: "NullableDate", major: "EmptyStringVarCharDateComplex"},
+    {from: "NullableVarChar", to: "NullableTimeStamp", major: "EmptyStringVarCharDateComplex"},
+    {from: "NullableVarChar", to: "NullableTime", major: "EmptyStringVarCharDateComplex"},
+
     {from: "VarBinary", to: "Date", major: "VarBinaryDate", alias: "datetype"},
     {from: "VarBinary", to: "TimeStamp", major: "VarBinaryDate", alias: "timestamptype"},
     {from: "VarBinary", to: "Time", major: "VarBinaryDate", alias: "timetype"},
+
+    {from: "VarBinary", to: "NullableDate", major: "EmptyStringVarCharDateComplex"},
+    {from: "VarBinary", to: "NullableTimeStamp", major: "EmptyStringVarCharDateComplex"},
+    {from: "VarBinary", to: "NullableTime", major: "EmptyStringVarCharDateComplex"},
+
+    {from: "NullableVarBinary", to: "NullableDate", major: "EmptyStringVarCharDateComplex"},
+    {from: "NullableVarBinary", to: "NullableTimeStamp", major: "EmptyStringVarCharDateComplex"},
+    {from: "NullableVarBinary", to: "NullableTime", major: "EmptyStringVarCharDateComplex"},
+
+    {from: "NullableVar16Char", to: "NullableDate", major: "EmptyStringVarCharDateComplex"},
+    {from: "NullableVar16Char", to: "NullableTimeStamp", major: "EmptyStringVarCharDateComplex"},
+    {from: "NullableVar16Char", to: "NullableTime", major: "EmptyStringVarCharDateComplex"},
 
     {from: "Date", to: "VarChar", major: "DateVarChar", bufferLength: "10"}
     {from: "TimeStamp", to: "VarChar", major: "DateVarChar", bufferLength: "23"},
@@ -72,6 +92,14 @@
     {from: "VarChar", to: "Interval", major: "VarCharInterval"},
     {from: "VarChar", to: "IntervalDay", major: "VarCharInterval"},
     {from: "VarChar", to: "IntervalYear", major: "VarCharInterval"},
+
+    {from: "VarChar", to: "NullableInterval", major: "EmptyStringVarCharIntervalComplex"},
+    {from: "VarChar", to: "NullableIntervalDay", major: "EmptyStringVarCharIntervalComplex"},
+    {from: "VarChar", to: "NullableIntervalYear", major: "EmptyStringVarCharIntervalComplex"},
+
+    {from: "NullableVarChar", to: "NullableInterval", major: "EmptyStringVarCharIntervalComplex"},
+    {from: "NullableVarChar", to: "NullableIntervalDay", major: "EmptyStringVarCharIntervalComplex"},
+    {from: "NullableVarChar", to: "NullableIntervalYear", major: "EmptyStringVarCharIntervalComplex"},
 
     {from: "Interval", to: "VarChar", major: "IntervalVarChar", bufferLength: "65"},
     {from: "IntervalYear", to: "VarChar", major: "IntervalYearVarChar", bufferLength: "35"},

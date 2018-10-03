@@ -18,9 +18,13 @@
 <@pp.dropOutputFile />
 
 <#list cast.types as type>
-<#if type.major == "VarCharInterval">  <#-- Template to convert from VarChar to Interval, IntervalYear, IntervalDay -->
+<#if type.major == "VarCharInterval" || type.major == "EmptyStringVarCharIntervalComplex">  <#-- Template to convert from VarChar to Interval, IntervalYear, IntervalDay -->
 
+<#if type.major == "VarCharInterval">
 <@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/gcast/Cast${type.from}To${type.to}.java" />
+<#elseif type.major == "EmptyStringVarCharIntervalComplex">
+<@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/gcast/CastEmptyString${type.from}To${type.to}.java" />
+</#if>
 
 <#include "/@includes/license.ftl" />
 
@@ -46,8 +50,13 @@ import io.netty.buffer.DrillBuf;
  * This class is generated using freemarker and the ${.template_name} template.
  */
 @SuppressWarnings("unused")
+<#if type.major == "VarCharInterval">
 @FunctionTemplate(name = "cast${type.to?upper_case}", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls=NullHandling.NULL_IF_NULL)
 public class Cast${type.from}To${type.to} implements DrillSimpleFunc {
+<#elseif type.major == "EmptyStringVarCharIntervalComplex">
+@FunctionTemplate(name = "castEmptyString${type.from}To${type.to?upper_case}", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.INTERNAL)
+public class CastEmptyString${type.from}To${type.to} implements DrillSimpleFunc {
+</#if>
 
   @Param ${type.from}Holder in;
   @Output ${type.to}Holder out;
@@ -56,34 +65,41 @@ public class Cast${type.from}To${type.to} implements DrillSimpleFunc {
   }
 
   public void eval() {
+    <#if type.major == "EmptyStringVarCharIntervalComplex">
+    if(<#if type.from == "NullableVarChar" || type.from == "NullableVar16Char" || type.from == "NullableVarBinary">in.isSet == 0 || </#if>in.end == in.start) {
+      out.isSet = 0;
+      return;
+    }
+    out.isSet = 1;
+    </#if>
 
-      byte[] buf = new byte[in.end - in.start];
-      in.buffer.getBytes(in.start, buf, 0, in.end - in.start);
-      String input = new String(buf, com.google.common.base.Charsets.UTF_8);
+    byte[] buf = new byte[in.end - in.start];
+    in.buffer.getBytes(in.start, buf, 0, in.end - in.start);
+    String input = new String(buf, com.google.common.base.Charsets.UTF_8);
 
-      // Parse the ISO format
-      org.joda.time.Period period = org.joda.time.Period.parse(input);
+    // Parse the ISO format
+    org.joda.time.Period period = org.joda.time.Period.parse(input);
 
-      <#if type.to == "Interval">
-      out.months       = (period.getYears() * org.apache.drill.exec.vector.DateUtilities.yearsToMonths) + period.getMonths();
+    <#if type.to == "Interval" || type.to == "NullableInterval">
+    out.months       = (period.getYears() * org.apache.drill.exec.vector.DateUtilities.yearsToMonths) + period.getMonths();
 
-      out.days         = period.getDays();
+    out.days         = period.getDays();
 
-      out.milliseconds = (period.getHours() * org.apache.drill.exec.vector.DateUtilities.hoursToMillis) +
-                         (period.getMinutes() * org.apache.drill.exec.vector.DateUtilities.minutesToMillis) +
-                         (period.getSeconds() * org.apache.drill.exec.vector.DateUtilities.secondsToMillis) +
-                         (period.getMillis());
+    out.milliseconds = (period.getHours() * org.apache.drill.exec.vector.DateUtilities.hoursToMillis) +
+                       (period.getMinutes() * org.apache.drill.exec.vector.DateUtilities.minutesToMillis) +
+                       (period.getSeconds() * org.apache.drill.exec.vector.DateUtilities.secondsToMillis) +
+                       (period.getMillis());
 
-      <#elseif type.to == "IntervalDay">
-      out.days         = period.getDays();
+    <#elseif type.to == "IntervalDay" || type.to == "NullableIntervalDay">
+    out.days         = period.getDays();
 
-      out.milliseconds = (period.getHours() * org.apache.drill.exec.vector.DateUtilities.hoursToMillis) +
-                         (period.getMinutes() * org.apache.drill.exec.vector.DateUtilities.minutesToMillis) +
-                         (period.getSeconds() * org.apache.drill.exec.vector.DateUtilities.secondsToMillis) +
-                         (period.getMillis());
-      <#elseif type.to == "IntervalYear">
-      out.value = (period.getYears() * org.apache.drill.exec.vector.DateUtilities.yearsToMonths) + period.getMonths();
-      </#if>
+    out.milliseconds = (period.getHours() * org.apache.drill.exec.vector.DateUtilities.hoursToMillis) +
+                       (period.getMinutes() * org.apache.drill.exec.vector.DateUtilities.minutesToMillis) +
+                       (period.getSeconds() * org.apache.drill.exec.vector.DateUtilities.secondsToMillis) +
+                       (period.getMillis());
+    <#elseif type.to == "IntervalYear" || type.to == "NullableIntervalYear">
+    out.value = (period.getYears() * org.apache.drill.exec.vector.DateUtilities.yearsToMonths) + period.getMonths();
+    </#if>
   }
 }
 </#if> <#-- type.major -->
