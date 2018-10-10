@@ -19,12 +19,17 @@
     {truncInputTypes: ["Date", "TimeStamp", "Time", "Interval", "IntervalDay", "IntervalYear"] },
     {truncUnits : ["Second", "Minute", "Hour", "Day", "Month", "Year", "Week", "Quarter", "Decade", "Century", "Millennium" ] },
 
-    {emptyStringToDateConversion: [
-        {from: "VarChar",  to: "NullableDate"},
-        {from: "NullableVarChar",  to: "NullableDate"},
-        {from: "VarChar",  to: "NullableTime"},
-        {from: "NullableVarChar",  to: "NullableTime"},
-        {from: "VarChar",  to: "NullableTimeStamp"},
-        {from: "NullableVarChar",  to: "NullableTimeStamp"}
-    ]}
+    {
+        varCharToDate: [
+            {from: "VarChar", to: "Date", nullableOutput: false},
+            {from: "VarChar", to: "NullableDate", nullableOutput: true},
+            {from: "NullableVarChar", to: "NullableDate", nullableOutput: true},
+            {from: "VarChar", to: "Time", nullableOutput: false},
+            {from: "VarChar", to: "NullableTime", nullableOutput: true},
+            {from: "NullableVarChar",  to: "NullableTime", nullableOutput: true},
+            {from: "VarChar", to: "TimeStamp", nullableOutput: false},
+            {from: "VarChar", to: "NullableTimeStamp", nullableOutput: true},
+            {from: "NullableVarChar", to: "NullableTimeStamp", nullableOutput: true}
+        ]
+    }
 }

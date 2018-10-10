@@ -32,7 +32,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.drill.common.expression.fn.ToFunctions;
+import org.apache.drill.common.expression.fn.FunctionsUtil;
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.drill.shaded.guava.com.google.common.collect.Sets;
 import org.apache.drill.shaded.guava.com.google.common.io.Files;
@@ -42,7 +42,6 @@ import org.apache.drill.common.config.CommonConstants;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.FunctionCall;
-import org.apache.drill.common.expression.fn.CastFunctions;
 import org.apache.drill.common.scanner.ClassPathScanner;
 import org.apache.drill.common.scanner.RunTimeScan;
 import org.apache.drill.common.scanner.persistence.ScanResult;
@@ -211,10 +210,8 @@ public class FunctionImplementationRegistry implements FunctionLookupContext, Au
     MajorType majorType =  functionCall.args.get(0).getMajorType();
     DataMode dataMode = majorType.getMode();
     MinorType minorType = majorType.getMinorType();
-    if (CastFunctions.isReplacementNeeded(funcName, minorType)) {
-      funcName = CastFunctions.getReplacingCastFunction(funcName, dataMode, minorType);
-    } else if (ToFunctions.isReplacementNeeded(funcName, minorType)) {
-      funcName = ToFunctions.getReplacingFunction(funcName, dataMode, minorType);
+    if (FunctionsUtil.isReplacementNeeded(funcName, minorType)) {
+      funcName = FunctionsUtil.getReplacingFunction(funcName, dataMode, minorType);
     }
 
     return funcName;

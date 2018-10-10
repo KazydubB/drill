@@ -18,12 +18,12 @@
 <@pp.dropOutputFile />
 
 <#list cast.types as type>
-<#if type.major == "VarCharDate" || type.major == "VarBinaryDate" || type.major == "EmptyStringVarCharDateComplex">  <#-- Template to convert from VarChar/ VarBinary to Date, Time, TimeStamp -->
+<#if type.major == "VarCharDate" || type.major == "VarBinaryDate" || type.major == "NullableVarCharDate">  <#-- Template to convert from VarChar/ VarBinary to Date, Time, TimeStamp -->
 
 <#if type.major == "VarCharDate" || type.major == "VarBinaryDate">
 <@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/gcast/Cast${type.from}To${type.to}.java" />
-<#elseif type.major == "EmptyStringVarCharDateComplex">
-<@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/gcast/CastEmptyString${type.from}To${type.to}.java" />
+<#elseif type.major == "NullableVarCharDate">
+<@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/gcast/CastNullableVarChar${type.from}To${type.to}.java" />
 </#if>
 
 <#include "/@includes/license.ftl" />
@@ -54,9 +54,9 @@ import io.netty.buffer.DrillBuf;
 @FunctionTemplate(names = {"cast${type.to?upper_case}", "${type.alias}"}, scope = FunctionTemplate.FunctionScope.SIMPLE, nulls=NullHandling.NULL_IF_NULL, 
   costCategory = FunctionCostCategory.COMPLEX)
 public class Cast${type.from}To${type.to} implements DrillSimpleFunc {
-<#elseif type.major == "EmptyStringVarCharDateComplex">
+<#elseif type.major == "NullableVarCharDate">
 @FunctionTemplate(name = "castEmptyString${type.from}To${type.to?upper_case}", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.INTERNAL)
-public class CastEmptyString${type.from}To${type.to} implements DrillSimpleFunc {
+public class CastNullableVarChar${type.from}To${type.to} implements DrillSimpleFunc {
 </#if>
 
   @Param ${type.from}Holder in;
@@ -65,7 +65,7 @@ public class CastEmptyString${type.from}To${type.to} implements DrillSimpleFunc 
   public void setup() { }
 
   public void eval() {
-    <#if type.major == "EmptyStringVarCharDateComplex">
+    <#if type.major == "NullableVarCharDate">
     if(<#if type.from == "NullableVarChar" || type.from == "NullableVar16Char" || type.from == "NullableVarBinary">in.isSet == 0 || </#if>in.end == in.start) {
       out.isSet = 0;
       return;
@@ -73,20 +73,20 @@ public class CastEmptyString${type.from}To${type.to} implements DrillSimpleFunc 
     out.isSet = 1;
     </#if>
 
-    <#if type.to != "Date" && type.to != "NullableDate">
+    <#if !type.to?contains("Date")>
     byte[] buf = new byte[in.end - in.start];
     in.buffer.getBytes(in.start, buf, 0, in.end - in.start);
     String input = new String(buf, com.google.common.base.Charsets.UTF_8);
     </#if>
-      
-    <#if type.to == "Date" || type.to == "NullableDate">
+
+    <#if type.to?contains("Date")>
     out.value = org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getDate(in.buffer, in.start, in.end);
 
-    <#elseif type.to == "TimeStamp" || type.to == "NullableTimeStamp">
+    <#elseif type.to?contains("TimeStamp")>
     java.time.LocalDateTime parsedDateTime = org.apache.drill.exec.expr.fn.impl.DateUtility.parseBest(input);
     out.value = parsedDateTime.toInstant(java.time.ZoneOffset.UTC).toEpochMilli();
 
-    <#elseif type.to == "Time" || type.to == "NullableTime">
+    <#elseif type.to?contains("Time")>
     java.time.format.DateTimeFormatter f = org.apache.drill.exec.expr.fn.impl.DateUtility.getTimeFormatter();
     out.value = (int) (java.time.LocalTime.parse(input, f).atDate(java.time.LocalDate.ofEpochDay(0)).toInstant(java.time.ZoneOffset.UTC).toEpochMilli());
     </#if>

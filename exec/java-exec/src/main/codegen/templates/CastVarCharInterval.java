@@ -18,11 +18,11 @@
 <@pp.dropOutputFile />
 
 <#list cast.types as type>
-<#if type.major == "VarCharInterval" || type.major == "EmptyStringVarCharIntervalComplex">  <#-- Template to convert from VarChar to Interval, IntervalYear, IntervalDay -->
+<#if type.major == "VarCharInterval" || type.major == "NullableVarCharInterval">  <#-- Template to convert from VarChar to Interval, IntervalYear, IntervalDay -->
 
 <#if type.major == "VarCharInterval">
 <@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/gcast/Cast${type.from}To${type.to}.java" />
-<#elseif type.major == "EmptyStringVarCharIntervalComplex">
+<#elseif type.major == "NullableVarCharInterval">
 <@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/gcast/CastEmptyString${type.from}To${type.to}.java" />
 </#if>
 
@@ -51,10 +51,14 @@ import io.netty.buffer.DrillBuf;
  */
 @SuppressWarnings("unused")
 <#if type.major == "VarCharInterval">
-@FunctionTemplate(name = "cast${type.to?upper_case}", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls=NullHandling.NULL_IF_NULL)
+@FunctionTemplate(name = "cast${type.to?upper_case}",
+    scope = FunctionTemplate.FunctionScope.SIMPLE,
+    nulls = NullHandling.NULL_IF_NULL)
 public class Cast${type.from}To${type.to} implements DrillSimpleFunc {
-<#elseif type.major == "EmptyStringVarCharIntervalComplex">
-@FunctionTemplate(name = "castEmptyString${type.from}To${type.to?upper_case}", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.INTERNAL)
+<#elseif type.major == "NullableVarCharInterval">
+@FunctionTemplate(name = "castEmptyString${type.from}To${type.to?upper_case}",
+    scope = FunctionTemplate.FunctionScope.SIMPLE,
+    nulls = NullHandling.INTERNAL)
 public class CastEmptyString${type.from}To${type.to} implements DrillSimpleFunc {
 </#if>
 
@@ -65,8 +69,8 @@ public class CastEmptyString${type.from}To${type.to} implements DrillSimpleFunc 
   }
 
   public void eval() {
-    <#if type.major == "EmptyStringVarCharIntervalComplex">
-    if(<#if type.from == "NullableVarChar" || type.from == "NullableVar16Char" || type.from == "NullableVarBinary">in.isSet == 0 || </#if>in.end == in.start) {
+    <#if type.major == "NullableVarCharInterval">
+    if (<#if type.from == "NullableVarChar" || type.from == "NullableVar16Char" || type.from == "NullableVarBinary">in.isSet == 0 || </#if>in.end == in.start) {
       out.isSet = 0;
       return;
     }

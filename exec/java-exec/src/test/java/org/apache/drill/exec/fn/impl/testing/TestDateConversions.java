@@ -22,6 +22,7 @@ import org.apache.drill.test.BaseTestQuery;
 import org.apache.drill.categories.SqlFunctionTest;
 import org.apache.drill.categories.UnlikelyTest;
 import org.apache.drill.common.exceptions.UserException;
+import org.apache.drill.test.TestBuilder;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,6 +41,10 @@ import static org.junit.Assert.assertThat;
 @RunWith(JMockit.class)
 @Category({UnlikelyTest.class, SqlFunctionTest.class})
 public class TestDateConversions extends BaseTestQuery {
+
+  private static final String ENABLE_CAST_EMPTY_STRING_AS_NULL_QUERY =
+      "alter system set `drill.exec.functions.cast_empty_string_to_null` = true;";
+
   @BeforeClass
   public static void generateTestFiles() throws IOException {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(dirTestWatcher.getRootDir(), "joda_postgres_date.json")))) {
@@ -213,97 +218,51 @@ public class TestDateConversions extends BaseTestQuery {
 
   @Test
   public void testToDateWithEmptyString() throws Exception {
-    try {
-      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
-      Object[] nullObj = new Object[] {null};
-      testBuilder().sqlQuery("SELECT to_date(dateCol, 'yyyy-MM-dd') d from cp.`dateWithEmptyStrings.json`")
-          .unOrdered()
-          .baselineColumns("d")
-          .baselineValues(nullObj)
-          .baselineValues(nullObj)
-          .baselineValues(LocalDate.of(1997, 12, 10))
-          .go();
-    } finally {
-      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
-    }
+    String query = "SELECT to_date(dateCol, 'yyyy-MM-dd') d from cp.`dateWithEmptyStrings.json`";
+    testToDateTimeFunctionWithEmptyStringsAsNull(query, "d", null, null, LocalDate.of(1997, 12, 10));
   }
 
   @Test
   public void testToTimeWithEmptyString() throws Exception {
-    try {
-      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
-      Object[] nullObj = new Object[] {null};
-      testBuilder().sqlQuery("SELECT to_time(timeCol, 'hh:mm:ss') t from cp.`dateWithEmptyStrings.json`")
-          .unOrdered()
-          .baselineColumns("t")
-          .baselineValues(nullObj)
-          .baselineValues(nullObj)
-          .baselineValues(LocalTime.of(7, 21, 39))
-          .go();
-    } finally {
-      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
-    }
+    String query = "SELECT to_time(timeCol, 'hh:mm:ss') t from cp.`dateWithEmptyStrings.json`";
+    testToDateTimeFunctionWithEmptyStringsAsNull(query, "t", null, null, LocalTime.of(7, 21, 39));
   }
 
   @Test
   public void testToTimeStampWithEmptyString() throws Exception {
-    try {
-      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
-      Object[] nullObj = new Object[] {null};
-      testBuilder().sqlQuery("SELECT to_timestamp(timestampCol, 'yyyy-MM-dd hh:mm:ss') t from cp.`dateWithEmptyStrings.json`")
-          .unOrdered()
-          .baselineColumns("t")
-          .baselineValues(nullObj)
-          .baselineValues(nullObj)
-          .baselineValues(LocalDateTime.of(2003, 9, 11, 10, 1, 37))
-          .go();
-    } finally {
-      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
-    }
+    String query = "SELECT to_timestamp(timestampCol, 'yyyy-MM-dd hh:mm:ss') t from cp.`dateWithEmptyStrings.json`";
+    testToDateTimeFunctionWithEmptyStringsAsNull(query, "t", null, null, LocalDateTime.of(2003, 9, 11, 10, 1, 37));
   }
 
   @Test
   public void testToDateWithLiteralEmptyString() throws Exception {
-    try {
-      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
-      Object[] nullObj = new Object[] {null};
-      testBuilder().sqlQuery("SELECT to_date('', 'yyyy-MM-dd') d from (values(1))")
-          .unOrdered()
-          .baselineColumns("d")
-          .baselineValues(nullObj)
-          .go();
-    } finally {
-      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
-    }
+    Object[] nullObj = new Object[] {null};
+    testToDateTimeFunctionWithEmptyStringsAsNull("SELECT to_date('', 'yyyy-MM-dd') d from (values(1))", "d", nullObj);
   }
 
   @Test
   public void testToTimeWithLiteralEmptyString() throws Exception {
-    try {
-      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
-      Object[] nullObj = new Object[] {null};
-      testBuilder().sqlQuery("SELECT to_time('', 'hh:mm:ss') d from (values(1))")
-          .unOrdered()
-          .baselineColumns("d")
-          .baselineValues(nullObj)
-          .go();
-    } finally {
-      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
-    }
+    Object[] nullObj = new Object[] {null};
+    testToDateTimeFunctionWithEmptyStringsAsNull("SELECT to_time('', 'hh:mm:ss') d from (values(1))", "d", nullObj);
   }
 
   @Test
   public void testToTimeStampWithLiteralEmptyString() throws Exception {
-    try {
-      test("alter system set `drill.exec.functions.cast_empty_string_to_null` = true;");
-      Object[] nullObj = new Object[] {null};
-      testBuilder().sqlQuery("SELECT to_timestamp('', 'yyyy-MM-dd hh:mm:ss') d from (values(1))")
-          .unOrdered()
-          .baselineColumns("d")
-          .baselineValues(nullObj)
-          .go();
-    } finally {
-      test("alter system reset `drill.exec.functions.cast_empty_string_to_null`;");
+    Object[] nullObj = new Object[] {null};
+    testToDateTimeFunctionWithEmptyStringsAsNull(
+        "SELECT to_timestamp('', 'yyyy-MM-dd hh:mm:ss') d from (values(1))", "d", nullObj);
+  }
+
+  private void testToDateTimeFunctionWithEmptyStringsAsNull(
+      String query, String baselineColumn, Object... baselineValues) throws Exception {
+    TestBuilder testBuilder = testBuilder()
+        .optionSettingQueriesForTestQuery(ENABLE_CAST_EMPTY_STRING_AS_NULL_QUERY)
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns(baselineColumn);
+    for (Object value : baselineValues) {
+      testBuilder.baselineValues(value);
     }
+    testBuilder.go();
   }
 }

@@ -19,9 +19,13 @@ import org.apache.drill.exec.expr.annotations.Workspace;
 
 <@pp.dropOutputFile/>
 
-<#list dateIntervalFunc.dates as type>
+<#list dateIntervalFunc.varCharToDate as convert>
 
-<@pp.changeOutputFile name = "/org/apache/drill/exec/expr/fn/impl/SqlTo${type}.java"/>
+<#if !convert.nullableOutput>
+<@pp.changeOutputFile name = "/org/apache/drill/exec/expr/fn/impl/SqlTo${convert.to}.java"/>
+<#else>
+<@pp.changeOutputFile name = "/org/apache/drill/exec/expr/fn/impl/G${convert.from}SqlTo${convert.to}.java"/>
+</#if>
 
 <#include "/@includes/license.ftl"/>
 
@@ -38,16 +42,22 @@ import org.apache.drill.exec.expr.holders.*;
 /*
  * This class is generated using freemarker and the ${.template_name} template.
  */
+<#if !convert.nullableOutput>
+@FunctionTemplate(name = "sql_to_${convert.to?lower_case}",
+    scope = FunctionTemplate.FunctionScope.SIMPLE,
+    nulls = NullHandling.NULL_IF_NULL)
+public class SqlTo${convert.to} implements DrillSimpleFunc {
+<#else>
+@FunctionTemplate(name = "convert${convert.from}SqlTo${convert.to}",
+    scope = FunctionTemplate.FunctionScope.SIMPLE,
+    nulls = NullHandling.INTERNAL)
+public class G${convert.from}SqlTo${convert.to} implements DrillSimpleFunc {
+</#if>
 
-@FunctionTemplate(name = "sql_to_${type?lower_case}",
-                  scope = FunctionTemplate.FunctionScope.SIMPLE,
-                  nulls = NullHandling.NULL_IF_NULL)
-public class SqlTo${type} implements DrillSimpleFunc {
-
-  @Param  VarCharHolder left;
+  @Param  ${convert.from}Holder left;
   @Param  VarCharHolder right;
   @Workspace org.joda.time.format.DateTimeFormatter format;
-  @Output ${type}Holder out;
+  @Output ${convert.to}Holder out;
 
   public void setup() {
     // Get the desired output format
@@ -57,25 +67,33 @@ public class SqlTo${type} implements DrillSimpleFunc {
       format = org.joda.time.format.DateTimeFormat.forPattern(pattern);
     } catch (IllegalArgumentException e) {
       throw org.apache.drill.common.exceptions.UserException.functionError(e)
-        .message("Error parsing formatter %s in %s function", formatString, "sql_to_${type?lower_case}")
+        .message("Error parsing formatter %s in %s function", formatString, "sql_to_${convert.to?lower_case}")
         .build();
     }
   }
 
   public void eval() {
+    <#if convert.nullableOutput>
+    if (<#if convert.from == "NullableVarChar">left.isSet == 0 || </#if>left.start == left.end) {
+      out.isSet = 0;
+      return;
+    }
+    out.isSet = 1;
+
+    </#if>
     // Get the input
     String input = org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(left);
     try {
-      <#if type == "Date">
+      <#if convert.to?contains("Date")>
       out.value = org.joda.time.DateMidnight.parse(input, format).withZoneRetainFields(org.joda.time.DateTimeZone.UTC).getMillis();
-      <#elseif type == "TimeStamp">
+      <#elseif convert.to?contains("TimeStamp")>
       out.value = org.joda.time.DateTime.parse(input, format).withZoneRetainFields(org.joda.time.DateTimeZone.UTC).getMillis();
-      <#elseif type == "Time">
+      <#elseif convert.to?contains("Time")>
       out.value = (int) format.parseDateTime(input).withZoneRetainFields(org.joda.time.DateTimeZone.UTC).getMillis();
       </#if>
     } catch (IllegalArgumentException e) {
       throw org.apache.drill.common.exceptions.UserException.functionError(e)
-        .message("Error parsing date-time %s in %s function", input, "sql_to_${type?lower_case}")
+        .message("Error parsing date-time %s in %s function", input, "sql_to_${convert.to?lower_case}")
         .build();
     }
   }
