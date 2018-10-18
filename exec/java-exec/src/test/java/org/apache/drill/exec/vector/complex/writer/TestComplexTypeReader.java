@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.apache.drill.test.TestBuilder.listOf;
+import static org.apache.drill.test.TestBuilder.mapOf;
 
 public class TestComplexTypeReader extends BaseTestQuery {
   @BeforeClass
@@ -229,6 +230,19 @@ public class TestComplexTypeReader extends BaseTestQuery {
   // Test SplitUpComplexExpressions rule which splits complex expression into multiple projects
   public void testComplexAndSimpleColumnSelection() throws Exception {
     test("select t.a.b, kvgen(t.a.c) from cp.`jsoninput/input4.json` t");
+  }
+
+  @Test
+  public void testKVGenWithNullableInput() throws Exception {
+    testBuilder()
+        .sqlQuery("select kvgen(foo) kv from cp.`jsoninput/input_nested.json`")
+        .unOrdered()
+        .baselineColumns("kv")
+        .baselineValues(listOf(mapOf("key", "obj", "value", 1L), mapOf("key", "bar", "value", 10L)))
+        .baselineValues(listOf(mapOf("key", "obj", "value", 2L), mapOf("key", "bar", "value", 20L)))
+        .baselineValues(listOf())
+        .baselineValues(listOf(mapOf("key", "bar", "value", 30L)))
+        .go();
   }
 
   @Test
