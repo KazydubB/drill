@@ -1,0 +1,4 @@
+{"foo": {"obj":1, "bar":10}}
+{"foo": {"obj":2, "bar":20}}
+{"foo": null}
+{"foo": {"obj": null, "bar": 30}}
