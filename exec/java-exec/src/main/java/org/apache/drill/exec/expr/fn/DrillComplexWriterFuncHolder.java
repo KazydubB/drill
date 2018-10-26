@@ -41,13 +41,6 @@ public class DrillComplexWriterFuncHolder extends DrillSimpleFuncHolder {
   }
 
   @Override
-  protected void checkNullHandling(NullHandling nullHandling) {
-    checkArgument(nullHandling == NullHandling.INTERNAL,
-        "Function with @Output of type 'org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter'" +
-            " is required to do its own null handling.");
-  }
-
-  @Override
   public boolean isComplexWriterFuncHolder() {
     return true;
   }
@@ -99,5 +92,12 @@ public class DrillComplexWriterFuncHolder extends DrillSimpleFuncHolder {
     classGenerator.getEvalBlock().directStatement(String.format("//---- end of eval portion of %s function. ----//", getRegisteredNames()[0]));
 
     return null;
+  }
+
+  @Override
+  protected void checkNullHandling(NullHandling nullHandling) {
+    checkArgument(nullHandling == NullHandling.INTERNAL,
+        "Function with @Output of type 'org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter'" +
+            " is required to handle null input(s) on its own.");
   }
 }

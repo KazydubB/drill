@@ -103,7 +103,7 @@ public @interface FunctionTemplate {
     DEFAULT(OutputWidthCalculators.DefaultOutputWidthCalculator.INSTANCE),
     CLONE(OutputWidthCalculators.CloneOutputWidthCalculator.INSTANCE),
     CONCAT(OutputWidthCalculators.ConcatOutputWidthCalculator.INSTANCE),
-    // Custom calculator is required for functions that don't fall in to any pre-defined
+    // Custom calculator is required for functions that don't fall into any predefined
     // calculator categories - like replace and lpad
     // place holder markers on functions until support
     // for CUSTOM calculators is implemented
@@ -139,7 +139,7 @@ public @interface FunctionTemplate {
      * either input is NULL, and therefore that the method must not be called
      * with null inputs.  (The calling framework must handle NULLs.)
      *
-     * <p>Not Supported for Functions with {@link Output} of type
+     * <p>Not Supported for aggregate functions and for functions with {@link Output} of type
      * {@link org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter}.</p>
      */
     NULL_IF_NULL

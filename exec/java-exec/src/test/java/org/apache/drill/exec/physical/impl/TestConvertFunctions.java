@@ -246,11 +246,17 @@ public class TestConvertFunctions extends BaseTestQuery {
 
   @Test
   public void testConvertFromJsonNullableInput() throws Exception {
+    // Contents of the generated file:
+    /*
+      {"k": "{a: 1, b: 2}"}
+      {"k": null}
+      {"k": "{c: 3}"}
+     */
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(
         new File(dirTestWatcher.getRootDir(), "nullable_json_strings.json")))) {
       String[] fieldValue = {"\"{a: 1, b: 2}\"", null, "\"{c: 3}\""};
       for (String value : fieldValue) {
-        String entry = String.format("{\"k\": %s}", value);
+        String entry = String.format("{\"k\": %s}\n", value);
         writer.write(entry);
       }
     }

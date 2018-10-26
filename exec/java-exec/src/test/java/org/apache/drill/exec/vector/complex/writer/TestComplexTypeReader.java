@@ -24,6 +24,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -234,8 +235,24 @@ public class TestComplexTypeReader extends BaseTestQuery {
 
   @Test
   public void testKVGenWithNullableInput() throws Exception {
+    // Contents of the generated file:
+    /*
+      {"foo": {"obj":1, "bar":10}}
+      {"foo": {"obj":2, "bar":20}}
+      {"foo": null}
+      {"foo": {"obj": null, "bar": 30}}
+     */
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(
+        new File(dirTestWatcher.getRootDir(), "input_nested.json")))) {
+      String[] fieldValue = {"{\"obj\":1, \"bar\":10}", "{\"obj\":2, \"bar\":20}", null, "{\"obj\": null, \"bar\": 30}"};
+      for (String value : fieldValue) {
+        String entry = String.format("{\"foo\": %s}\n", value);
+        writer.write(entry);
+      }
+    }
+
     testBuilder()
-        .sqlQuery("select kvgen(foo) kv from cp.`jsoninput/input_nested.json`")
+        .sqlQuery("select kvgen(foo) kv from dfs.`input_nested.json`")
         .unOrdered()
         .baselineColumns("kv")
         .baselineValues(listOf(mapOf("key", "obj", "value", 1L), mapOf("key", "bar", "value", 10L)))

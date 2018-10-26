@@ -1394,10 +1394,16 @@ public class TestStringFunctions extends BaseTestQuery {
 
   @Test
   public void testSplitWithNullInput() throws Exception {
+    // Contents of the generated file:
+    /*
+      {"a": "aaaaaa.bbb.cc.ddddd"}
+      {"a": null}
+      {"a": "aa"}
+     */
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(dirTestWatcher.getRootDir(), "nullable_strings.json")))) {
       String[] fieldValue = {"\"aaaaaa.bbb.cc.ddddd\"", null, "\"aa\""};
       for (String value : fieldValue) {
-        String entry = String.format("{ \"a\": %s}", value);
+        String entry = String.format("{ \"a\": %s}\n", value);
         writer.write(entry);
       }
     }

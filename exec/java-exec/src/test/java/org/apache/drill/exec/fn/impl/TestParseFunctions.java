@@ -42,11 +42,17 @@ public class TestParseFunctions extends ClusterTest {
   }
 
   private static void generateDataSource() throws Exception {
+    // Contents of the generated file:
+    /*
+      {"url": "ftp://somewhere.com:3190/someFile?a=12&b=someValue"}
+      {"url": null}
+      {"url": "http://someUrl?p1=v1&p2=v=2&"}
+     */
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(
         new File(dirTestWatcher.getRootDir(), "nullable_urls.json")))) {
       String[] urls = {"\"ftp://somewhere.com:3190/someFile?a=12&b=someValue\"", null, "\"http://someUrl?p1=v1&p2=v=2&\""};
       for (String url : urls) {
-        String entry = String.format("{ \"url\": %s}", url);
+        String entry = String.format("{ \"url\": %s}\n", url);
         writer.write(entry);
       }
     }

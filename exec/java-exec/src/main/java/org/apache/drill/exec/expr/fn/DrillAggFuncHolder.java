@@ -68,12 +68,6 @@ class DrillAggFuncHolder extends DrillFuncHolder {
   }
 
   @Override
-  protected void checkNullHandling(NullHandling nullHandling) {
-    checkArgument(nullHandling == NullHandling.INTERNAL,
-        "An aggregation function is required to do its own null handling.");
-  }
-
-  @Override
   public boolean isNested(){
     return true;
   }
@@ -268,4 +262,9 @@ class DrillAggFuncHolder extends DrillFuncHolder {
 
   }
 
+  @Override
+  protected void checkNullHandling(NullHandling nullHandling) {
+    checkArgument(nullHandling == NullHandling.INTERNAL,
+        "An aggregate function is required to handle null input(s) on its own.");
+  }
 }

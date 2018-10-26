@@ -29,8 +29,12 @@ import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import javax.inject.Inject;
 
 /**
- * The function splits up a query string and returns a map of the key-value pairs.
- * For example, {@code parse_query('url?arg1=x&arg2=y')} will return:
+ * The {@code parse_query} function splits up a query string and returns a map of the key-value pairs.
+ * If input string contains one or more {@code '?'} characters the string will be
+ * split by the first occurrence of the character and key-value mapping will be performed for
+ * the second part of split string (the part starting after {@code '?'} character) only.
+ *
+ * <p>For example, {@code parse_query('url?arg1=x&arg2=y')} will return:
  * <pre>
  * {
  *   "arg1": "x",
@@ -60,13 +64,15 @@ public class ParseQueryFunction {
 
       String queryString =
           org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(in.start, in.end, in.buffer);
+      // Check if input string contains '?' character. If it does - split the string by the first occurrence
+      // of the character and preserve the part starting from the '?' exclusively so that only part with query
+      // parameters is left.
       int questionMarkIndex = queryString.indexOf("?");
       if (questionMarkIndex > -1) {
-        // Leave query parameters only
         queryString = queryString.substring(questionMarkIndex + 1);
       }
 
-      if (queryString.trim().isEmpty() || queryString.equals("null")) {
+      if (queryString.trim().isEmpty() || queryString.equalsIgnoreCase("null")) {
         queryString = "";
       }
 
@@ -132,13 +138,15 @@ public class ParseQueryFunction {
 
       String queryString =
             org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(in.start, in.end, in.buffer);
+      // Check if input string contains '?' character. If it does - split the string by the first occurrence
+      // of the character and preserve the part starting from the '?' exclusively so that only part with query
+      // parameters is left.
       int questionMarkIndex = queryString.indexOf("?");
       if (questionMarkIndex > -1) {
-        // Leave query parameters only
         queryString = queryString.substring(questionMarkIndex + 1);
       }
 
-      if (queryString.trim().isEmpty() || queryString.equals("null")) {
+      if (queryString.trim().isEmpty() || queryString.equalsIgnoreCase("null")) {
         queryString = "";
       }
 

@@ -28,6 +28,24 @@ import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 
 import javax.inject.Inject;
 
+/**
+ * The {@code parse_url} function takes an URL and returns a map of components of the URL.
+ * It acts as a wrapper for {@link java.net.URL}. If an optional URL component is absent,
+ * e.g. there is no anchor (reference) element, the {@code "ref"} entry will not be added to resulting map.
+ *
+ * <p>For example, {@code parse_url('http://example.com/some/path?key=value#ref')} will return:
+ * <pre>
+ * {
+ *   "protocol":"http",
+ *   "authority":"example.com",
+ *   "host":"example.com",
+ *   "path":"/some/path",
+ *   "query":"key=value",
+ *   "filename":"/some/path?key=value",
+ *   "ref":"ref"
+ * }
+ * </pre>
+ */
 public class ParseUrlFunction {
 
   @FunctionTemplate(name = "parse_url", scope = FunctionTemplate.FunctionScope.SIMPLE)
@@ -46,96 +64,54 @@ public class ParseUrlFunction {
 
     @Override
     public void eval() {
-      org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter urlMapWriter = outWriter.rootAsMap();
+      org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter mapWriter = outWriter.rootAsMap();
 
       String urlString =
           org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(in.start, in.end, in.buffer);
       try {
-        java.net.URL aURL = new java.net.URL(urlString);
+        mapWriter.start();
 
-        String protocol = aURL.getProtocol();
-        String authority = aURL.getAuthority();
-        String host = aURL.getHost();
-        java.lang.Integer port = aURL.getPort();
-        String path = aURL.getPath();
-        String query = aURL.getQuery();
-        String filename = aURL.getFile();
-        String ref = aURL.getRef();
+        java.net.URL aURL = new java.net.URL(urlString);
+        // Diamond operator can not be used here because Janino does not support
+        // type inference for generic instance creation.
+        // LinkedHashMap is used to preserve insertion-order.
+        java.util.Map<String, String> urlComponents = new java.util.LinkedHashMap<String, String>();
+        urlComponents.put("protocol", aURL.getProtocol());
+        urlComponents.put("authority", aURL.getAuthority());
+        urlComponents.put("host", aURL.getHost());
+        urlComponents.put("path", aURL.getPath());
+        urlComponents.put("query", aURL.getQuery());
+        urlComponents.put("filename", aURL.getFile());
+        urlComponents.put("ref", aURL.getRef());
 
         org.apache.drill.exec.expr.holders.VarCharHolder rowHolder =
             new org.apache.drill.exec.expr.holders.VarCharHolder();
-
-        urlMapWriter.start();
-
-        byte[] protocolBytes = protocol.getBytes();
-        outBuffer.reallocIfNeeded(protocolBytes.length);
-        outBuffer.setBytes(0, protocolBytes);
-        rowHolder.start = 0;
-        rowHolder.end = protocolBytes.length;
-        rowHolder.buffer = outBuffer;
-        urlMapWriter.varChar("protocol").write(rowHolder);
-
-        byte[] authorityBytes = authority.getBytes();
-        outBuffer.reallocIfNeeded(authorityBytes.length);
-        outBuffer.setBytes(0, authorityBytes);
-        rowHolder.start = 0;
-        rowHolder.end = authorityBytes.length;
-        rowHolder.buffer = outBuffer;
-        urlMapWriter.varChar("authority").write(rowHolder);
-
-        byte[] hostBytes = host.getBytes();
-        outBuffer.reallocIfNeeded(hostBytes.length);
-        outBuffer.setBytes(0, hostBytes);
-        rowHolder.start = 0;
-        rowHolder.end = hostBytes.length;
-        rowHolder.buffer = outBuffer;
-        urlMapWriter.varChar("host").write(rowHolder);
-
-        byte[] pathBytes = path.getBytes();
-        outBuffer.reallocIfNeeded(pathBytes.length);
-        outBuffer.setBytes(0, pathBytes);
-        rowHolder.start = 0;
-        rowHolder.end = pathBytes.length;
-        rowHolder.buffer = outBuffer;
-        urlMapWriter.varChar("path").write(rowHolder);
-
-        if (query != null) {
-          byte[] queryBytes = query.getBytes();
-          outBuffer.reallocIfNeeded(queryBytes.length);
-          outBuffer.setBytes(0, queryBytes);
-          rowHolder.start = 0;
-          rowHolder.end = queryBytes.length;
-          rowHolder.buffer = outBuffer;
-          urlMapWriter.varChar("query").write(rowHolder);
+        for (java.util.Map.Entry<String, String> entry : urlComponents.entrySet()) {
+          if (entry.getValue() != null) {
+            // Explicit casting to String is required because of Janino's limitations regarding generics.
+            byte[] protocolBytes = ((String) entry.getValue()).getBytes();
+            outBuffer.reallocIfNeeded(protocolBytes.length);
+            outBuffer.setBytes(0, protocolBytes);
+            rowHolder.start = 0;
+            rowHolder.end = protocolBytes.length;
+            rowHolder.buffer = outBuffer;
+            mapWriter.varChar((String) entry.getKey()).write(rowHolder);
+          }
         }
 
-        byte[] filenameBytes = filename.getBytes();
-        outBuffer.reallocIfNeeded(filenameBytes.length);
-        outBuffer.setBytes(0, filenameBytes);
-        rowHolder.start = 0;
-        rowHolder.end = filenameBytes.length;
-        rowHolder.buffer = outBuffer;
-        urlMapWriter.varChar("filename").write(rowHolder);
-
-        if (ref != null) {
-          byte[] refBytes = ref.getBytes();
-          outBuffer.reallocIfNeeded(refBytes.length);
-          outBuffer.setBytes(0, refBytes);
-          rowHolder.start = 0;
-          rowHolder.end = refBytes.length;
-          rowHolder.buffer = outBuffer;
-          urlMapWriter.varChar("ref").write(rowHolder);
-        }
-
+        java.lang.Integer port = aURL.getPort();
+        // If port number is not specified in URL string, it is assigned a default value of -1.
+        // Include port number into resulting map only if it was specified.
         if (port != -1) {
           org.apache.drill.exec.expr.holders.IntHolder intHolder = new org.apache.drill.exec.expr.holders.IntHolder();
           intHolder.value = port;
-          urlMapWriter.integer("port").write(intHolder);
+          mapWriter.integer("port").write(intHolder);
         }
 
-        urlMapWriter.end();
-      } catch (java.net.MalformedURLException e) {
-        throw new IllegalArgumentException(e);
+        mapWriter.end();
+      } catch (Exception e) {
+        // Enclose map
+        mapWriter.end();
       }
     }
   }
@@ -168,82 +144,39 @@ public class ParseUrlFunction {
       String urlString =
           org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(in.start, in.end, in.buffer);
       try {
-        java.net.URL aURL = new java.net.URL(urlString);
+        mapWriter.start();
 
-        String protocol = aURL.getProtocol();
-        String authority = aURL.getAuthority();
-        String host = aURL.getHost();
-        java.lang.Integer port = aURL.getPort();
-        String path = aURL.getPath();
-        String query = aURL.getQuery();
-        String filename = aURL.getFile();
-        String ref = aURL.getRef();
+        java.net.URL aURL = new java.net.URL(urlString);
+        // Diamond operator can not be used here because Janino does not support
+        // type inference for generic instance creation.
+        // LinkedHashMap is used to preserve insertion-order.
+        java.util.Map<String, String> urlComponents = new java.util.LinkedHashMap<String, String>();
+        urlComponents.put("protocol", aURL.getProtocol());
+        urlComponents.put("authority", aURL.getAuthority());
+        urlComponents.put("host", aURL.getHost());
+        urlComponents.put("path", aURL.getPath());
+        urlComponents.put("query", aURL.getQuery());
+        urlComponents.put("filename", aURL.getFile());
+        urlComponents.put("ref", aURL.getRef());
 
         org.apache.drill.exec.expr.holders.VarCharHolder rowHolder =
             new org.apache.drill.exec.expr.holders.VarCharHolder();
-
-        mapWriter.start();
-
-        byte[] protocolBytes = protocol.getBytes();
-        outBuffer.reallocIfNeeded(protocolBytes.length);
-        outBuffer.setBytes(0, protocolBytes);
-        rowHolder.start = 0;
-        rowHolder.end = protocolBytes.length;
-        rowHolder.buffer = outBuffer;
-        mapWriter.varChar("protocol").write(rowHolder);
-
-        byte[] authorityBytes = authority.getBytes();
-        outBuffer.reallocIfNeeded(authorityBytes.length);
-        outBuffer.setBytes(0, authorityBytes);
-        rowHolder.start = 0;
-        rowHolder.end = authorityBytes.length;
-        rowHolder.buffer = outBuffer;
-        mapWriter.varChar("authority").write(rowHolder);
-
-        byte[] hostBytes = host.getBytes();
-        outBuffer.reallocIfNeeded(hostBytes.length);
-        outBuffer.setBytes(0, hostBytes);
-        rowHolder.start = 0;
-        rowHolder.end = hostBytes.length;
-        rowHolder.buffer = outBuffer;
-        mapWriter.varChar("host").write(rowHolder);
-
-        byte[] pathBytes = path.getBytes();
-        outBuffer.reallocIfNeeded(pathBytes.length);
-        outBuffer.setBytes(0, pathBytes);
-        rowHolder.start = 0;
-        rowHolder.end = pathBytes.length;
-        rowHolder.buffer = outBuffer;
-        mapWriter.varChar("path").write(rowHolder);
-
-        if (query != null) {
-          byte[] queryBytes = query.getBytes();
-          outBuffer.reallocIfNeeded(queryBytes.length);
-          outBuffer.setBytes(0, queryBytes);
-          rowHolder.start = 0;
-          rowHolder.end = queryBytes.length;
-          rowHolder.buffer = outBuffer;
-          mapWriter.varChar("query").write(rowHolder);
+        for (java.util.Map.Entry<String, String> entry : urlComponents.entrySet()) {
+          if (entry.getValue() != null) {
+            // Explicit casting to String is required because of Janino's limitations regarding generics.
+            byte[] protocolBytes = ((String) entry.getValue()).getBytes();
+            outBuffer.reallocIfNeeded(protocolBytes.length);
+            outBuffer.setBytes(0, protocolBytes);
+            rowHolder.start = 0;
+            rowHolder.end = protocolBytes.length;
+            rowHolder.buffer = outBuffer;
+            mapWriter.varChar((String) entry.getKey()).write(rowHolder);
+          }
         }
 
-        byte[] filenameBytes = filename.getBytes();
-        outBuffer.reallocIfNeeded(filenameBytes.length);
-        outBuffer.setBytes(0, filenameBytes);
-        rowHolder.start = 0;
-        rowHolder.end = filenameBytes.length;
-        rowHolder.buffer = outBuffer;
-        mapWriter.varChar("filename").write(rowHolder);
-
-        if (ref != null) {
-          byte[] refBytes = ref.getBytes();
-          outBuffer.reallocIfNeeded(refBytes.length);
-          outBuffer.setBytes(0, refBytes);
-          rowHolder.start = 0;
-          rowHolder.end = refBytes.length;
-          rowHolder.buffer = outBuffer;
-          mapWriter.varChar("ref").write(rowHolder);
-        }
-
+        java.lang.Integer port = aURL.getPort();
+        // If port number is not specified in URL string, it is assigned a default value of -1.
+        // Include port number into resulting map only if it was specified.
         if (port != -1) {
           org.apache.drill.exec.expr.holders.IntHolder intHolder = new org.apache.drill.exec.expr.holders.IntHolder();
           intHolder.value = port;
@@ -251,8 +184,9 @@ public class ParseUrlFunction {
         }
 
         mapWriter.end();
-      } catch (java.net.MalformedURLException e) {
-        throw new IllegalArgumentException(e);
+      } catch (Exception e) {
+        // Enclose map
+        mapWriter.end();
       }
     }
   }

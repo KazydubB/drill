@@ -1371,7 +1371,7 @@ public class StringFunctions{
     } // end of eval
   }
 
-  @FunctionTemplate(name = "split", scope = FunctionScope.SIMPLE, nulls = NullHandling.INTERNAL,
+  @FunctionTemplate(name = "split", scope = FunctionScope.SIMPLE,
       outputWidthCalculatorType = OutputWidthCalculatorType.CUSTOM_FIXED_WIDTH_DEFAULT)
   public static class Split implements DrillSimpleFunc {
     @Param VarCharHolder in;
@@ -1411,7 +1411,7 @@ public class StringFunctions{
     }
   }
 
-  @FunctionTemplate(name = "split", scope = FunctionScope.SIMPLE, nulls = NullHandling.INTERNAL,
+  @FunctionTemplate(name = "split", scope = FunctionScope.SIMPLE,
       outputWidthCalculatorType = OutputWidthCalculatorType.CUSTOM_FIXED_WIDTH_DEFAULT)
   public static class SplitNullableInput implements DrillSimpleFunc {
     @Param NullableVarCharHolder in;
