@@ -81,6 +81,7 @@
               <value>${project.build.directory}/surefire-reports</value>
             </property>
           </systemProperties>
+          <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>
       </plugin>
       <plugin>

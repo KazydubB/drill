@@ -19,6 +19,7 @@ package org.apache.drill.exec.physical.impl.project;
 
 import com.carrotsearch.hppc.IntHashSet;
 import org.apache.drill.common.expression.fn.FunctionReplacementUtils;
+import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
@@ -152,6 +153,11 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
   protected IterOutcome doWork() {
     if (wasNone) {
       return IterOutcome.NONE;
+    }
+
+    boolean fetchResults = context.getOptions().getOption(ExecConstants.FETCH_RESULT_SET_VALIDATOR);
+    if (!fetchResults && incoming.getSchema() == null) {
+      return IterOutcome.NO_SCHEMA;
     }
 
     int incomingRecordCount = incoming.getRecordCount();
@@ -499,7 +505,9 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
       }
 
       // add value vector to transfer if direct reference and this is allowed, otherwise, add to evaluation stack.
-      if (expr instanceof ValueVectorReadExpression && incomingBatch.getSchema().getSelectionVectorMode() == SelectionVectorMode.NONE
+      boolean fetchResults = context.getOptions().getOption(ExecConstants.FETCH_RESULT_SET_VALIDATOR); // todo: use it!
+      BatchSchema schema = incomingBatch.getSchema();
+      if (expr instanceof ValueVectorReadExpression && (schema != null && schema.getSelectionVectorMode() == SelectionVectorMode.NONE)
           && !((ValueVectorReadExpression) expr).hasReadPath()
           && !isAnyWildcard
           && !transferFieldIds.contains(((ValueVectorReadExpression) expr).getFieldId().getFieldIds()[0])) {
@@ -566,7 +574,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
       CodeGenerator<Projector> codeGen = cg.getCodeGenerator();
       codeGen.plainJavaCapable(true);
       // Uncomment out this line to debug the generated code.
-      //codeGen.saveCodeForDebugging(true);
+      codeGen.saveCodeForDebugging(true);
       this.projector = context.getImplementationClass(codeGen);
       projector.setup(context, incomingBatch, this, transfers);
     } catch (ClassTransformationException | IOException e) {

@@ -18,6 +18,7 @@
 package org.apache.drill.exec.physical.impl.validate;
 
 import static org.apache.drill.exec.record.RecordBatch.IterOutcome.NONE;
+import static org.apache.drill.exec.record.RecordBatch.IterOutcome.NO_SCHEMA;
 import static org.apache.drill.exec.record.RecordBatch.IterOutcome.OK;
 import static org.apache.drill.exec.record.RecordBatch.IterOutcome.OK_NEW_SCHEMA;
 import static org.apache.drill.exec.record.RecordBatch.IterOutcome.STOP;
@@ -25,6 +26,7 @@ import static org.apache.drill.exec.record.RecordBatch.IterOutcome.STOP;
 import java.util.Iterator;
 
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.record.CloseableRecordBatch;
@@ -253,6 +255,10 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
           validateBatch();
           // OK doesn't change high-level state.
           break;
+        case NO_SCHEMA:
+          // todo: to be or not to be
+          // validationState = ValidationState.TERMINAL;
+          break;
         case NONE:
           // NONE is allowed even without seeing a OK_NEW_SCHEMA. Such NONE is called
           // FAST NONE.
@@ -277,7 +283,7 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
               + batchState);
           //break;
       }
-
+      // todo: update
       // Validate schema when available.
       if (batchState == OK || batchState == OK_NEW_SCHEMA) {
         final BatchSchema prevLastNewSchema = lastNewSchema;
@@ -297,9 +303,13 @@ public class IteratorValidatorBatchIterator implements CloseableRecordBatch {
                        lastSchema,
                        lastSchema.equals(prevLastNewSchema) ? "equal" : "not equal",
                        prevLastNewSchema);
-          }
+        }
 
-        if (lastSchema == null) {
+        boolean fetchResults = getContext().getOptions().getOption(ExecConstants.FETCH_RESULT_SET_VALIDATOR);
+        // boolean hasSchema = lastSchema == null; // && batchState == NO_SCHEMA;
+        // hasSchema = true;
+        // if (!hasSchema) {
+        if (fetchResults && lastSchema == null) {
           throw new IllegalStateException(
               String.format(
                   "Incoming batch [#%d, %s] has a null schema. This is not allowed.",

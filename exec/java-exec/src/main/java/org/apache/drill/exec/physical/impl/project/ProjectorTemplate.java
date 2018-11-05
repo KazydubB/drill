@@ -17,6 +17,9 @@
  */
 package org.apache.drill.exec.physical.impl.project;
 
+import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.record.BatchSchema;
+import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.shaded.guava.com.google.common.collect.ImmutableList;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.ops.FragmentContext;
@@ -37,6 +40,8 @@ public abstract class ProjectorTemplate implements Projector {
   private SelectionVector4 vector4;
   private SelectionVectorMode svMode;
 
+  private OptionManager optionManager;
+
   public ProjectorTemplate() {
   }
 
@@ -44,6 +49,11 @@ public abstract class ProjectorTemplate implements Projector {
   public final int projectRecords(RecordBatch incomingRecordBatch, int startIndex, final int recordCount,
                                   int firstOutputIndex) {
     assert incomingRecordBatch != this; // mixed up incoming and outgoing batches?
+    boolean fetchResults = optionManager.getOption(ExecConstants.FETCH_RESULT_SET_VALIDATOR.getOptionName()).bool_val;
+    BatchSchema schema = incomingRecordBatch.getSchema();
+    if (!fetchResults && schema == null) {
+      return 0; // todo: consider returning -1 or some other predefined value
+    }
     switch (svMode) {
     case FOUR_BYTE:
       throw new UnsupportedOperationException();
@@ -89,7 +99,13 @@ public abstract class ProjectorTemplate implements Projector {
   @Override
   public final void setup(FragmentContext context, RecordBatch incoming, RecordBatch outgoing, List<TransferPair> transfers)  throws SchemaChangeException{
 
-    this.svMode = incoming.getSchema().getSelectionVectorMode();
+    optionManager = context.getOptions();
+    boolean fetchResults = optionManager.getOption(ExecConstants.FETCH_RESULT_SET_VALIDATOR);
+    BatchSchema schema = incoming.getSchema();
+    if (!fetchResults && schema == null) {
+      return;
+    }
+    this.svMode = schema.getSelectionVectorMode();
     switch (svMode) {
     case FOUR_BYTE:
       this.vector4 = incoming.getSelectionVector4();
