@@ -231,7 +231,9 @@ public interface RecordBatch extends VectorAccessible {
      *   input and again start from build side.
      * </p>
      */
-    EMIT(false);
+    EMIT(false),
+
+    NO_SCHEMA(false);
 
     private boolean error;
 

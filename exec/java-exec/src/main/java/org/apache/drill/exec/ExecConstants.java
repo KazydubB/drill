@@ -861,4 +861,8 @@ public final class ExecConstants {
   public static final String LIST_FILES_RECURSIVELY = "storage.list_files_recursively";
   public static final BooleanValidator LIST_FILES_RECURSIVELY_VALIDATOR = new BooleanValidator(LIST_FILES_RECURSIVELY,
       new OptionDescription("Enables recursive files listing when querying the `INFORMATION_SCHEMA.FILES` table or executing the SHOW FILES command. Default is false. (Drill 1.15+"));
+
+  public static final String FETCH_RESULT_SET = "drill.exec.fetch_resultset";
+  public static final BooleanValidator FETCH_RESULT_SET_VALIDATOR = new BooleanValidator(FETCH_RESULT_SET,
+      new OptionDescription("Some description goes here."));
 }

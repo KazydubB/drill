@@ -350,7 +350,9 @@ public class TestBuilder {
       ret.put(s, baselineValues[i]);
       i++;
     }
-    this.baselineRecords.add(ret);
+    if (!ret.isEmpty()) {
+      this.baselineRecords.add(ret);
+    }
     return this;
   }
 

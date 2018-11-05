@@ -523,7 +523,9 @@ public class DrillTestWrapper {
 
       checkNumBatches(actual);
 
-      addTypeInfoIfMissing(actual.get(0), testBuilder);
+      if (!actual.isEmpty()) {
+        addTypeInfoIfMissing(actual.get(0), testBuilder);
+      }
       addToMaterializedResults(actualRecords, actual, loader);
 
       // If actual result record number is 0,
@@ -557,6 +559,9 @@ public class DrillTestWrapper {
   }
 
   public void checkColumnDef(BatchSchema batchSchema) throws Exception{
+    if (batchSchema == null) {
+      return;
+    }
     assert (batchSchema != null && batchSchema.getFieldCount()==baselineColumns.length);
     for (int i=0; i<baselineColumns.length; ++i) {
       if (!SchemaPath.parseFromString(baselineColumns[i]).equals(

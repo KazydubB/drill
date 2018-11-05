@@ -89,15 +89,16 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
       do {
         upstream = next(incoming);
 
-        switch(upstream) {
+        switch (upstream) { // todo: handle NO_SCHEMA
           case OUT_OF_MEMORY:
           case STOP:
+          case NO_SCHEMA:
             return upstream;
-
+          // case NO_SCHEMA: // todo: or return upstream
           case NOT_YET:
             break;
           case NONE:
-            if (schema != null) {
+            if (schema != null) { // todo: kek
               // Schema is for the output batch schema which is setup in setupNewSchema(). Since the output
               // schema is fixed ((Fragment(VARCHAR), Number of records written (BIGINT)) we should set it
               // up even with 0 records for it to be reported back to the client.
@@ -108,7 +109,7 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
             setupNewSchema();
             // $FALL-THROUGH$
           case OK:
-            counter += eventBasedRecordWriter.write(incoming.getRecordCount());
+            counter += eventBasedRecordWriter.write(incoming.getRecordCount()); // todo: skip
             logger.debug("Total records written so far: {}", counter);
 
             for(final VectorWrapper<?> v : incoming) {
@@ -127,7 +128,8 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
       return IterOutcome.STOP;
     }
 
-    addOutputContainerData();
+    addOutputContainerData(); // todo: look!
+    // container.setRecordCount(0);
     processed = true;
 
     closeWriter();
@@ -155,7 +157,7 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
     container.setRecordCount(1);
   }
 
-  protected void setupNewSchema() throws IOException {
+  protected void setupNewSchema() throws IOException { // todo: eh
     try {
       // update the schema in RecordWriter
       stats.startSetup();
@@ -177,8 +179,11 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
     }
 
     eventBasedRecordWriter = new EventBasedRecordWriter(incoming, recordWriter);
-    container.buildSchema(SelectionVectorMode.NONE);
-    schema = container.getSchema();
+    container.buildSchema(SelectionVectorMode.NONE); // todo: skip?
+    if (container.hasSchema()) {
+      schema = container.getSchema();
+    }
+    // todo: make something
   }
 
   /** Clean up needs to be performed before closing writer. Partially written data will be removed. */

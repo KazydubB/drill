@@ -91,6 +91,7 @@ public abstract class AbstractUnaryRecordBatch<T extends PhysicalOperator> exten
         }
         return upstream;
       case OUT_OF_MEMORY:
+      case NO_SCHEMA:
         return upstream;
       case OK_NEW_SCHEMA:
         if (state == BatchState.FIRST) {
