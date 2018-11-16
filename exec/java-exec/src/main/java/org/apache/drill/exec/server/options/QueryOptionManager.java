@@ -19,14 +19,26 @@ package org.apache.drill.exec.server.options;
 
 import org.apache.drill.common.map.CaseInsensitiveMap;
 
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 /**
  * {@link OptionManager} that holds options within {@link org.apache.drill.exec.ops.QueryContext}.
  */
-public class QueryOptionManager extends InMemoryOptionManager {
+public class QueryOptionManager extends InMemoryOptionManager { // todo: see
 //  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(QueryOptionManager.class);
 
+  private static final OptionValue.AccessibleScopes SCOPE = OptionValue.AccessibleScopes.QUERY;
+
+  private CaseInsensitiveMap<OptionDefinition> definitions;
+  private CaseInsensitiveMap<OptionValue> defaults = CaseInsensitiveMap.newHashMap();
+
   public QueryOptionManager(OptionManager sessionOptions) {
-    super(sessionOptions, CaseInsensitiveMap.<OptionValue>newHashMap());
+    super(sessionOptions, CaseInsensitiveMap.newHashMap());
+    definitions = createDefaultOptionDefinitions();
+    // defaults = populateDefaultValues(definitions);
   }
 
   @Override
@@ -38,7 +50,11 @@ public class QueryOptionManager extends InMemoryOptionManager {
 
   @Override
   public OptionValue getDefault(String optionName) {
-    return fallback.getDefault(optionName);
+    OptionValue value = defaults.get(optionName);
+    if (value == null) {
+      value = fallback.getDefault(optionName);
+    }
+    return value;
   }
 
   public SessionOptionManager getSessionOptionManager() {
@@ -61,7 +77,78 @@ public class QueryOptionManager extends InMemoryOptionManager {
   }
 
   @Override
+  public OptionDefinition getOptionDefinition(String name) {
+    OptionDefinition definition = definitions.get(name);
+    if (definition == null) {
+      definition = super.getOptionDefinition(name);
+    }
+    return definition;
+  }
+
+  @Override
   protected OptionValue.OptionScope getScope() {
     return OptionValue.OptionScope.QUERY;
+  }
+
+  @Override
+  public OptionList getPublicOptionList() {
+    Iterator<OptionValue> values = this.iterator(); // todo: do similarly as is done in this.iterator(); OR redefine local options
+    OptionList optionList = new OptionList();
+
+    while (values.hasNext()) {
+      OptionValue value = values.next();
+
+      if (!getOptionDefinition(value.getName()).getMetaData().isInternal()) {
+        optionList.add(value);
+      }
+    }
+
+    optionList.merge(super.getPublicOptionList());
+    return optionList;
+  }
+
+  /**
+   * Creates all the OptionDefinitions to be registered with the {@link SystemOptionManager}.
+   * @return A map
+   */
+  private CaseInsensitiveMap<OptionDefinition> createDefaultOptionDefinitions() {
+    final OptionDefinition[] definitions = new OptionDefinition[]{
+        new OptionDefinition(new TypeValidators.StringValidator("sqlnode.kind", new OptionValidator.OptionDescription("Some description here!")),
+            new OptionMetaData(SCOPE, false, false)),
+    };
+    populateDefaultValue(defaults, definitions[0], "");
+
+    return Arrays.stream(definitions)
+        .collect(Collectors.toMap(
+            d -> d.getValidator().getOptionName(),
+            Function.identity(),
+            (o, n) -> n,
+            CaseInsensitiveMap::newHashMap));
+  }
+
+  private static void populateDefaultValue(CaseInsensitiveMap<OptionValue> defaults, OptionDefinition definition, Object value) {
+    // OptionValidator validator = definition.getValidator();
+    // String name = validator.getOptionName();
+    // defaults.put(name, defaultValue);
+
+    OptionMetaData metaData = definition.getMetaData();
+    OptionValue.AccessibleScopes type = metaData.getAccessibleScopes();
+    OptionValidator validator = definition.getValidator();
+    String name = validator.getOptionName();
+    OptionValue.Kind kind = validator.getKind();
+    OptionValue optionValue;
+
+    switch (kind) {
+    case BOOLEAN:
+    case LONG:
+    case STRING:
+    case DOUBLE:
+      optionValue = OptionValue.create(type, name, value, OptionValue.OptionScope.QUERY);
+      break;
+    default:
+      throw new UnsupportedOperationException();
+    }
+
+    defaults.put(name, optionValue);
   }
 }

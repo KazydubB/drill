@@ -48,12 +48,16 @@ public interface FragmentContext extends UdfUtilities, AutoCloseable {
    * @return the UDF registry
    */
   FunctionLookupContext getFunctionRegistry();
-
+  // todo: change docs
   /**
    * Returns a read-only version of the session options.
    * @return the session options
    */
   OptionManager getOptions();
+
+  OptionManager getSessionOptions();
+
+  // QueryContext getQueryContext();
 
   boolean isImpersonationEnabled();
 

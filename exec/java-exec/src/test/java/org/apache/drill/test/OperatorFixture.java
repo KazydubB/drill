@@ -213,6 +213,11 @@ public class OperatorFixture extends BaseFixture implements AutoCloseable {
     }
 
     @Override
+    public OptionManager getSessionOptions() {
+      return null;
+    }
+
+    @Override
     public boolean isImpersonationEnabled() {
       return false;
     }

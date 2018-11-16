@@ -20,6 +20,7 @@ package org.apache.drill.exec.planner.sql;
 import java.io.IOException;
 
 import org.apache.calcite.sql.SqlDescribeSchema;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
@@ -109,8 +110,12 @@ public class DrillSqlWorker {
     final SqlNode sqlNode = parser.parse(sql);
     final AbstractSqlHandler handler;
     final SqlHandlerConfig config = new SqlHandlerConfig(context, parser);
+    // context.getOptions().setLocalOption("sqlnode.kind", sqlNode.getKind().name());
 
-    switch(sqlNode.getKind()){
+    // Actual (Calcite-wise) type of the node
+    SqlKind kind = sqlNode.getKind();
+
+    switch(sqlNode.getKind()){ // todo: pure inspiration! :)
     case EXPLAIN:
       handler = new ExplainHandler(config, textPlan);
       break;
@@ -130,17 +135,21 @@ public class DrillSqlWorker {
     case OTHER:
       if(sqlNode instanceof SqlCreateTable) {
         handler = ((DrillSqlCall)sqlNode).getSqlHandler(config, textPlan);
+        kind = SqlKind.CREATE_TABLE;
         break;
       }
 
-      if (sqlNode instanceof DrillSqlCall) {
+      if (sqlNode instanceof DrillSqlCall) { // todo: check CREATE FUNCTION
         handler = ((DrillSqlCall)sqlNode).getSqlHandler(config);
+        kind = SqlConverter.getSqlKind(sqlNode);
         break;
       }
       // fallthrough
     default:
       handler = new DefaultSqlHandler(config, textPlan);
     }
+
+    context.getOptions().setLocalOption("sqlnode.kind", kind.name());
 
     try {
       return handler.getPlan(sqlNode);

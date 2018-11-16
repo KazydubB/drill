@@ -231,6 +231,14 @@ public class FragmentContextImpl extends BaseFragmentContext implements Executor
   }
 
   @Override
+  public OptionManager getSessionOptions() {
+    if (queryContext == null) {
+      return null;
+    }
+    return queryContext.getOptions();
+  }
+
+  @Override
   public PhysicalPlanReader getPlanReader() {
     return context.getPlanReader();
   }

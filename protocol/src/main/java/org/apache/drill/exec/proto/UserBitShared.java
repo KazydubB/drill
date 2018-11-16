@@ -6838,6 +6838,7 @@ public final class UserBitShared {
         while (!done) {
           int tag = input.readTag();
           switch (tag) {
+            // todo: add updateCount!!!!!!!!!IMPORTANT!!!!!!
             case 0:
               done = true;
               break;
@@ -6864,6 +6865,10 @@ public final class UserBitShared {
             case 24: {
               bitField0_ |= 0x00000002;
               carriesTwoByteSelectionVector_ = input.readBool();
+              break;
+            }
+            case 32: {
+              updateCount = input.readInt32();
               break;
             }
           }
@@ -6907,6 +6912,18 @@ public final class UserBitShared {
     public com.google.protobuf.Parser<RecordBatchDef> getParserForType() {
       return PARSER;
     }
+
+    private int updateCount = -1;
+
+    public boolean hasUpdateCount() {
+      return updateCount != -1;
+    }
+
+    public int getUpdateCount() {
+      return updateCount;
+    }
+
+    public static final int UPDATE_COUNT_FIELD_NUMBER = 4;
 
     private int bitField0_;
     // optional int32 record_count = 1;
@@ -6981,6 +6998,7 @@ public final class UserBitShared {
       recordCount_ = 0;
       field_ = java.util.Collections.emptyList();
       carriesTwoByteSelectionVector_ = false;
+      updateCount = -1;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -7003,6 +7021,9 @@ public final class UserBitShared {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeBool(3, carriesTwoByteSelectionVector_);
       }
+      if (hasUpdateCount()) {
+        output.writeInt32(4, updateCount);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -7023,6 +7044,10 @@ public final class UserBitShared {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(3, carriesTwoByteSelectionVector_);
+      }
+      if (hasUpdateCount()) {
+        size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(UPDATE_COUNT_FIELD_NUMBER, updateCount);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -7142,6 +7167,7 @@ public final class UserBitShared {
       public Builder clear() {
         super.clear();
         recordCount_ = 0;
+        updateCount = -1;
         bitField0_ = (bitField0_ & ~0x00000001);
         if (fieldBuilder_ == null) {
           field_ = java.util.Collections.emptyList();
@@ -7197,6 +7223,7 @@ public final class UserBitShared {
         }
         result.carriesTwoByteSelectionVector_ = carriesTwoByteSelectionVector_;
         result.bitField0_ = to_bitField0_;
+        result.updateCount = updateCount;
         onBuilt();
         return result;
       }
@@ -7244,6 +7271,9 @@ public final class UserBitShared {
         if (other.hasCarriesTwoByteSelectionVector()) {
           setCarriesTwoByteSelectionVector(other.getCarriesTwoByteSelectionVector());
         }
+        if (other.hasUpdateCount()) {
+          setUpdateCount(other.getUpdateCount());
+        } // todo: or move after the next row?
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -7270,6 +7300,23 @@ public final class UserBitShared {
         return this;
       }
       private int bitField0_;
+
+      private int updateCount;
+
+      public boolean hasUpdateCount() {
+        return updateCount != -1;
+      }
+
+      public int getUpdateCount() {
+        return updateCount;
+      }
+
+      public Builder setUpdateCount(int value) {
+        // todo: bitField0_
+        updateCount = value;
+        onChanged();
+        return this;
+      }
 
       // optional int32 record_count = 1;
       private int recordCount_ ;
@@ -8640,7 +8687,7 @@ public final class UserBitShared {
               bitField0_ |= 0x00000010;
               bufferLength_ = input.readInt32();
               break;
-            }
+            } // todo: add updateCount! Probably not needed as it is MaterializedField is being initialized
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -8799,6 +8846,17 @@ public final class UserBitShared {
     // optional int32 value_count = 4;
     public static final int VALUE_COUNT_FIELD_NUMBER = 4;
     private int valueCount_;
+
+    private int updateCount;
+
+    public boolean hasUpdateCount() {
+      return updateCount != -1;
+    }
+
+    public int getUpdateCount() {
+      return updateCount;
+    }
+
     /**
      * <code>optional int32 value_count = 4;</code>
      */
@@ -11563,6 +11621,10 @@ public final class UserBitShared {
      */
     org.apache.drill.exec.proto.UserBitShared.QueryIdOrBuilder getQueryIdOrBuilder();
 
+    boolean hasUpdateCount();
+
+    int getUpdateCount();
+
     // optional int32 row_count = 2;
     /**
      * <code>optional int32 row_count = 2;</code>
@@ -11674,7 +11736,12 @@ public final class UserBitShared {
               bitField0_ |= 0x00000004;
               break;
             }
+            case 32: {
+              updateCount = input.readInt32();
+              break;
+            }
           }
+          // todo: add updateCount somewhere here
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
         throw e.setUnfinishedMessage(this);
@@ -11736,6 +11803,18 @@ public final class UserBitShared {
       return queryId_;
     }
 
+    public static final int UPDATE_COUNT_FIELD_NUMBER = 4;
+    private int updateCount = -1;
+
+    @Override
+    public boolean hasUpdateCount() {
+      return updateCount != -1;
+    }
+
+    public int getUpdateCount() {
+      return updateCount;
+    }
+
     // optional int32 row_count = 2;
     public static final int ROW_COUNT_FIELD_NUMBER = 2;
     private int rowCount_;
@@ -11778,6 +11857,7 @@ public final class UserBitShared {
       queryId_ = org.apache.drill.exec.proto.UserBitShared.QueryId.getDefaultInstance();
       rowCount_ = 0;
       def_ = org.apache.drill.exec.proto.UserBitShared.RecordBatchDef.getDefaultInstance();
+      updateCount = -1;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -11800,6 +11880,10 @@ public final class UserBitShared {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeMessage(3, def_);
       }
+      // todo: if anything goes wrong - uncomment: // updateCount = 1;
+      if (hasUpdateCount()) {
+        output.writeInt32(UPDATE_COUNT_FIELD_NUMBER, updateCount);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -11820,6 +11904,11 @@ public final class UserBitShared {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(3, def_);
+      }
+      // todo: if anything goes wrong - uncomment: // updateCount = 1;
+      if (hasUpdateCount()) {
+        size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(4, updateCount);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -11951,6 +12040,7 @@ public final class UserBitShared {
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         rowCount_ = 0;
+        updateCount = -1;
         bitField0_ = (bitField0_ & ~0x00000002);
         if (defBuilder_ == null) {
           def_ = org.apache.drill.exec.proto.UserBitShared.RecordBatchDef.getDefaultInstance();
@@ -12001,6 +12091,7 @@ public final class UserBitShared {
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
         }
+        result.updateCount = updateCount;
         if (defBuilder_ == null) {
           result.def_ = def_;
         } else {
@@ -12030,6 +12121,9 @@ public final class UserBitShared {
         }
         if (other.hasDef()) {
           mergeDef(other.getDef());
+        }
+        if (other.hasUpdateCount()) {
+          setUpdateCount(other.getUpdateCount());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -12173,6 +12267,22 @@ public final class UserBitShared {
           queryId_ = null;
         }
         return queryIdBuilder_;
+      }
+
+      private int updateCount = -1;
+
+      public boolean hasUpdateCount() {
+        return updateCount != -1;
+      }
+
+      public int getUpdateCount() {
+        return updateCount;
+      }
+
+      public Builder setUpdateCount(int value) {
+        updateCount = value;
+        onChanged();
+        return this;
       }
 
       // optional int32 row_count = 2;

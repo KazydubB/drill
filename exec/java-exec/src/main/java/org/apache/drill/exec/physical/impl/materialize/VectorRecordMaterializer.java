@@ -17,6 +17,8 @@
  */
 package org.apache.drill.exec.physical.impl.materialize;
 
+import org.apache.calcite.sql.SqlKind;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.OperatorContext;
@@ -25,6 +27,7 @@ import org.apache.drill.exec.proto.UserBitShared.QueryData;
 import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.WritableBatch;
+import org.apache.drill.exec.server.options.OptionManager;
 
 public class VectorRecordMaterializer implements RecordMaterializer{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(VectorRecordMaterializer.class);
@@ -32,6 +35,7 @@ public class VectorRecordMaterializer implements RecordMaterializer{
   private QueryId queryId;
   private RecordBatch batch;
   private BufferAllocator allocator;
+  private OptionManager options;
 
   public VectorRecordMaterializer(FragmentContext context, OperatorContext oContext, RecordBatch batch) {
     this.queryId = context.getHandle().getQueryId();
@@ -39,21 +43,29 @@ public class VectorRecordMaterializer implements RecordMaterializer{
     this.allocator = oContext.getAllocator();
     BatchSchema schema = batch.getSchema();
     assert schema != null : "Schema must be defined.";
+    options = context.getSessionOptions();
 
 //    for (MaterializedField f : batch.getSchema()) {
 //      logger.debug("New Field: {}", f);
 //    }
   }
-
+// todo: provide correct value!
   public QueryWritableBatch convertNext() {
     //batch.getWritableBatch().getDef().getRecordCount()
     WritableBatch w = batch.getWritableBatch().transfer(allocator);
-
-    QueryData header = QueryData.newBuilder() //
+    // todo: maybe pass some info about "affects-row" to header here?
+    QueryData.Builder builder = QueryData.newBuilder() //
         .setQueryId(queryId) //
         .setRowCount(batch.getRecordCount()) //
-        .setDef(w.getDef()).build();
-    QueryWritableBatch batch = new QueryWritableBatch(header, w.getBuffers());
-    return batch;
+        .setDef(w.getDef());
+    if (options != null && !options.getOption(ExecConstants.FETCH_RESULT_SET_VALIDATOR)) {
+      String kindString = options.getString("sqlnode.kind");
+      SqlKind kind = SqlKind.valueOf(kindString);
+      if (SqlKind.DDL.contains(kind)) {
+        int count = w.getDef().getUpdateCount();
+        builder.setUpdateCount(count == -1 ? 0 : count); // todo: get from def?
+      }
+    }
+    return new QueryWritableBatch(builder.build(), w.getBuffers());
   }
 }

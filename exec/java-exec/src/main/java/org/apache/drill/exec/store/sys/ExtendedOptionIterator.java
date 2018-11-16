@@ -69,6 +69,7 @@ public class ExtendedOptionIterator implements Iterator<Object> {
     preference.put(OptionScope.SESSION, 0);
     preference.put(OptionScope.SYSTEM, 1);
     preference.put(OptionScope.BOOT, 2);
+    preference.put(OptionScope.QUERY, -1);
 
     typeMapping = new HashMap<Kind, String>();
     typeMapping.put(Kind.STRING, "VARCHAR");

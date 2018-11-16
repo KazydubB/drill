@@ -830,6 +830,8 @@ public final class SchemaUserBitShared
 
                 if(message.hasCarriesTwoByteSelectionVector())
                     output.writeBool(3, message.getCarriesTwoByteSelectionVector(), false);
+                if(message.hasUpdateCount())
+                    output.writeInt32(4, message.getUpdateCount(), false);
             }
             public boolean isInitialized(org.apache.drill.exec.proto.UserBitShared.RecordBatchDef message)
             {
@@ -878,6 +880,9 @@ public final class SchemaUserBitShared
                             break;
                         case 3:
                             builder.setCarriesTwoByteSelectionVector(input.readBool());
+                            break;
+                        case 4:
+                            builder.setUpdateCount(input.readInt32());
                             break;
                         default:
                             input.handleUnknownField(number, this);
@@ -1444,7 +1449,7 @@ public final class SchemaUserBitShared
         public static java.lang.String getFieldName(int number)
         {
             switch(number)
-            {
+            {// todo: add? no!
                 case 1: return "queryState";
                 case 2: return "queryId";
                 case 3: return "error";
@@ -1483,6 +1488,9 @@ public final class SchemaUserBitShared
                     output.writeInt32(2, message.getRowCount(), false);
                 if(message.hasDef())
                     output.writeObject(3, message.getDef(), org.apache.drill.exec.proto.SchemaUserBitShared.RecordBatchDef.WRITE, false);
+                if (message.hasUpdateCount()) {
+                    output.writeInt32(4, message.getUpdateCount(), false);
+                }
 
             }
             public boolean isInitialized(org.apache.drill.exec.proto.UserBitShared.QueryData message)
@@ -1534,6 +1542,9 @@ public final class SchemaUserBitShared
                             builder.setDef(input.mergeObject(org.apache.drill.exec.proto.UserBitShared.RecordBatchDef.newBuilder(), org.apache.drill.exec.proto.SchemaUserBitShared.RecordBatchDef.MERGE));
 
                             break;
+                      case 4: // todo: recently added!
+                            builder.setUpdateCount(input.readInt32());
+                            break;
                         default:
                             input.handleUnknownField(number, this);
                     }
@@ -1572,7 +1583,7 @@ public final class SchemaUserBitShared
         }
         public static java.lang.String getFieldName(int number)
         {
-            switch(number)
+            switch(number) // todo: update if decided
             {
                 case 1: return "queryId";
                 case 2: return "rowCount";

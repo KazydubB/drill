@@ -29,6 +29,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.drill.jdbc.DrillStatement;
 import org.apache.drill.shaded.guava.com.google.common.base.Stopwatch;
 import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.ColumnMetaData;
@@ -178,7 +179,7 @@ class DrillCursor implements Cursor {
       logger.info( "[#{}] Query failed: ", instanceId, ex );
     }
 
-    @Override
+    @Override // todo: see if it is possible to not include unnecessary data
     public void dataArrived(QueryDataBatch result, ConnectionThrottle throttle) {
       lastReceivedBatchNumber++;
       logger.debug( "[#{}] Received query data batch #{}: {}.",
@@ -205,6 +206,12 @@ class DrillCursor implements Cursor {
       }
 
       releaseIfFirst();
+      // todo: the MOST important thing!
+      if (result.getHeader().hasUpdateCount()) { // todo: probably move this out of here!
+        int updateCount = result.getHeader().getUpdateCount();
+        ((DrillStatement) parent.statement).setUpdateCount(updateCount);
+        ((DrillStatement) parent.statement).setResultSet(null);
+      }
     }
 
     @Override
@@ -466,7 +473,7 @@ class DrillCursor implements Cursor {
       // (First call always takes this branch.)
 
       try {
-        QueryDataBatch qrb = resultsListener.getNext();
+        QueryDataBatch qrb = resultsListener.getNext(); // todo: modify flow here
 
         // (Apparently:)  Skip any spurious empty batches (batches that have
         // zero rows and/or null data, other than the first batch (which carries
