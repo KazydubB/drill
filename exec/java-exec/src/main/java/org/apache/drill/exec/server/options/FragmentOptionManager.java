@@ -23,13 +23,12 @@ import org.apache.drill.common.map.CaseInsensitiveMap;
 import java.util.Map;
 
 /**
- * {@link OptionManager} that holds options within {@link FragmentContextImpl}.
+ * {@link OptionManager} that holds options within {@link org.apache.drill.exec.ops.FragmentContext}.
  */
 public class FragmentOptionManager extends InMemoryOptionManager {
-//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FragmentOptionManager.class);
 
   public FragmentOptionManager(OptionManager systemOptions, OptionList options) {
-    super(systemOptions, getMapFromOptionList(options));
+    super(systemOptions, CaseInsensitiveMap.newHashMap(), getMapFromOptionList(options));
   }
 
   private static Map<String, OptionValue> getMapFromOptionList(final OptionList options) {

@@ -55,6 +55,7 @@ public class VectorAccessibleSerializable extends AbstractStreamSerializable {
   private WritableBatch batch;
   private final BufferAllocator allocator;
   private int recordCount = -1;
+  private int updateCount = -1;
   private BatchSchema.SelectionVectorMode svMode = BatchSchema.SelectionVectorMode.NONE;
   private SelectionVector2 sv2;
   private long timeNs;
@@ -100,6 +101,7 @@ public class VectorAccessibleSerializable extends AbstractStreamSerializable {
   public void readFromStream(InputStream input) throws IOException {
     final UserBitShared.RecordBatchDef batchDef = UserBitShared.RecordBatchDef.parseDelimitedFrom(input);
     recordCount = batchDef.getRecordCount();
+    updateCount = batchDef.getUpdateCount();
     if (batchDef.hasCarriesTwoByteSelectionVector() && batchDef.getCarriesTwoByteSelectionVector()) {
       readSv2(input);
     }

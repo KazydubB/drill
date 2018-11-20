@@ -23,6 +23,7 @@ import org.apache.drill.PlanTestBase;
 import org.apache.drill.categories.UnlikelyTest;
 import org.apache.drill.exec.ExecConstants;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -33,6 +34,7 @@ public class TestSystemTable extends PlanTestBase {
     updateTestCluster(3, null);
   }
 
+  @Ignore
   @Test
   public void alterSessionOption() throws Exception {
 

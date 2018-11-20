@@ -19,6 +19,7 @@ package org.apache.drill.exec.record;
 
 import io.netty.buffer.DrillBuf;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.drill.exec.memory.BufferAllocator;
@@ -116,7 +117,7 @@ public class WritableBatch implements AutoCloseable {
         newBuf.release(1);
       }
     }
-
+    // todo: in case when updateCount != -1 this may be skipped?
     SelectionVectorMode svMode;
     if (def.hasCarriesTwoByteSelectionVector() && def.getCarriesTwoByteSelectionVector()) {
       svMode = SelectionVectorMode.TWO_BYTE;
@@ -154,7 +155,7 @@ public class WritableBatch implements AutoCloseable {
   public static WritableBatch getBatchNoHV(int recordCount, Iterable<ValueVector> vectors, boolean isSV2) {
     List<DrillBuf> buffers = Lists.newArrayList();
     List<SerializedField> metadata = Lists.newArrayList();
-
+    long updateCount = -1;
     for (ValueVector vv : vectors) {
       metadata.add(vv.getMetadata());
 
@@ -164,17 +165,28 @@ public class WritableBatch implements AutoCloseable {
         continue;
       }
 
-      for (DrillBuf b : vv.getBuffers(true)) {
-        buffers.add(b);
+      if ("Number of records written".equals(vv.getField().getName())) { // todo: re-write this! :);
+        updateCount = 0;
+        for (int i = 0; i < vv.getAccessor().getValueCount(); i++) {
+          updateCount += ((Long) vv.getAccessor().getObject(i));
+        }
+      } else if ("ok".equals(vv.getField().getName())) {
+        updateCount = (boolean) vv.getAccessor().getObject(0) ? 1 : 0;
       }
+
+      buffers.addAll(Arrays.asList(vv.getBuffers(true)));
       // remove vv access to buffers.
       vv.clear();
     }
 
-    RecordBatchDef batchDef = RecordBatchDef.newBuilder().addAllField(metadata).setRecordCount(recordCount)
-        .setCarriesTwoByteSelectionVector(isSV2).build();
-    WritableBatch b = new WritableBatch(batchDef, buffers);
-    return b;
+    RecordBatchDef.Builder builder = RecordBatchDef.newBuilder()
+        .addAllField(metadata)
+        .setRecordCount(recordCount)
+        .setCarriesTwoByteSelectionVector(isSV2);
+    if (updateCount != -1) {
+      builder.setUpdateCount((int) updateCount);
+    }
+    return new WritableBatch(builder.build(), buffers);
   }
 
   public static WritableBatch get(VectorAccessible batch) {

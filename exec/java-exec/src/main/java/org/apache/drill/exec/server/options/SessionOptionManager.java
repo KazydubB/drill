@@ -17,11 +17,16 @@
  */
 package org.apache.drill.exec.server.options;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.drill.common.map.CaseInsensitiveMap;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.rpc.user.UserSession;
 
 import org.apache.drill.shaded.guava.com.google.common.base.Predicate;
@@ -40,17 +45,28 @@ import org.apache.drill.shaded.guava.com.google.common.collect.Collections2;
 public class SessionOptionManager extends InMemoryOptionManager {
 //  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SessionOptionManager.class);
 
+  private static final Map<String, Object> defaultValues;
+
+  static {
+    Map<String, Object> values = new HashMap<>();
+    values.put(ExecConstants.FETCH_RESULT_SET, true);
+
+    defaultValues = CaseInsensitiveMap.newImmutableMap(values);
+  }
+
   private final UserSession session;
 
   /**
    * Map of short lived options. Key: option name, Value: [ start, end )
    */
-  private final Map<String, ImmutablePair<Integer, Integer>> shortLivedOptions =
-    CaseInsensitiveMap.newConcurrentMap();
+  private final Map<String, ImmutablePair<Integer, Integer>> shortLivedOptions = CaseInsensitiveMap.newConcurrentMap();
+
+  private final Map<String, OptionValue> defaults = CaseInsensitiveMap.newConcurrentMap();
 
   public SessionOptionManager(final OptionManager systemOptions, final UserSession session) {
-    super(systemOptions, CaseInsensitiveMap.<OptionValue>newConcurrentMap());
+    super(systemOptions, createSessionOptionDefinitions(), CaseInsensitiveMap.newConcurrentMap());
     this.session = session;
+    setDefaultValues(definitions, defaults, defaultValues, OptionValue.OptionScope.SESSION);
   }
 
   @Override
@@ -80,7 +96,7 @@ public class SessionOptionManager extends InMemoryOptionManager {
       // option is not in effect if queryNumber < start
       if (queryNumber < start) {
         return fallback.getOption(name);
-      // reset if queryNumber <= end
+        // reset if queryNumber <= end
       } else {
         options.remove(name);
         shortLivedOptions.remove(name);
@@ -114,6 +130,7 @@ public class SessionOptionManager extends InMemoryOptionManager {
 
   /**
    * Gets the SystemOptionManager.
+   *
    * @return The SystemOptionManager.
    */
   public SystemOptionManager getSystemOptionManager() {
@@ -123,11 +140,34 @@ public class SessionOptionManager extends InMemoryOptionManager {
 
   @Override
   public OptionValue getDefault(String optionName) {
-    return fallback.getDefault(optionName);
+    OptionValue value = defaults.get(optionName);
+    if (value == null) {
+      value = fallback.getDefault(optionName);
+    }
+    return value;
   }
 
   @Override
   protected OptionValue.OptionScope getScope() {
     return OptionValue.OptionScope.SESSION;
+  }
+
+  /**
+   * Creates all the OptionDefinitions to be registered with the {@link SessionOptionManager}.
+   *
+   * @return A map
+   */
+  private static Map<String, OptionDefinition> createSessionOptionDefinitions() {
+    final OptionDefinition[] definitions = new OptionDefinition[] {
+        new OptionDefinition(ExecConstants.FETCH_RESULT_SET_VALIDATOR,
+            new OptionMetaData(OptionValue.AccessibleScopes.SESSION, false, false)),
+    };
+
+    return Arrays.stream(definitions)
+        .collect(Collectors.toMap(
+            d -> d.getValidator().getOptionName(),
+            Function.identity(),
+            (o, n) -> n,
+            CaseInsensitiveMap::newConcurrentMap));
   }
 }

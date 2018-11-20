@@ -129,6 +129,7 @@ public class UserSession implements AutoCloseable {
               DrillProperties.QUOTING_IDENTIFIERS);
         }
       }
+      // userSession.setSessionOption(ExecConstants.FETCH_RESULT_SET, "true");
       UserSession session = userSession;
       userSession = null;
       return session;
