@@ -20,10 +20,12 @@ package org.apache.drill.exec.planner.sql;
 import java.io.IOException;
 
 import org.apache.calcite.sql.SqlDescribeSchema;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.drill.common.exceptions.UserException;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.physical.PhysicalPlan;
 import org.apache.drill.exec.planner.sql.handlers.AbstractSqlHandler;
@@ -110,7 +112,11 @@ public class DrillSqlWorker {
     final AbstractSqlHandler handler;
     final SqlHandlerConfig config = new SqlHandlerConfig(context, parser);
 
-    switch(sqlNode.getKind()){
+    // Actual type of the node. Needed because many SqlNode Drill implementations
+    // such as CREATE TABLE, DROP TABLE etc. have SqlKind.OTHER
+    SqlKind kind = sqlNode.getKind();
+
+    switch(sqlNode.getKind()) {
     case EXPLAIN:
       handler = new ExplainHandler(config, textPlan);
       break;
@@ -130,17 +136,21 @@ public class DrillSqlWorker {
     case OTHER:
       if(sqlNode instanceof SqlCreateTable) {
         handler = ((DrillSqlCall)sqlNode).getSqlHandler(config, textPlan);
+        kind = SqlKind.CREATE_TABLE;
         break;
       }
 
       if (sqlNode instanceof DrillSqlCall) {
         handler = ((DrillSqlCall)sqlNode).getSqlHandler(config);
+        kind = SqlConverter.getSqlKind(sqlNode);
         break;
       }
       // fallthrough
     default:
       handler = new DefaultSqlHandler(config, textPlan);
     }
+
+    context.getOptions().setLocalOption(ExecConstants.SQL_NODE_KIND, kind.name());
 
     try {
       return handler.getPlan(sqlNode);

@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.exception.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.base.Writer;
@@ -32,6 +33,7 @@ import org.apache.drill.exec.record.BatchSchema.SelectionVectorMode;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.VectorWrapper;
+import org.apache.drill.exec.record.WritableBatch;
 import org.apache.drill.exec.store.EventBasedRecordWriter;
 import org.apache.drill.exec.store.RecordWriter;
 import org.apache.drill.exec.vector.AllocationHelper;
@@ -152,6 +154,15 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
     summaryVector.getMutator().setSafe(0, counter);
     summaryVector.getMutator().setValueCount(1);
 
+    if (!context.getOptions().getOption(ExecConstants.FETCH_RESULT_SET_FOR_DDL_VALIDATOR)) {
+      final BigIntVector rowsAffected = (BigIntVector) container.getValueAccessorById(BigIntVector.class,
+          container.getValueVectorId(SchemaPath.getSimplePath(WritableBatch.ROWS_AFFECTED_HIDDEN_COLUMN_NAME))
+              .getFieldIds()).getValueVector();
+      AllocationHelper.allocate(rowsAffected, 1, 8);
+      rowsAffected.getMutator().setSafe(0, counter);
+      rowsAffected.getMutator().setValueCount(1);
+    }
+
     container.setRecordCount(1);
   }
 
@@ -171,6 +182,14 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
 
       container.addOrGet(fragmentIdField);
       container.addOrGet(summaryField);
+
+      if (!context.getOptions().getOption(ExecConstants.FETCH_RESULT_SET_FOR_DDL_VALIDATOR)) {
+        //  3. Temporary vector to contain count for updated rows in case when result set is not to be returned.
+        final MaterializedField rowsAffected =
+            MaterializedField.create(WritableBatch.ROWS_AFFECTED_HIDDEN_COLUMN_NAME, Types.required(MinorType.BIGINT));
+        container.addOrGet(rowsAffected);
+      }
+
       container.buildSchema(BatchSchema.SelectionVectorMode.NONE);
     } finally {
       stats.stopSetup();

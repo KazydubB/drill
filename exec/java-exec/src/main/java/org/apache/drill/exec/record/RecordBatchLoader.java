@@ -53,6 +53,7 @@ public class RecordBatchLoader implements VectorAccessible, Iterable<VectorWrapp
   private VectorContainer container = new VectorContainer();
   private int valueCount;
   private BatchSchema schema;
+  private int updateCount;
 
   /**
    * Constructs a loader using the given allocator for vector buffer allocation.
@@ -82,6 +83,7 @@ public class RecordBatchLoader implements VectorAccessible, Iterable<VectorWrapp
     }
     container.zeroVectors();
     valueCount = def.getRecordCount();
+    updateCount = def.getUpdateCount();
     boolean schemaChanged = schema == null;
 
     // Load vectors from the batch buffer, while tracking added and/or removed
@@ -107,17 +109,16 @@ public class RecordBatchLoader implements VectorAccessible, Iterable<VectorWrapp
           // Field did not exist previously--is schema change.
           schemaChanged = true;
           vector = TypeHelper.getNewVector(fieldDef, allocator);
-        } else if (! vector.getField().getType().equals(fieldDef.getType())) {
+        } else if (!vector.getField().getType().equals(fieldDef.getType())) {
           // Field had different type before--is schema change.
           // clear previous vector
           vector.clear();
           schemaChanged = true;
           vector = TypeHelper.getNewVector(fieldDef, allocator);
 
-        // If the field is a map, check if the map schema changed.
+          // If the field is a map, check if the map schema changed.
 
-        } else if (vector.getField().getType().getMinorType() == MinorType.MAP  &&
-                   ! isSameSchema(vector.getField().getChildren(), field.getChildList())) {
+        } else if (vector.getField().getType().getMinorType() == MinorType.MAP && !isSameSchema(vector.getField().getChildren(), field.getChildList())) {
 
           // The map schema changed. Discard the old map and create a new one.
 

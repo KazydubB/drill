@@ -50,6 +50,7 @@ public final class QueryData implements Externalizable, Message<QueryData>, Sche
     private QueryId queryId;
     private int rowCount;
     private RecordBatchDef def;
+    private int updateCount;
 
     public QueryData()
     {
@@ -94,6 +95,19 @@ public final class QueryData implements Externalizable, Message<QueryData>, Sche
     public QueryData setDef(RecordBatchDef def)
     {
         this.def = def;
+        return this;
+    }
+
+    // updateCount
+
+    public int getUpdateCount()
+    {
+        return updateCount;
+    }
+
+    public QueryData setUpdateCount(int updateCount)
+    {
+        this.updateCount = updateCount;
         return this;
     }
 
@@ -162,6 +176,9 @@ public final class QueryData implements Externalizable, Message<QueryData>, Sche
                     message.def = input.mergeObject(message.def, RecordBatchDef.getSchema());
                     break;
 
+                case 4:
+                    message.updateCount = input.readInt32();
+                    break;
                 default:
                     input.handleUnknownField(number, this);
             }   
@@ -181,6 +198,9 @@ public final class QueryData implements Externalizable, Message<QueryData>, Sche
         if(message.def != null)
              output.writeObject(3, message.def, RecordBatchDef.getSchema(), false);
 
+
+        if(message.updateCount != 0)
+            output.writeInt32(4, message.updateCount, false);
     }
 
     public String getFieldName(int number)
@@ -190,6 +210,7 @@ public final class QueryData implements Externalizable, Message<QueryData>, Sche
             case 1: return "queryId";
             case 2: return "rowCount";
             case 3: return "def";
+            case 4: return "updateCount";
             default: return null;
         }
     }
@@ -206,6 +227,7 @@ public final class QueryData implements Externalizable, Message<QueryData>, Sche
         __fieldMap.put("queryId", 1);
         __fieldMap.put("rowCount", 2);
         __fieldMap.put("def", 3);
+        __fieldMap.put("updateCount", 4);
     }
     
 }

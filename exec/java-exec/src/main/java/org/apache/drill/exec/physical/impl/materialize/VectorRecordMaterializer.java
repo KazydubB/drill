@@ -17,6 +17,8 @@
  */
 package org.apache.drill.exec.physical.impl.materialize;
 
+import org.apache.calcite.sql.SqlKind;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.OperatorContext;
@@ -25,13 +27,15 @@ import org.apache.drill.exec.proto.UserBitShared.QueryData;
 import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.WritableBatch;
+import org.apache.drill.exec.server.options.OptionManager;
 
-public class VectorRecordMaterializer implements RecordMaterializer{
+public class VectorRecordMaterializer implements RecordMaterializer {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(VectorRecordMaterializer.class);
 
   private QueryId queryId;
   private RecordBatch batch;
   private BufferAllocator allocator;
+  private OptionManager options;
 
   public VectorRecordMaterializer(FragmentContext context, OperatorContext oContext, RecordBatch batch) {
     this.queryId = context.getHandle().getQueryId();
@@ -39,21 +43,28 @@ public class VectorRecordMaterializer implements RecordMaterializer{
     this.allocator = oContext.getAllocator();
     BatchSchema schema = batch.getSchema();
     assert schema != null : "Schema must be defined.";
-
-//    for (MaterializedField f : batch.getSchema()) {
-//      logger.debug("New Field: {}", f);
-//    }
+    options = context.getOptions();
   }
 
   public QueryWritableBatch convertNext() {
-    //batch.getWritableBatch().getDef().getRecordCount()
     WritableBatch w = batch.getWritableBatch().transfer(allocator);
+    QueryData.Builder builder = QueryData.newBuilder()
+        .setQueryId(queryId)
+        .setRowCount(batch.getRecordCount())
+        .setDef(w.getDef());
+    if (hasUpdateCount()) {
+      int count = w.getDef().getUpdateCount();
+      builder.setUpdateCount(count == -1 ? 0 : count);
+    }
+    return new QueryWritableBatch(builder.build(), w.getBuffers());
+  }
 
-    QueryData header = QueryData.newBuilder() //
-        .setQueryId(queryId) //
-        .setRowCount(batch.getRecordCount()) //
-        .setDef(w.getDef()).build();
-    QueryWritableBatch batch = new QueryWritableBatch(header, w.getBuffers());
-    return batch;
+  private boolean hasUpdateCount() {
+    if (options != null && !options.getOption(ExecConstants.FETCH_RESULT_SET_FOR_DDL_VALIDATOR)) {
+      String sqlQueryKind = options.getOption(ExecConstants.SQL_NODE_KIND_VALIDATOR);
+      SqlKind kind = SqlKind.valueOf(sqlQueryKind);
+      return SqlKind.DDL.contains(kind);
+    }
+    return false;
   }
 }

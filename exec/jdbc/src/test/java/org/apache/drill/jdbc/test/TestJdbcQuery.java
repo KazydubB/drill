@@ -18,6 +18,9 @@
 package org.apache.drill.jdbc.test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 
 import java.nio.file.Paths;
 import java.sql.Connection;
@@ -26,6 +29,7 @@ import java.sql.Statement;
 import java.sql.Types;
 
 import org.apache.drill.categories.JdbcTest;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.jdbc.JdbcTestBase;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -402,5 +406,148 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
      withNoDefaultSchema()
         .sql("SELECT CONVERT_FROM(columns[1], 'JSON') as col1 from cp.`empty.csv`")
         .returns("");
+  }
+
+  @Test
+  public void testResultSetIsNotReturnedSet() throws Exception {
+    Statement s = null;
+    try (Connection conn = connect()) {
+      s = conn.createStatement();
+      boolean hasResult = s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+
+      assertFalse("SET query should not return result set", hasResult);
+      assertNull("No result", s.getResultSet());
+      assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
+    } finally {
+      if (s != null) {
+        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.close();
+      }
+    }
+  }
+
+  @Test
+  public void testResultSetIsNotReturnedCTAS() throws Exception {
+    final String tableName = "dfs.tmp.`ctas`";
+
+    Statement s = null;
+    try (Connection conn = connect()) {
+      s = conn.createStatement();
+      s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+
+      s.execute(String.format("CREATE TABLE %s AS SELECT * FROM cp.`employee.json`", tableName));
+      assertNull("No result", s.getResultSet());
+      assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
+    } finally {
+      if (s != null) {
+        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.close();
+      }
+    }
+  }
+
+  @Test
+  public void testResultSetIsNotReturnedCreateView() throws Exception {
+    final String tableName = "dfs.tmp.`cv`";
+
+    Statement s = null;
+    try (Connection conn = connect()) {
+      s = conn.createStatement();
+      s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+
+      s.execute(String.format("CREATE VIEW %s AS SELECT * FROM cp.`employee.json`", tableName));
+      assertNull("No result", s.getResultSet());
+      assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
+    } finally {
+      if (s != null) {
+        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.close();
+      }
+    }
+  }
+
+  @Test
+  public void testResultSetIsNotReturnedDropTable() throws Exception {
+    final String tableName = "dfs.tmp.`dt`";
+
+    Statement s = null;
+    try (Connection con = connect()) {
+      s = con.createStatement();
+      s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+
+      s.execute(String.format("CREATE TABLE %s AS SELECT * FROM cp.`employee.json`", tableName));
+
+      s.execute(String.format("DROP TABLE %s", tableName));
+      assertNull("No result", s.getResultSet());
+      assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
+    } finally {
+      if (s != null) {
+        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.close();
+      }
+    }
+  }
+
+  @Test
+  public void testResultSetIsNotReturnedDropView() throws Exception {
+    final String tableName = "dfs.tmp.`dv`";
+
+    Statement stmt = null;
+    try (Connection conn = connect()) {
+      stmt = conn.createStatement();
+      stmt.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+
+      stmt.execute(String.format("CREATE VIEW %s AS SELECT * FROM cp.`employee.json`", tableName));
+
+      stmt.execute(String.format("DROP VIEW %s", tableName));
+      assertNull("No result", stmt.getResultSet());
+      assertNotEquals("Update count should be >= 0", -1, stmt.getUpdateCount());
+    } finally {
+      if (stmt != null) {
+        stmt.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        stmt.close();
+      }
+    }
+  }
+
+  @Test
+  public void testResultSetIsNotReturnedUse() throws Exception {
+    Statement s = null;
+    try (Connection conn = connect()) {
+      s = conn.createStatement();
+      s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+
+      boolean hasResult = s.execute("USE dfs.tmp");
+      assertFalse("SET query should not return result set", hasResult);
+      assertNull("No result", s.getResultSet());
+      assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
+    } finally {
+      if (s != null) {
+        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.close();
+      }
+    }
+  }
+
+  @Test
+  public void testResultSetIsNotReturnedRefreshMetadata() throws Exception {
+    final String tableName = "dfs.tmp.`rm`";
+
+    Statement s = null;
+    try (Connection conn = connect()) {
+      s = conn.createStatement();
+      s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+
+      s.execute(String.format("CREATE TABLE %s AS SELECT * FROM cp.`employee.json`", tableName));
+
+      s.execute(String.format("REFRESH TABLE METADATA %s", tableName));
+      assertNull("No result", s.getResultSet());
+      assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
+    } finally {
+      if (s != null) {
+        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.close();
+      }
+    }
   }
 }

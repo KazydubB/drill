@@ -18,15 +18,30 @@
 package org.apache.drill.exec.server.options;
 
 import org.apache.drill.common.map.CaseInsensitiveMap;
+import org.apache.drill.exec.ExecConstants;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * {@link OptionManager} that holds options within {@link org.apache.drill.exec.ops.QueryContext}.
  */
 public class QueryOptionManager extends InMemoryOptionManager {
-//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(QueryOptionManager.class);
+
+  private static final Map<String, Object> defaultValues;
+  static {
+    Map<String, Object> values = new HashMap<>();
+    values.put(ExecConstants.SQL_NODE_KIND, "");
+
+    defaultValues = CaseInsensitiveMap.newImmutableMap(values);
+  }
 
   public QueryOptionManager(OptionManager sessionOptions) {
-    super(sessionOptions, CaseInsensitiveMap.<OptionValue>newHashMap());
+    super(sessionOptions, createQueryOptionDefinitions(), CaseInsensitiveMap.newHashMap());
+    setDefaultValues(definitions, defaults, defaultValues, OptionValue.OptionScope.QUERY);
   }
 
   @Override
@@ -34,11 +49,6 @@ public class QueryOptionManager extends InMemoryOptionManager {
     OptionList list = super.getOptionList();
     list.merge(fallback.getOptionList());
     return list;
-  }
-
-  @Override
-  public OptionValue getDefault(String optionName) {
-    return fallback.getDefault(optionName);
   }
 
   public SessionOptionManager getSessionOptionManager() {
@@ -63,5 +73,26 @@ public class QueryOptionManager extends InMemoryOptionManager {
   @Override
   protected OptionValue.OptionScope getScope() {
     return OptionValue.OptionScope.QUERY;
+  }
+
+  /**
+   * Creates all the OptionDefinitions to be registered with the {@link QueryOptionManager}.
+   *
+   * @return a {@code CaseInsensitiveMap} containing option definitions for
+   * {@link OptionValue.AccessibleScopes#QUERY} scope
+   */
+  private static Map<String, OptionDefinition> createQueryOptionDefinitions() {
+    final OptionDefinition[] definitions = new OptionDefinition[] {
+        new OptionDefinition(ExecConstants.SQL_NODE_KIND_VALIDATOR,
+            new OptionMetaData(OptionValue.AccessibleScopes.QUERY, false, true)),
+    };
+
+    return Arrays.stream(definitions)
+        .collect(Collectors.toMap(
+            d -> d.getValidator().getOptionName(),
+            Function.identity(),
+            (o, n) -> n,
+            CaseInsensitiveMap::newHashMap)
+        );
   }
 }

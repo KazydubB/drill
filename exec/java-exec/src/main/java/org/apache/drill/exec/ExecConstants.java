@@ -876,4 +876,12 @@ public final class ExecConstants {
   public static final String LIST_FILES_RECURSIVELY = "storage.list_files_recursively";
   public static final BooleanValidator LIST_FILES_RECURSIVELY_VALIDATOR = new BooleanValidator(LIST_FILES_RECURSIVELY,
       new OptionDescription("Enables recursive files listing when querying the `INFORMATION_SCHEMA.FILES` table or executing the SHOW FILES command. Default is false. (Drill 1.15+"));
+
+  public static final String FETCH_RESULT_SET_FOR_DDL = "drill.exec.fetch_resultset_for_ddl";
+  public static final BooleanValidator FETCH_RESULT_SET_FOR_DDL_VALIDATOR = new BooleanValidator(FETCH_RESULT_SET_FOR_DDL,
+      new OptionDescription("Controls whether to fetch result set for CREATE TABLE/VIEW, DROP TABLE/VIEW, SET, USE etc. queries"));
+
+  public static final String SQL_NODE_KIND = "drill.exec.query_sqlnode_kind";
+  public static final StringValidator SQL_NODE_KIND_VALIDATOR = new StringValidator(SQL_NODE_KIND,
+      new OptionDescription("Query-level type of sql node."));
 }

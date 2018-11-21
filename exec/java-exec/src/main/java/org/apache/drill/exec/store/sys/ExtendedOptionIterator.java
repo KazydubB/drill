@@ -38,7 +38,7 @@ import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 /*
  * Extends the original Option iterator. The idea is to hide the implementation details and present the
  * user with the rows which have values set at the top level of hierarchy and exclude the values set
- * at lower levels. This is done by examining the scope and the precedence order of scope is session - system - default.
+ * at lower levels. This is done by examining the scope and the precedence order of scope is query - session - system - default.
  * All the values are represented as String instead of having multiple
  * columns and the data type is provided as kind to preserve type information about the option.
  * The query output is as follows  -
@@ -55,7 +55,6 @@ import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
  *  only the value set at SESSION level.
  */
 public class ExtendedOptionIterator implements Iterator<Object> {
-  //private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ExtendedOptionIterator.class);
 
   private final OptionManager fragmentOptions;
   private final Iterator<OptionValue> mergedOptions;
@@ -65,12 +64,13 @@ public class ExtendedOptionIterator implements Iterator<Object> {
 
   public ExtendedOptionIterator(FragmentContext context, boolean internal) {
     fragmentOptions = context.getOptions();
-    preference = new HashMap<OptionScope, Integer>();
-    preference.put(OptionScope.SESSION, 0);
-    preference.put(OptionScope.SYSTEM, 1);
-    preference.put(OptionScope.BOOT, 2);
+    preference = new HashMap<>();
+    preference.put(OptionScope.QUERY, 0);
+    preference.put(OptionScope.SESSION, 1);
+    preference.put(OptionScope.SYSTEM, 2);
+    preference.put(OptionScope.BOOT, 3);
 
-    typeMapping = new HashMap<Kind, String>();
+    typeMapping = new HashMap<>();
     typeMapping.put(Kind.STRING, "VARCHAR");
     typeMapping.put(Kind.DOUBLE, "FLOAT");
     typeMapping.put(Kind.LONG, "BIGINT");
