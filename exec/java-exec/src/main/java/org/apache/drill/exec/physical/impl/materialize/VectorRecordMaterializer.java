@@ -17,7 +17,6 @@
  */
 package org.apache.drill.exec.physical.impl.materialize;
 
-import org.apache.calcite.sql.SqlKind;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
@@ -52,19 +51,10 @@ public class VectorRecordMaterializer implements RecordMaterializer {
         .setQueryId(queryId)
         .setRowCount(batch.getRecordCount())
         .setDef(w.getDef());
-    if (hasUpdateCount()) {
+    if (!options.getBoolean(ExecConstants.RETURN_RESULT_SET_FOR_DDL)) {
       int count = w.getDef().getUpdateCount();
       builder.setUpdateCount(count == -1 ? 0 : count);
     }
     return new QueryWritableBatch(builder.build(), w.getBuffers());
-  }
-
-  private boolean hasUpdateCount() {
-    if (options != null && !options.getOption(ExecConstants.FETCH_RESULT_SET_FOR_DDL_VALIDATOR)) {
-      String sqlQueryKind = options.getOption(ExecConstants.SQL_NODE_KIND_VALIDATOR);
-      SqlKind kind = SqlKind.valueOf(sqlQueryKind);
-      return SqlKind.DDL.contains(kind);
-    }
-    return false;
   }
 }

@@ -413,14 +413,14 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
     Statement s = null;
     try (Connection conn = connect()) {
       s = conn.createStatement();
-      boolean hasResult = s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+      boolean hasResult = s.execute(String.format("alter session set `%s` = false", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
 
       assertFalse("SET query should not return result set", hasResult);
       assertNull("No result", s.getResultSet());
       assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
     } finally {
       if (s != null) {
-        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.execute(String.format("reset `%s`", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
         s.close();
       }
     }
@@ -433,14 +433,14 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
     Statement s = null;
     try (Connection conn = connect()) {
       s = conn.createStatement();
-      s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+      s.execute(String.format("alter session set `%s` = false", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
 
       s.execute(String.format("CREATE TABLE %s AS SELECT * FROM cp.`employee.json`", tableName));
       assertNull("No result", s.getResultSet());
       assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
     } finally {
       if (s != null) {
-        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.execute(String.format("reset `%s`", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
         s.close();
       }
     }
@@ -453,14 +453,14 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
     Statement s = null;
     try (Connection conn = connect()) {
       s = conn.createStatement();
-      s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+      s.execute(String.format("alter session set `%s` = false", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
 
       s.execute(String.format("CREATE VIEW %s AS SELECT * FROM cp.`employee.json`", tableName));
       assertNull("No result", s.getResultSet());
       assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
     } finally {
       if (s != null) {
-        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.execute(String.format("reset `%s`", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
         s.close();
       }
     }
@@ -473,7 +473,7 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
     Statement s = null;
     try (Connection con = connect()) {
       s = con.createStatement();
-      s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+      s.execute(String.format("alter session set `%s` = false", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
 
       s.execute(String.format("CREATE TABLE %s AS SELECT * FROM cp.`employee.json`", tableName));
 
@@ -482,7 +482,7 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
       assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
     } finally {
       if (s != null) {
-        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.execute(String.format("reset `%s`", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
         s.close();
       }
     }
@@ -495,7 +495,7 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
     Statement stmt = null;
     try (Connection conn = connect()) {
       stmt = conn.createStatement();
-      stmt.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+      stmt.execute(String.format("alter session set `%s` = false", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
 
       stmt.execute(String.format("CREATE VIEW %s AS SELECT * FROM cp.`employee.json`", tableName));
 
@@ -504,7 +504,7 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
       assertNotEquals("Update count should be >= 0", -1, stmt.getUpdateCount());
     } finally {
       if (stmt != null) {
-        stmt.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        stmt.execute(String.format("reset `%s`", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
         stmt.close();
       }
     }
@@ -515,7 +515,7 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
     Statement s = null;
     try (Connection conn = connect()) {
       s = conn.createStatement();
-      s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+      s.execute(String.format("alter session set `%s` = false", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
 
       boolean hasResult = s.execute("USE dfs.tmp");
       assertFalse("SET query should not return result set", hasResult);
@@ -523,7 +523,7 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
       assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
     } finally {
       if (s != null) {
-        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.execute(String.format("reset `%s`", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
         s.close();
       }
     }
@@ -536,7 +536,7 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
     Statement s = null;
     try (Connection conn = connect()) {
       s = conn.createStatement();
-      s.execute(String.format("alter session set `%s` = false", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+      s.execute(String.format("alter session set `%s` = false", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
 
       s.execute(String.format("CREATE TABLE %s AS SELECT * FROM cp.`employee.json`", tableName));
 
@@ -545,7 +545,7 @@ public class TestJdbcQuery extends JdbcTestQueryBase {
       assertNotEquals("Update count should be >= 0", -1, s.getUpdateCount());
     } finally {
       if (s != null) {
-        s.execute(String.format("reset `%s`", ExecConstants.FETCH_RESULT_SET_FOR_DDL));
+        s.execute(String.format("reset `%s`", ExecConstants.RETURN_RESULT_SET_FOR_DDL));
         s.close();
       }
     }

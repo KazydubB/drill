@@ -17,8 +17,6 @@
  */
 package org.apache.drill.exec.server.options;
 
-import org.apache.drill.common.map.CaseInsensitiveMap;
-
 import java.util.Map;
 
 /**
@@ -27,26 +25,18 @@ import java.util.Map;
  * (see {@link #options}) whereas the {@link SystemOptionManager} stores options in a persistent store.
  */
 public abstract class InMemoryOptionManager extends FallbackOptionManager {
+//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(InMemoryOptionManager.class);
 
-  protected final Map<String, OptionDefinition> definitions;
   protected final Map<String, OptionValue> options;
-  protected final Map<String, OptionValue> defaults;
 
-  InMemoryOptionManager(final OptionManager fallback, final Map<String, OptionDefinition> definitions,
-                        final Map<String, OptionValue> defaults) {
+  InMemoryOptionManager(final OptionManager fallback, final Map<String, OptionValue> options) {
     super(fallback);
-    this.definitions = definitions;
-    this.defaults = defaults;
-    options = CaseInsensitiveMap.newHashMap();
+    this.options = options;
   }
 
   @Override
   OptionValue getLocalOption(final String name) {
-    OptionValue value = options.get(name);
-    if (value == null) {
-      value = defaults.get(name);
-    }
-    return value;
+    return options.get(name);
   }
 
   @Override
@@ -56,12 +46,7 @@ public abstract class InMemoryOptionManager extends FallbackOptionManager {
 
   @Override
   Iterable<OptionValue> getLocalOptions() {
-    Map<String, OptionValue> localOptions = CaseInsensitiveMap.newHashMap();
-    // populate the default options
-    localOptions.putAll(defaults);
-    // override if changed
-    localOptions.putAll(options);
-    return localOptions.values();
+    return options.values();
   }
 
   @Override
@@ -72,52 +57,5 @@ public abstract class InMemoryOptionManager extends FallbackOptionManager {
   @Override
   public void deleteLocalOption(final String name) {
     options.remove(name);
-  }
-
-  @Override
-  public OptionValue getDefault(String optionName) {
-    OptionValue value = defaults.get(optionName);
-    if (value == null) {
-      value = fallback.getDefault(optionName);
-    }
-    return value;
-  }
-
-  @Override
-  public OptionDefinition getOptionDefinition(String name) {
-    OptionDefinition definition = definitions.get(name);
-    if (definition == null) {
-      definition = super.getOptionDefinition(name);
-    }
-    return definition;
-  }
-
-  static void setDefaultValues(Map<String, OptionDefinition> definitions,
-                               Map<String, OptionValue> defaults,
-                               Map<String, Object> defaultValues,
-                               OptionValue.OptionScope scope) {
-    for (Map.Entry<String, Object> entry : defaultValues.entrySet()) {
-      OptionDefinition definition = definitions.get(entry.getKey());
-      OptionMetaData metaData = definition.getMetaData();
-      OptionValue.AccessibleScopes type = metaData.getAccessibleScopes();
-      OptionValidator validator = definition.getValidator();
-      String name = validator.getOptionName();
-      OptionValue.Kind kind = validator.getKind();
-      OptionValue optionValue;
-
-      switch (kind) {
-      case BOOLEAN:
-      case LONG:
-      case STRING:
-      case DOUBLE:
-        optionValue = OptionValue.create(type, name, entry.getValue(), scope);
-        break;
-      default:
-        throw new IllegalStateException(
-            String.format("Default value for %s-scoped option '%s' is not defined.", scope.name(), entry.getKey()));
-      }
-
-      defaults.put(entry.getKey(), optionValue);
-    }
   }
 }

@@ -25,18 +25,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import org.apache.calcite.sql.SqlKind;
-import org.apache.drill.exec.planner.sql.parser.SqlCreateFunction;
-import org.apache.drill.exec.planner.sql.parser.SqlCreateTable;
-import org.apache.drill.exec.planner.sql.parser.SqlCreateView;
-import org.apache.drill.exec.planner.sql.parser.SqlDropFunction;
-import org.apache.drill.exec.planner.sql.parser.SqlDropTable;
-import org.apache.drill.exec.planner.sql.parser.SqlDropView;
-import org.apache.drill.exec.planner.sql.parser.SqlRefreshMetadata;
-import org.apache.drill.exec.planner.sql.parser.SqlShowFiles;
-import org.apache.drill.exec.planner.sql.parser.SqlShowSchemas;
-import org.apache.drill.exec.planner.sql.parser.SqlShowTables;
-import org.apache.drill.exec.planner.sql.parser.SqlUseSchema;
 import org.apache.drill.shaded.guava.com.google.common.base.Strings;
 import org.apache.drill.shaded.guava.com.google.common.collect.ImmutableList;
 import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
@@ -747,35 +735,5 @@ public class SqlConverter {
     properties.setProperty(CalciteConnectionProperty.CASE_SENSITIVE.camelName(),
         String.valueOf(caseSensitive));
     return new CalciteConnectionConfigImpl(properties);
-  }
-
-  public static SqlKind getSqlKind(SqlNode node) {
-    SqlKind kind = node.getKind();
-
-    if (node instanceof SqlCreateFunction) {
-      kind = SqlKind.OTHER_DDL;
-    } else if (node instanceof SqlCreateTable) {
-      kind = SqlKind.CREATE_TABLE;
-    } else if (node instanceof SqlCreateView) {
-      kind = SqlKind.CREATE_VIEW;
-    } else if (node instanceof SqlDropFunction) {
-      kind = SqlKind.OTHER_DDL;
-    } else if (node instanceof SqlDropTable) {
-      kind = SqlKind.DROP_TABLE;
-    } else if (node instanceof SqlDropView) {
-      kind = SqlKind.DROP_VIEW;
-    } else if (node instanceof SqlRefreshMetadata) {
-      kind = SqlKind.OTHER_DDL;
-    } else if (node instanceof SqlShowFiles) {
-      kind = SqlKind.OTHER;
-    } else if (node instanceof SqlShowSchemas) {
-      kind = SqlKind.OTHER;
-    } else if (node instanceof SqlShowTables) {
-      kind = SqlKind.OTHER;
-    } else if (node instanceof SqlUseSchema) {
-      kind = SqlKind.OTHER_DDL;
-    }
-
-    return kind;
   }
 }

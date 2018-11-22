@@ -154,7 +154,7 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
     summaryVector.getMutator().setSafe(0, counter);
     summaryVector.getMutator().setValueCount(1);
 
-    if (!context.getOptions().getOption(ExecConstants.FETCH_RESULT_SET_FOR_DDL_VALIDATOR)) {
+    if (!context.getOptions().getOption(ExecConstants.RETURN_RESULT_SET_FOR_DDL_VALIDATOR)) {
       final BigIntVector rowsAffected = (BigIntVector) container.getValueAccessorById(BigIntVector.class,
           container.getValueVectorId(SchemaPath.getSimplePath(WritableBatch.ROWS_AFFECTED_HIDDEN_COLUMN_NAME))
               .getFieldIds()).getValueVector();
@@ -183,7 +183,7 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
       container.addOrGet(fragmentIdField);
       container.addOrGet(summaryField);
 
-      if (!context.getOptions().getOption(ExecConstants.FETCH_RESULT_SET_FOR_DDL_VALIDATOR)) {
+      if (!context.getOptions().getOption(ExecConstants.RETURN_RESULT_SET_FOR_DDL_VALIDATOR)) {
         //  3. Temporary vector to contain count for updated rows in case when result set is not to be returned.
         final MaterializedField rowsAffected =
             MaterializedField.create(WritableBatch.ROWS_AFFECTED_HIDDEN_COLUMN_NAME, Types.required(MinorType.BIGINT));

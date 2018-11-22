@@ -186,8 +186,7 @@ public class FragmentContextImpl extends BaseFragmentContext implements Executor
         throw new ExecutionSetupException("Failure while reading plan options.", e);
       }
     }
-    OptionManager parentOptionManager = queryContext != null ? queryContext.getOptions() : context.getOptionManager();
-    fragmentOptions = new FragmentOptionManager(parentOptionManager, queryContext == null ? list : new OptionList());
+    fragmentOptions = new FragmentOptionManager(context.getOptionManager(), list);
 
     executionControls = new ExecutionControls(fragmentOptions, dbContext.getEndpoint());
 
