@@ -36,6 +36,7 @@ import org.apache.drill.exec.proto.UserBitShared.SerializedField;
 import org.apache.drill.exec.record.selection.SelectionVector2;
 import org.apache.drill.exec.record.selection.SelectionVector4;
 import org.apache.drill.exec.vector.AllocationHelper;
+import org.apache.drill.exec.vector.UntypedNullVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,7 +129,13 @@ public class RecordBatchLoader implements VectorAccessible, Iterable<VectorWrapp
 
         // Load the vector.
         if (buf == null) {
-          // Schema only
+          if (vector instanceof UntypedNullVector) {
+            // Data buffer for record batch consisting only of untyped null values is null.
+            // In the case field value is sufficient to load the vector.
+            vector.load(field, null);
+          } else {
+            // Schema only
+          }
         } else if (field.getValueCount() == 0) {
           AllocationHelper.allocate(vector, 0, 0, 0);
         } else {
