@@ -749,4 +749,21 @@ public class TestCastFunctions extends ClusterTest {
       run("drop table if exists dfs.tmp.test_time_filter");
     }
   }
+
+  @Test
+  public void testCastUntypedNull() throws Exception {
+    String[] types = new String[] {
+        "BOOLEAN", "INT", "BIGINT", "FLOAT", "DOUBLE", "DATE", "TIME", "TIMESTAMP", "INTERVAL MONTH",
+        "INTERVAL YEAR", "VARBINARY", "VARCHAR", "DECIMAL(9)", "DECIMAL(18)", "DECIMAL(28)", "DECIMAL(38)"
+    };
+    String query = "select cast(coalesce(unk1, unk2) as %s) as coal from cp.`tpch/nation.parquet` limit 1";
+    for (String type : types) {
+      testBuilder()
+          .sqlQuery(String.format(query, type))
+          .unOrdered()
+          .baselineColumns("coal")
+          .baselineValues(new Object[] {null})
+          .go();
+    }
+  }
 }

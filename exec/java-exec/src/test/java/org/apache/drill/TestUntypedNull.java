@@ -106,5 +106,91 @@ public class TestUntypedNull extends ClusterTest {
     assertEquals(0, summary.recordCount());
   }
 
+  @Test
+  public void testCoalesceOnNotExistentColumns() throws Exception {
+    String query = "select coalesce(unk1, unk2) as coal from cp.`tpch/nation.parquet` limit 5";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("coal")
+        .baselineValuesForSingleColumn(null, null, null, null, null)
+        .go();
+  }
+
+  @Test
+  public void testCoalesceOnNotExistentColumnsWithGroupBy() throws Exception {
+    String query = "select coalesce(unk1, unk2) as coal from cp.`tpch/nation.parquet` group by 1";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("coal")
+        .baselineValuesForSingleColumn(new Object[] {null})
+        .go();
+  }
+
+  @Test
+  public void testCoalesceOnNotExistentColumnsWithOrderBy() throws Exception {
+    String query = "select coalesce(unk1, unk2) as coal from cp.`tpch/nation.parquet` order by 1 limit 5";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("coal")
+        .baselineValuesForSingleColumn(null, null, null, null, null)
+        .go();
+  }
+
+  @Test
+  public void testCoalesceOnNotExistentColumnsWithCoalesceInWhereClause() throws Exception {
+    String query = "select coalesce(unk1, unk2) as coal from cp.`tpch/nation.parquet` where coalesce(unk1, unk2) > 10";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .expectsNumRecords(0)
+        .go();
+  }
+
+  @Test
+  public void testCoalesceOnNotExistentColumnsWithCoalesceInHavingClause() throws Exception {
+    String query = "select 1 from cp.`tpch/nation.parquet` group by n_name having count(coalesce(unk1, unk2)) > 10";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .expectsNumRecords(0)
+        .go();
+  }
+
+  @Test
+  public void testPartitionByCoalesceOnNotExistentColumns() throws Exception {
+    String query =
+        "select row_number() over (partition by coalesce(unk1, unk2)) as row_num from cp.`tpch/nation.parquet` limit 5";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("row_num")
+        .baselineValuesForSingleColumn(1L, 2L, 3L, 4L, 5L)
+        .go();
+  }
+
+  @Test
+  public void testCoalesceOnNotExistentColumnsInUDF() throws Exception {
+    String query = "select substr(coalesce(unk1, unk2), 1, 2) as coal from cp.`tpch/nation.parquet` limit 5";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("coal")
+        .baselineValuesForSingleColumn(null, null, null, null, null)
+        .go();
+  }
+
+  @Test
+  public void testCoalesceOnNotExistentColumnsInUDF2() throws Exception {
+    String query = "select abs(coalesce(unk1, unk2)) as coal from cp.`tpch/nation.parquet` limit 5";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("coal")
+        .baselineValuesForSingleColumn(null, null, null, null, null)
+        .go();
+  }
 }
 
