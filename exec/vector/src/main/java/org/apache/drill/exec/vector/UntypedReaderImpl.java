@@ -15,16 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.vector.complex.impl;
+package org.apache.drill.exec.vector;
 
-import org.apache.drill.exec.vector.UntypedNullHolder;
-import org.apache.drill.exec.vector.complex.reader.BaseReader;
+import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.exec.vector.complex.impl.AbstractFieldReader;
 
-public interface UntypedReader extends BaseReader {
+public class UntypedReaderImpl extends AbstractFieldReader {
 
-  boolean isSet();
-  int size();
-  void read(UntypedNullHolder holder);
-  void read(int arrayIndex, UntypedNullHolder holder);
+  @Override
+  public TypeProtos.MajorType getType() {
+    return UntypedNullHolder.TYPE;
+  }
 
+  @Override
+  public boolean isSet() {
+    return false;
+  }
+
+  @Override
+  public int size() {
+    return 0;
+  }
+
+  @Override
+  public void read(UntypedNullHolder holder) {
+    holder.isSet = 0;
+  }
+
+  @Override
+  public void read(int arrayIndex, UntypedNullHolder holder) {
+    holder.isSet = 0;
+  }
 }

@@ -15,21 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.vector.complex.impl;
+package org.apache.drill.exec.vector;
 
 import org.apache.drill.common.types.TypeProtos;
-import org.apache.drill.exec.vector.UntypedNullHolder;
+import org.apache.drill.exec.vector.complex.impl.AbstractFieldReader;
 
-public class UntypedReaderImpl extends AbstractFieldReader {
+public class UntypedHolderReaderImpl extends AbstractFieldReader {
 
-  @Override
-  public TypeProtos.MajorType getType() {
-    return UntypedNullHolder.TYPE;
-  }
+  private final UntypedNullHolder holder;
 
-  @Override
-  public boolean isSet() {
-    return false;
+  public UntypedHolderReaderImpl(UntypedNullHolder holder) {
+    this.holder = holder;
   }
 
   @Override
@@ -38,13 +34,17 @@ public class UntypedReaderImpl extends AbstractFieldReader {
   }
 
   @Override
-  public void read(UntypedNullHolder holder) {
-    holder.isSet = 0;
+  public boolean next() {
+    return false;
   }
 
   @Override
-  public void read(int arrayIndex, UntypedNullHolder holder) {
-    holder.isSet = 0;
+  public TypeProtos.MajorType getType() {
+    return holder.getType();
   }
 
+  @Override
+  public boolean isSet() {
+    return false;
+  }
 }

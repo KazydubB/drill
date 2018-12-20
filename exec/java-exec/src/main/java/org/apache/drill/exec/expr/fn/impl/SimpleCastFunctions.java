@@ -28,8 +28,9 @@ import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.holders.BigIntHolder;
 import org.apache.drill.exec.expr.holders.BitHolder;
+import org.apache.drill.exec.expr.holders.NullableVarCharHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
-
+import org.apache.drill.exec.vector.UntypedNullHolder;
 
 public class SimpleCastFunctions {
 
@@ -71,6 +72,27 @@ public class SimpleCastFunctions {
       out.buffer = buffer;
       out.start = 0;
       out.end = Math.min((int)len.value, outB.length); // truncate if target type has length smaller than that of input's string
+    }
+  }
+
+  @FunctionTemplate(name = "castVARCHAR",
+      scope = FunctionTemplate.FunctionScope.SIMPLE,
+      returnType = FunctionTemplate.ReturnType.STRING_CAST,
+      nulls = NullHandling.NULL_IF_NULL,
+      outputWidthCalculatorType = FunctionTemplate.OutputWidthCalculatorType.CUSTOM_CLONE_DEFAULT)
+  public static class CastUntypedNullVarChar implements DrillSimpleFunc {
+
+    @Param
+    UntypedNullHolder in;
+    @Param
+    BigIntHolder len;
+    @Output
+    NullableVarCharHolder out;
+
+    public void setup() {}
+
+    public void eval() {
+      out.isSet = 0;
     }
   }
 }

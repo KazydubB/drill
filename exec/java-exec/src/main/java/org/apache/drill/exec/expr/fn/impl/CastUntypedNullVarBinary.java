@@ -15,37 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.vector.complex.impl;
+package org.apache.drill.exec.expr.fn.impl;
 
-import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.exec.expr.DrillSimpleFunc;
+import org.apache.drill.exec.expr.annotations.FunctionTemplate;
+import org.apache.drill.exec.expr.annotations.FunctionTemplate.NullHandling;
+import org.apache.drill.exec.expr.annotations.Output;
+import org.apache.drill.exec.expr.annotations.Param;
+import org.apache.drill.exec.expr.holders.BigIntHolder;
+import org.apache.drill.exec.expr.holders.NullableVarBinaryHolder;
 import org.apache.drill.exec.vector.UntypedNullHolder;
 
-public class UntypedHolderReaderImpl extends AbstractFieldReader {
+@SuppressWarnings("unused")
+@FunctionTemplate(name = "castVARBINARY",
+    scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
+public class CastUntypedNullVarBinary implements DrillSimpleFunc {
 
-  private final UntypedNullHolder holder;
+  @Param
+  UntypedNullHolder in;
+  @Param
+  BigIntHolder len;
+  @Output
+  NullableVarBinaryHolder out;
 
-  public UntypedHolderReaderImpl(UntypedNullHolder holder) {
-    this.holder = holder;
+  public void setup() {
   }
 
-  @Override
-  public int size() {
-    return 0;
+  public void eval() {
+    out.isSet = 0;
   }
-
-  @Override
-  public boolean next() {
-    return false;
-  }
-
-  @Override
-  public TypeProtos.MajorType getType() {
-    return holder.getType();
-  }
-
-  @Override
-  public boolean isSet() {
-    return false;
-  }
-
 }
