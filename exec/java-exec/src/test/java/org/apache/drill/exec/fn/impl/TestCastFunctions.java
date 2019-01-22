@@ -21,17 +21,24 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.drill.categories.SqlFunctionTest;
 import org.apache.drill.categories.UnlikelyTest;
 import org.apache.drill.common.exceptions.UserRemoteException;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
+import org.apache.drill.exec.record.BatchSchema;
+import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatchLoader;
+import org.apache.drill.exec.record.metadata.ColumnBuilder;
+import org.apache.drill.exec.record.metadata.SchemaBuilder;
 import org.apache.drill.exec.rpc.user.QueryDataBatch;
 import org.apache.drill.exec.vector.IntervalYearVector;
 import org.apache.drill.test.ClusterFixture;
@@ -46,6 +53,17 @@ import org.junit.rules.ExpectedException;
 import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
 
+import static org.apache.drill.common.types.TypeProtos.MinorType.BIGINT;
+import static org.apache.drill.common.types.TypeProtos.MinorType.BIT;
+import static org.apache.drill.common.types.TypeProtos.MinorType.DATE;
+import static org.apache.drill.common.types.TypeProtos.MinorType.FLOAT4;
+import static org.apache.drill.common.types.TypeProtos.MinorType.FLOAT8;
+import static org.apache.drill.common.types.TypeProtos.MinorType.INT;
+import static org.apache.drill.common.types.TypeProtos.MinorType.INTERVALYEAR;
+import static org.apache.drill.common.types.TypeProtos.MinorType.TIME;
+import static org.apache.drill.common.types.TypeProtos.MinorType.TIMESTAMP;
+import static org.apache.drill.common.types.TypeProtos.MinorType.VARCHAR;
+import static org.apache.drill.common.types.TypeProtos.MinorType.VARDECIMAL;
 import static org.apache.drill.exec.ExecTest.mockUtcDateTimeZone;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -752,18 +770,59 @@ public class TestCastFunctions extends ClusterTest {
 
   @Test
   public void testCastUntypedNull() throws Exception {
-    String[] types = new String[] {
-        "BOOLEAN", "INT", "BIGINT", "FLOAT", "DOUBLE", "DATE", "TIME", "TIMESTAMP", "INTERVAL MONTH",
-        "INTERVAL YEAR", "VARBINARY", "VARCHAR", "DECIMAL(9)", "DECIMAL(18)", "DECIMAL(28)", "DECIMAL(38)"
-    };
     String query = "select cast(coalesce(unk1, unk2) as %s) as coal from cp.`tpch/nation.parquet` limit 1";
-    for (String type : types) {
+
+    Map<String, Triple<TypeProtos.MinorType, Integer, Integer>> typesMap = createCastTypeMap();
+    for (Map.Entry<String, Triple<TypeProtos.MinorType, Integer, Integer>> entry : typesMap.entrySet()) {
+      String q = String.format(query, entry.getKey());
+
+      TypeProtos.MinorType minorType = entry.getValue().getLeft();
+      int precision = entry.getValue().getMiddle();
+      int scale = entry.getValue().getRight();
+      MaterializedField field = new ColumnBuilder("coal", minorType)
+          .setMode(TypeProtos.DataMode.OPTIONAL)
+          .setPrecisionAndScale(precision, scale)
+          .build();
+      BatchSchema expectedSchema = new SchemaBuilder()
+          .add(field)
+          .build();
+
+      // Validate schema
       testBuilder()
-          .sqlQuery(String.format(query, type))
+          .sqlQuery(q)
+          .schemaBaseLine(expectedSchema)
+          .go();
+
+      // Validate result
+      testBuilder()
+          .sqlQuery(q)
           .unOrdered()
           .baselineColumns("coal")
           .baselineValues(new Object[] {null})
           .go();
     }
+  }
+
+  private static Map<String, Triple<TypeProtos.MinorType, Integer, Integer>> createCastTypeMap() {
+    Map<String, Triple<TypeProtos.MinorType, Integer, Integer>> typesMap = new HashMap<>();
+    typesMap.put("BOOLEAN", Triple.of(BIT, 0, 0));
+    typesMap.put("INT", Triple.of(INT, 0, 0));
+    typesMap.put("BIGINT", Triple.of(BIGINT, 0, 0));
+    typesMap.put("FLOAT", Triple.of(FLOAT4, 0, 0));
+    typesMap.put("DOUBLE", Triple.of(FLOAT8, 0, 0));
+    typesMap.put("DATE", Triple.of(DATE, 0, 0));
+    typesMap.put("TIME", Triple.of(TIME, 0, 0));
+    typesMap.put("TIMESTAMP", Triple.of(TIMESTAMP, 0, 0));
+    typesMap.put("INTERVAL MONTH", Triple.of(INTERVALYEAR, 0, 0));
+    typesMap.put("INTERVAL YEAR", Triple.of(INTERVALYEAR, 0, 0));
+    // todo: uncomment after DRILL-6993 is resolved
+    // typesMap.put("VARBINARY(31)", Triple.of(VARBINARY, 31, 0));
+    typesMap.put("VARCHAR(26)", Triple.of(VARCHAR, 26, 0));
+    typesMap.put("DECIMAL(9, 2)", Triple.of(VARDECIMAL, 9, 2));
+    typesMap.put("DECIMAL(18, 5)", Triple.of(VARDECIMAL, 18, 5));
+    typesMap.put("DECIMAL(28, 3)", Triple.of(VARDECIMAL, 28, 3));
+    typesMap.put("DECIMAL(38, 2)", Triple.of(VARDECIMAL, 38, 2));
+
+    return typesMap;
   }
 }

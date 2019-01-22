@@ -18,7 +18,11 @@
 package org.apache.drill;
 
 import org.apache.drill.categories.SqlFunctionTest;
+import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.record.BatchSchema;
+import org.apache.drill.exec.record.metadata.SchemaBuilder;
 import org.apache.drill.test.ClusterFixture;
 import org.apache.drill.test.ClusterFixtureBuilder;
 import org.apache.drill.test.ClusterTest;
@@ -35,6 +39,8 @@ import static org.junit.Assert.assertTrue;
 
 @Category(SqlFunctionTest.class)
 public class TestUntypedNull extends ClusterTest {
+
+  private static final TypeProtos.MajorType UNTYPED_NULL_TYPE = Types.optional(TypeProtos.MinorType.NULL);
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -109,6 +115,15 @@ public class TestUntypedNull extends ClusterTest {
   @Test
   public void testCoalesceOnNotExistentColumns() throws Exception {
     String query = "select coalesce(unk1, unk2) as coal from cp.`tpch/nation.parquet` limit 5";
+    BatchSchema expectedSchema = new SchemaBuilder()
+        .add("coal", UNTYPED_NULL_TYPE)
+        .build();
+
+    testBuilder()
+        .sqlQuery(query)
+        .schemaBaseLine(expectedSchema)
+        .go();
+
     testBuilder()
         .sqlQuery(query)
         .unOrdered()
@@ -120,6 +135,15 @@ public class TestUntypedNull extends ClusterTest {
   @Test
   public void testCoalesceOnNotExistentColumnsWithGroupBy() throws Exception {
     String query = "select coalesce(unk1, unk2) as coal from cp.`tpch/nation.parquet` group by 1";
+    BatchSchema expectedSchema = new SchemaBuilder()
+        .add("coal", UNTYPED_NULL_TYPE)
+        .build();
+
+    testBuilder()
+      .sqlQuery(query)
+        .schemaBaseLine(expectedSchema)
+        .go();
+
     testBuilder()
         .sqlQuery(query)
         .unOrdered()
@@ -131,6 +155,15 @@ public class TestUntypedNull extends ClusterTest {
   @Test
   public void testCoalesceOnNotExistentColumnsWithOrderBy() throws Exception {
     String query = "select coalesce(unk1, unk2) as coal from cp.`tpch/nation.parquet` order by 1 limit 5";
+    BatchSchema expectedSchema = new SchemaBuilder()
+        .add("coal", UNTYPED_NULL_TYPE)
+        .build();
+
+    testBuilder()
+        .sqlQuery(query)
+        .schemaBaseLine(expectedSchema)
+        .go();
+
     testBuilder()
         .sqlQuery(query)
         .unOrdered()

@@ -126,6 +126,7 @@ public final class UntypedNullVector extends BaseDataValueVector implements Fixe
 
   public void transferTo(UntypedNullVector target) {
     target.valueCount = valueCount;
+    clear();
   }
 
   public void splitAndTransferTo(int startIndex, int length, UntypedNullVector target) { }
@@ -171,6 +172,11 @@ public final class UntypedNullVector extends BaseDataValueVector implements Fixe
 
   @Override
   public void copyEntry(int toIndex, ValueVector from, int fromIndex) {
+  }
+
+  @Override
+  public void clear() {
+    valueCount = 0;
   }
 
   public final class Accessor extends BaseAccessor {
