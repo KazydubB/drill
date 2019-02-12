@@ -929,7 +929,7 @@ public class TestParquetMetadataCache extends PlanTestBase {
    *
    * @param table table name or table path
    */
-  private void checkForMetadataFile(String table) {
+  public static void checkForMetadataFile(String table) {
     final String tmpDir;
 
     try {
