@@ -405,7 +405,8 @@ public enum PlannerPhase {
             ParquetPruneScanRule.getFilterOnScanParquet(optimizerRulesContext),
             // Include LIMIT_ON_PROJECT since LIMIT_ON_SCAN may not work without it
             DrillPushLimitToScanRule.LIMIT_ON_PROJECT,
-            DrillPushLimitToScanRule.LIMIT_ON_SCAN
+            DrillPushLimitToScanRule.LIMIT_ON_SCAN,
+            PruneScanRule.getFilePruneOnScan(optimizerRulesContext)
         )
         .build();
 
@@ -471,7 +472,8 @@ public enum PlannerPhase {
         .addAll(getItemStarRules())
         .add(
             PruneScanRule.getDirFilterOnProject(optimizerRulesContext),
-            PruneScanRule.getDirFilterOnScan(optimizerRulesContext)
+            PruneScanRule.getDirFilterOnScan(optimizerRulesContext),
+            PruneScanRule.getFilePruneOnScan(optimizerRulesContext)
         )
         .build();
 

@@ -204,9 +204,9 @@ public class ColumnExplorer {
 
     int rootDepth = new Path(root).depth();
     Path path = new Path(filePath);
-    int parentDepth = path.getParent().depth();
+    int fileDepth = path.depth();
 
-    int diffCount = parentDepth - rootDepth;
+    int diffCount = fileDepth - rootDepth;
 
     if (diffCount < 1) {
       return Collections.emptyList();
@@ -215,10 +215,10 @@ public class ColumnExplorer {
     String[] diffDirectoryNames = new String[diffCount];
 
     // start filling in array from the end
-    for (int i = rootDepth; parentDepth > i; i++) {
-      path = path.getParent();
+    for (int i = rootDepth; fileDepth > i; i++) {
       // place in the end of array
-      diffDirectoryNames[parentDepth - i - 1] = path.getName();
+      diffDirectoryNames[fileDepth - i - 1] = path.getName();
+      path = path.getParent();
     }
 
     return Arrays.asList(diffDirectoryNames);

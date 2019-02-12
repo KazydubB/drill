@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.store.dfs;
 
+import java.util.List;
 import java.util.Map;
 
 import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
@@ -37,6 +38,8 @@ public class MetadataContext {
   private PruneStatus pruneStatus = PruneStatus.NOT_STARTED;
 
   private boolean metadataCacheCorrupted;
+
+  private List<String> directories;
 
   public void setStatus(String dir) {
     dirModifCheckMap.put(dir,  true);
@@ -80,6 +83,14 @@ public class MetadataContext {
    */
   public void setMetadataCacheCorrupted(boolean metadataCacheCorrupted) {
     this.metadataCacheCorrupted = metadataCacheCorrupted;
+  }
+
+  public void setDirectories(List<String> directories) {
+    this.directories = directories;
+  }
+
+  public List<String> getDirectories() {
+    return directories;
   }
 
   public enum PruneStatus {
