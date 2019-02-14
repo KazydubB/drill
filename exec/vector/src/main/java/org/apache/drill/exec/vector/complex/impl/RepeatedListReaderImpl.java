@@ -34,6 +34,8 @@ public class RepeatedListReaderImpl extends AbstractFieldReader{
   private final String name;
   private final RepeatedListVector container;
   private FieldReader reader;
+  private int currentOffset;
+  private int maxOffset;
 
   public RepeatedListReaderImpl(String name, RepeatedListVector container) {
     super();
@@ -64,9 +66,6 @@ public class RepeatedListReaderImpl extends AbstractFieldReader{
     impl.container.copyFromSafe(idx(), impl.idx(), container);
   }
 
-  private int currentOffset;
-  private int maxOffset;
-
   @Override
   public void reset() {
     super.reset();
@@ -80,7 +79,10 @@ public class RepeatedListReaderImpl extends AbstractFieldReader{
 
   @Override
   public int size() {
-    return maxOffset - currentOffset;
+    if (currentOffset == NO_VALUES) {
+      return 0;
+    }
+    return maxOffset - currentOffset - 1;
   }
 
   @Override

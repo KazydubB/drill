@@ -34,6 +34,8 @@ public class RepeatedMapReaderImpl extends AbstractFieldReader{
 
   private final RepeatedMapVector vector;
   private final Map<String, FieldReader> fields = Maps.newHashMap();
+  private int currentOffset;
+  private int maxOffset;
 
   public RepeatedMapReaderImpl(RepeatedMapVector vector) {
     this.vector = vector;
@@ -71,9 +73,6 @@ public class RepeatedMapReaderImpl extends AbstractFieldReader{
     return new SingleLikeRepeatedMapReaderImpl(vector, this);
   }
 
-  private int currentOffset;
-  private int maxOffset;
-
   @Override
   public void reset() {
     super.reset();
@@ -90,7 +89,7 @@ public class RepeatedMapReaderImpl extends AbstractFieldReader{
     if (isNull()) {
       return 0;
     }
-    return maxOffset - (currentOffset < 0 ? 0 : currentOffset);
+    return maxOffset - currentOffset - 1;
   }
 
   @Override
