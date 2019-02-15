@@ -24,154 +24,72 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
+import java.nio.file.Paths;
 
 @Category(SqlFunctionTest.class)
 public class TestNewSimpleRepeatedFunctions extends ClusterTest {
 
+  private static final String SELECT_REPEATED_CONTAINS = "select repeated_contains(topping, '%s*') from cp.`testRepeatedWrite.json`";
+  private static final String SELECT_REPEATED_COUNT_LIST = "select repeated_count(array) from dfs.`functions/repeated/repeated_list.json`";
+  private static final String SELECT_REPEATED_COUNT_MAP = "select repeated_count(mapArray) from dfs.`functions/repeated/repeated_map.json`";
+  private static final String COLUMN_NAME = "EXPR$0";
+
   @BeforeClass
   public static void setUp() throws Exception {
+    dirTestWatcher.copyResourceToRoot(Paths.get("functions", "repeated"));
     startCluster(ClusterFixture.builder(dirTestWatcher));
   }
 
   @Test
   public void testRepeatedContainsForWildCards() throws Exception {
-    testBuilder()
-        .sqlQuery("select repeated_contains(topping, 'Choc*') from cp.`testRepeatedWrite.json`")
-        .ordered()
-        .baselineColumns("EXPR$0")
-        .baselineValuesForSingleColumn(true, true, true, true, false)
-        .go();
-
-    testBuilder()
-        .sqlQuery("select repeated_contains(topping, 'Pow*') from cp.`testRepeatedWrite.json`")
-        .ordered()
-        .baselineColumns("EXPR$0")
-        .baselineValuesForSingleColumn(true, false, false, true, false)
-        .go();
+    performTest(SELECT_REPEATED_CONTAINS, new String[] {"Choc"}, true, true, true, true, false);
+    performTest(SELECT_REPEATED_CONTAINS, new String[] {"Pow"}, true, false, false, true, false);
   }
 
   @Test
   public void testRepeatedCountRepeatedMap() throws Exception {
-    // Contents of the generated file:
-    /*
-      {"mapArray": [{"field1": 1, "field2": "val1"}, {"field1": 2}]}
-      {"mapArray": [{"field1": 1}, {"field1": 2}]}
-      {"mapArray": [{"field2": "val2"}, {"field1": 2}, {"field1": 2}]}
-      {"mapArray": []}
-      {"mapArray": [{"field1": 1, "field2": "val3"}]}
-      {"mapArray": [{"field1": 1, "field2": "val4"}, {"field1": 2}, {"field1": 2}, {"field2": "val1"}, {"field1": 2}]}
-      {"mapArray": [{"field1": 1, "field2": "val3"}, {"field1": 2}]}
-    */
-    String fileName = "repeated_count_map.json";
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(
-        new File(dirTestWatcher.getRootDir(), fileName)))) {
-      String[] arrayElements = {
-          "{\"field1\": 1, \"field2\": \"val1\"}, {\"field1\": 2}",
-          "{\"field1\": 1}, {\"field1\": 2}",
-          "{\"field2\": \"val2\"}, {\"field1\": 2}, {\"field1\": 2}",
-          "",
-          "{\"field1\": 1, \"field2\": \"val3\"}",
-          "{\"field1\": 1, \"field2\": \"val4\"}, {\"field1\": 2}, {\"field1\": 2}, {\"field2\": \"val1\"}, {\"field1\": 2}",
-          "{\"field1\": 1, \"field2\": \"val3\"}, {\"field1\": 2}"
-      };
-      for (String value : arrayElements) {
-        String entry = String.format("{\"mapArray\": [%s]}\n", value);
-        writer.write(entry);
-      }
-    }
+    performTest(SELECT_REPEATED_COUNT_MAP, 2, 2, 3, 0, 1, 5, 2);
+  }
 
-    String selectQuery = "select repeated_count(mapArray) from dfs.`%s`";
-    testBuilder()
-        .sqlQuery(selectQuery, fileName)
-        .ordered()
-        .baselineColumns("EXPR$0")
-        .baselineValuesForSingleColumn(2, 2, 3, 0, 1, 5, 2)
-        .go();
+  @Test
+  public void testRepeatedCountRepeatedMapInWhere() throws Exception {
+    String query = SELECT_REPEATED_COUNT_MAP + " where repeated_count(mapArray) > 2";
+    performTest(query, 3, 5);
+  }
 
-    testBuilder()
-        .sqlQuery(selectQuery + " where repeated_count(mapArray) > 2", fileName)
-        .ordered()
-        .baselineColumns("EXPR$0")
-        .baselineValuesForSingleColumn(3, 5)
-        .go();
-
-    testBuilder()
-        .sqlQuery(selectQuery + " group by 1", fileName)
-        .unOrdered()
-        .baselineColumns("EXPR$0")
-        .baselineValuesForSingleColumn(2, 3, 0, 1, 5)
-        .go();
-
-    testBuilder()
-        .sqlQuery(selectQuery + " group by 1 having repeated_count(mapArray) < 3", fileName)
-        .unOrdered()
-        .baselineColumns("EXPR$0")
-        .baselineValuesForSingleColumn(2, 0, 1)
-        .go();
+  @Test
+  public void testRepeatedCountRepeatedMapInHaving() throws Exception {
+    String query = SELECT_REPEATED_COUNT_MAP + " group by 1 having repeated_count(mapArray) < 3";
+    performTest(query, 2, 0, 1);
   }
 
   @Test
   public void testRepeatedCountRepeatedList() throws Exception {
-    // Contents of the generated file:
-    /*
-      {"id": 1, "array": [[1, 2], [1, 3], [2, 3]]}
-      {"id": 2, "array": []}
-      {"id": 3, "array": [[2, 3], [1, 3, 4]]}
-      {"id": 4, "array": [[1], [2], [3, 4], [5], [6]]}
-      {"id": 5, "array": [[1, 2, 3], [4, 5], [6], [7], [8, 9], [2, 3], [2, 3], [2, 3], [2]]}
-      {"id": 6, "array": [[1, 2], [3], [4], [5]]}
-      {"id": 7, "array": []}
-      {"id": 8, "array": [[1], [2], [3]]}
-    */
-    String fileName = "repeated_count_list.json";
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(
-        new File(dirTestWatcher.getRootDir(), fileName)))) {
-      String[] arrayElements = {
-          "[1, 2], [1, 3], [2, 3]",
-          "",
-          "[2, 3], [1, 3, 4]",
-          "[1], [2], [3, 4], [5], [6]",
-          "[1, 2, 3], [4, 5], [6], [7], [8, 9], [2, 3], [2, 3], [2, 3], [2]",
-          "[1, 2], [3], [4], [5]",
-          "",
-          "[1], [2], [3]"};
-      int elementId = 1;
-      for (String value : arrayElements) {
-        String entry = String.format("{\"id\": %d, \"array\": [%s]}\n", elementId++, value);
-        writer.write(entry);
-      }
-    }
+    performTest(SELECT_REPEATED_COUNT_LIST, 3, 0, 2, 5, 9, 4, 0, 3);
+  }
 
-    String selectQuery = "select repeated_count(array) from dfs.`%s`";
-    testBuilder()
-        .sqlQuery(selectQuery, fileName)
-        .ordered()
-        .baselineColumns("EXPR$0")
-        .baselineValuesForSingleColumn(3, 0, 2, 5, 9, 4, 0, 3)
-        .go();
+  @Test
+  public void testRepeatedCountRepeatedListInWhere() throws Exception {
+    String query = SELECT_REPEATED_COUNT_LIST + " where repeated_count(array) > 4";
+    performTest(query, 5, 9);
+  }
 
-    testBuilder()
-        .sqlQuery(selectQuery + " where repeated_count(array) > 4", fileName)
-        .ordered()
-        .baselineColumns("EXPR$0")
-        .baselineValuesForSingleColumn(5, 9)
-        .go();
+  @Test
+  public void testRepeatedCountRepeatedListInHaving() throws Exception {
+    String query = SELECT_REPEATED_COUNT_LIST + " group by 1 having repeated_count(array) < 4";
+    performTest(query, 3, 0, 2);
+  }
 
+  private void performTest(String query, Object... expectedValues) throws Exception {
+    performTest(query, new Object[0], expectedValues);
+  }
+
+  private void performTest(String query, Object[] replacements, Object... expectedValues) throws Exception {
     testBuilder()
-        .sqlQuery(selectQuery + " group by 1", fileName)
+        .sqlQuery(query, replacements)
         .unOrdered()
-        .baselineColumns("EXPR$0")
-        .baselineValuesForSingleColumn(3, 0, 2, 5, 9, 4)
-        .go();
-
-    testBuilder()
-        .sqlQuery(selectQuery + " group by 1 having repeated_count(array) < 4", fileName)
-        .unOrdered()
-        .baselineColumns("EXPR$0")
-        .baselineValuesForSingleColumn(3, 0, 2)
+        .baselineColumns(COLUMN_NAME)
+        .baselineValuesForSingleColumn(expectedValues)
         .go();
   }
 }
