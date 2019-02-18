@@ -86,10 +86,7 @@ public class RepeatedMapReaderImpl extends AbstractFieldReader{
 
   @Override
   public int size() {
-    if (isNull()) {
-      return 0;
-    }
-    return maxOffset - currentOffset - 1;
+    return isNull() ? 0 : maxOffset - currentOffset;
   }
 
   @Override
@@ -105,8 +102,8 @@ public class RepeatedMapReaderImpl extends AbstractFieldReader{
     if (h.start == h.end) {
       currentOffset = NO_VALUES;
     } else {
-      currentOffset = h.start-1;
-      maxOffset = h.end;
+      currentOffset = h.start - 1;
+      maxOffset = h.end - 1;
       setChildrenPosition(currentOffset);
     }
   }
@@ -128,7 +125,7 @@ public class RepeatedMapReaderImpl extends AbstractFieldReader{
 
   @Override
   public boolean next() {
-    if (currentOffset +1 < maxOffset) {
+    if (currentOffset < maxOffset) {
       setChildrenPosition(++currentOffset);
       return true;
     } else {

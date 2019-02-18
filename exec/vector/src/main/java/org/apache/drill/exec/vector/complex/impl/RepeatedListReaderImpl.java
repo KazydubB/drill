@@ -17,7 +17,6 @@
  */
 package org.apache.drill.exec.vector.complex.impl;
 
-
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
@@ -79,10 +78,7 @@ public class RepeatedListReaderImpl extends AbstractFieldReader{
 
   @Override
   public int size() {
-    if (currentOffset == NO_VALUES) {
-      return 0;
-    }
-    return maxOffset - currentOffset - 1;
+    return currentOffset == NO_VALUES ? 0 : maxOffset - currentOffset;
   }
 
   @Override
@@ -98,8 +94,8 @@ public class RepeatedListReaderImpl extends AbstractFieldReader{
     if (h.start == h.end) {
       currentOffset = NO_VALUES;
     } else {
-      currentOffset = h.start-1;
-      maxOffset = h.end;
+      currentOffset = h.start - 1;
+      maxOffset = h.end - 1;
       if(reader != null) {
         reader.setPosition(currentOffset);
       }
@@ -108,7 +104,7 @@ public class RepeatedListReaderImpl extends AbstractFieldReader{
 
   @Override
   public boolean next() {
-    if (currentOffset +1 < maxOffset) {
+    if (currentOffset < maxOffset) {
       currentOffset++;
       if (reader != null) {
         reader.setPosition(currentOffset);
@@ -142,5 +138,4 @@ public class RepeatedListReaderImpl extends AbstractFieldReader{
   public boolean isSet() {
     return true;
   }
-
 }
