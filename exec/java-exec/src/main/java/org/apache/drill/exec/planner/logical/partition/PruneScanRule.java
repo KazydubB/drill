@@ -587,6 +587,7 @@ public abstract class PruneScanRule extends StoragePluginOptimizerRule {
       return new FileSystemPartitionDescriptor(settings, scanRel);
     }
 
+    // Checks if query references directory columns only and has DISTINCT or GROUP BY operation
     @Override
     public boolean matches(RelOptRuleCall call) {
       Aggregate aggregate = call.rel(0);
@@ -608,6 +609,33 @@ public abstract class PruneScanRule extends StoragePluginOptimizerRule {
       return scan.isDistinct() || aggregate.getGroupCount() > 0;
     }
 
+    /*
+      Transforms Scan node to DrillValuesRel node to avoid unnecessary scanning of selected files.
+      If cache metadata directory file exists, directory columns will be read from it,
+      otherwise directories will be gathered from selection (PartitionLocations).
+      DrillValuesRel will contain gathered constant literals.
+
+      For example, plan for "select dir0, dir1 from `t` group by 1, 2", where table `t` has directory structure year/quarter
+
+      00-00    Screen
+      00-01      Project(dir0=[$0], dir1=[$1])
+      00-02        HashAgg(group=[{0, 1}])
+      00-03          Scan(table=[[t]], groupscan=[ParquetGroupScan [entries=[ReadEntryWithPath [path=file:/path/t/1996/Q4/orders_96_q4.parquet],
+        ReadEntryWithPath [path=file:/path/t/1996/Q1/file_96_q1.parquet], ReadEntryWithPath [path=file:/path/t/1996/Q3/file_96_q3.parquet],
+        ReadEntryWithPath [path=file:/path/t/1996/Q2/file_96_q2.parquet], ReadEntryWithPath [path=file:/path/t/1994/Q4/file_94_q4.parquet],
+        ReadEntryWithPath [path=file:/path/t/1994/Q1/file_94_q1.parquet], ReadEntryWithPath [path=file:/path/t/1994/Q3/file_94_q3.parquet],
+        ReadEntryWithPath [path=file:/path/t/1994/Q2/file_94_q2.parquet], ReadEntryWithPath [path=file:/path/t/1995/Q4/file_95_q4.parquet],
+        ReadEntryWithPath [path=file:/path/t/1995/Q1/file_95_q1.parquet], ReadEntryWithPath [path=file:/path/t/1995/Q3/file_95_q3.parquet],
+        ReadEntryWithPath [path=file:/path/t/1995/Q2/file_95_q2.parquet]], selectionRoot=file:/path/t, ..., columns=[`dir0`, `dir1`]]])
+
+      will be changed to
+
+      00-00    Screen
+      00-01      Project(dir0=[$0], dir1=[$1])
+      00-02        HashAgg(group=[{0, 1}])
+      00-03          Values(tuples=[[{ '1995', 'Q1' }, { '1994', 'Q4' }, { '1996', 'Q3' }, { '1996', 'Q2' }, { '1994', 'Q2' },
+        { '1995', 'Q4' }, { '1996', 'Q1' }, { '1995', 'Q3' }, { '1996', 'Q4' }, { '1994', 'Q3' }, { '1994', 'Q1' }, { '1995', 'Q2' }]])
+     */
     @Override
     public void onMatch(RelOptRuleCall call) {
       TableScan scan = call.rel(1);
@@ -634,6 +662,7 @@ public abstract class PruneScanRule extends StoragePluginOptimizerRule {
         int index = descriptor.getPartitionHierarchyIndex(field);
         indexes.add(index);
       }
+
       if (metaContext != null && metaContext.getDirectories() != null) {
         // Dir metadata cache file exists
         logger.debug("Using Metadata Directories cache");
@@ -669,6 +698,7 @@ public abstract class PruneScanRule extends StoragePluginOptimizerRule {
       }
 
       try {
+        // Transform Scan node to DrillValuesRel node
         List<RelDataTypeField> typeFields = new ArrayList<>(fieldNames.size());
         RelDataTypeFactory typeFactory = scan.getCluster().getTypeFactory();
 
@@ -717,6 +747,7 @@ public abstract class PruneScanRule extends StoragePluginOptimizerRule {
           if (index < parts.size()) {
             values.add(parts.get(index));
           } else {
+            // No partition value for given index - set null value
             values.add(null);
           }
         }
