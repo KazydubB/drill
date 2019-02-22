@@ -34,6 +34,9 @@ import org.apache.drill.exec.planner.sql.parser.impl.DrillSqlParseException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.base.MetadataProviderManager;
 import org.apache.drill.exec.physical.base.TableMetadataProvider;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.util.Pair;
 import org.apache.drill.shaded.guava.com.google.common.cache.CacheBuilder;
 import org.apache.drill.shaded.guava.com.google.common.cache.CacheLoader;
 import org.apache.drill.shaded.guava.com.google.common.cache.LoadingCache;
@@ -403,8 +406,20 @@ public class SqlConverter {
         new SqlToRelConverter(new Expander(), validator, catalog, cluster, DrillConvertletTable.INSTANCE,
             sqlToRelConverterConfig);
 
-    //To avoid unexpected column errors set a value of top to false
-    final RelRoot rel = sqlToRelConverter.convertQuery(validatedNode, false, false);
+    RelRoot rel = sqlToRelConverter.convertQuery(validatedNode, false, !isInnerQuery);
+
+    // If extra expressions used in ORDER BY were added to the project list,
+    // add another project to remove them.
+    if (!isInnerQuery && rel.rel.getRowType().getFieldCount() - rel.fields.size() > 0) {
+      List<RexNode> exprs = new ArrayList<>();
+      RexBuilder builder = rel.rel.getCluster().getRexBuilder();
+      for (Pair<Integer, String> field : rel.fields) {
+        exprs.add(builder.makeInputRef(rel.rel, field.left));
+      }
+
+      RelNode project = LogicalProject.create(rel.rel, exprs, rel.validatedRowType/*.getFieldNames().subList(0, exprs.size())*/);
+      rel = RelRoot.of(project, rel.validatedRowType, rel.kind);
+    }
     return rel.withRel(sqlToRelConverter.flattenTypes(rel.rel, true));
   }
 
