@@ -34,12 +34,17 @@ import org.apache.drill.exec.planner.physical.PrelUtil;
 
 import java.util.List;
 
-
 /**
  * Base class for logical and physical Aggregations implemented in Drill
  */
 public abstract class DrillAggregateRelBase extends Aggregate implements DrillRelNode {
 
+  public DrillAggregateRelBase(RelOptCluster cluster, RelTraitSet traits, RelNode child,
+                               ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
+    super(cluster, traits, child, groupSet, groupSets, aggCalls);
+  }
+
+  @Deprecated // Will be removed before Calcite 2.0
   public DrillAggregateRelBase(RelOptCluster cluster, RelTraitSet traits, RelNode child, boolean indicator,
       ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
     super(cluster, traits, child, indicator, groupSet, groupSets, aggCalls);

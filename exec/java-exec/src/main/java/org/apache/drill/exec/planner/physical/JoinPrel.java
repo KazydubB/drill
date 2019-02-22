@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexChecker;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
@@ -145,7 +146,12 @@ public abstract class JoinPrel extends DrillJoinRelBase implements Prel {
 
     for (Pair<Integer, Integer> pair : Pair.zip(leftKeys, rightKeys)) {
       final RexNode conditionExpr = conjuncts.get(i++);
-      final SqlKind kind  = conditionExpr.getKind();
+      boolean b = false;
+      if (conditionExpr instanceof RexCall) {
+        RexCall call = (RexCall) conditionExpr;
+        b = collapseExpandedIsNotDistinctFromExpr(call);
+      }
+      SqlKind kind  = b ? SqlKind.IS_NOT_DISTINCT_FROM : conditionExpr.getKind();
       if (kind != SqlKind.EQUALS && kind != SqlKind.IS_NOT_DISTINCT_FROM) {
         throw UserException.unsupportedError()
             .message("Unsupported comparator in join condition %s", conditionExpr)
@@ -156,6 +162,58 @@ public abstract class JoinPrel extends DrillJoinRelBase implements Prel {
           FieldReference.getWithQuotedRef(leftFields.get(pair.left)),
           FieldReference.getWithQuotedRef(rightFields.get(pair.right))));
     }
+  }
+
+  private static boolean collapseExpandedIsNotDistinctFromExpr(RexCall call) {
+    if (call.getKind() != SqlKind.OR || call.getOperands().size() != 2) {
+      return false;
+    }
+
+    final RexNode op0 = call.getOperands().get(0);
+    final RexNode op1 = call.getOperands().get(1);
+
+    if (!(op0 instanceof RexCall) || !(op1 instanceof RexCall)) {
+      return false;
+    }
+
+    RexCall opEqCall = (RexCall) op0;
+    RexCall opNullEqCall = (RexCall) op1;
+
+    if (opEqCall.getKind() == SqlKind.AND
+        && opNullEqCall.getKind() == SqlKind.EQUALS) {
+      RexCall temp = opEqCall;
+      opEqCall = opNullEqCall;
+      opNullEqCall = temp;
+    }
+
+    if (opNullEqCall.getKind() != SqlKind.AND
+        || opNullEqCall.getOperands().size() != 2
+        || opEqCall.getKind() != SqlKind.EQUALS) {
+      return false;
+    }
+
+    final RexNode op10 = opNullEqCall.getOperands().get(0);
+    final RexNode op11 = opNullEqCall.getOperands().get(1);
+    if (op10.getKind() != SqlKind.IS_NULL
+        || op11.getKind() != SqlKind.IS_NULL) {
+      return false;
+    }
+    final RexNode isNullInput0 = ((RexCall) op10).getOperands().get(0);
+    final RexNode isNullInput1 = ((RexCall) op11).getOperands().get(0);
+
+    final String isNullInput0Digest = isNullInput0.toString();
+    final String isNullInput1Digest = isNullInput1.toString();
+    final String equalsInput0Digest = opEqCall.getOperands().get(0).toString();
+    final String equalsInput1Digest = opEqCall.getOperands().get(1).toString();
+
+    if ((isNullInput0Digest.equals(equalsInput0Digest)
+        && isNullInput1Digest.equals(equalsInput1Digest))
+        || (isNullInput1Digest.equals(equalsInput0Digest)
+        && isNullInput0Digest.equals(equalsInput1Digest))) {
+      return true;
+    }
+
+    return false;
   }
 
   public boolean isSemiJoin() {
