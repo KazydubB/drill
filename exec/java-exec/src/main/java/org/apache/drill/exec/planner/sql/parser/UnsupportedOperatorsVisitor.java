@@ -268,7 +268,7 @@ public class UnsupportedOperatorsVisitor extends SqlShuttle {
 
     // Disable Function
     for(String strOperator : disabledOperators) {
-      if(sqlCall.getOperator().isName(strOperator)) {
+      if(sqlCall.getOperator().isName(strOperator, true)) { // true is passed to have previous behavior
         unsupportedOperatorCollector.setException(SqlUnsupportedException.ExceptionType.FUNCTION,
             sqlCall.getOperator().getName() + " is not supported\n" +
             "See Apache Drill JIRA: DRILL-2115");
