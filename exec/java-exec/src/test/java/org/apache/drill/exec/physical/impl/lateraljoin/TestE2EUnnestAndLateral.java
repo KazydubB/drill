@@ -137,7 +137,7 @@ public class TestE2EUnnestAndLateral extends ClusterTest {
     String sql = "SELECT customer.c_name, orders.o_id, orders.o_amount " +
       "FROM cp.`lateraljoin/nested-customer.parquet` customer, LATERAL " +
       "(SELECT t.ord.o_id as o_id, t.ord.o_amount as o_amount FROM UNNEST(customer.orders) t(ord) ORDER BY " +
-      "o_amount DESC) orders WHERE customer.c_id = 1.0";
+      "o_amount DESC LIMIT 3) orders WHERE customer.c_id = 1.0";
 
     testBuilder()
       .sqlQuery(sql)
@@ -369,7 +369,7 @@ public class TestE2EUnnestAndLateral extends ClusterTest {
     String sql = "SELECT customer.c_name, customer.c_custkey, orders.o_orderkey, orders.o_totalprice " +
       "FROM dfs.`lateraljoin/multipleFiles` customer, LATERAL " +
       "(SELECT t.ord.o_orderkey as o_orderkey, t.ord.o_totalprice as o_totalprice FROM UNNEST(customer.c_orders) t(ord)" +
-      " ORDER BY o_totalprice DESC) orders WHERE customer.c_custkey = '7180' LIMIT 1";
+      " ORDER BY o_totalprice DESC LIMIT 1) orders WHERE customer.c_custkey = '7180' LIMIT 1";
 
     testBuilder()
       .sqlQuery(sql)

@@ -42,8 +42,17 @@ public class StreamAggPrel extends AggPrelBase implements Prel{
 
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StreamAggPrel.class);
 
+  public StreamAggPrel(RelOptCluster cluster,
+                       RelTraitSet traits,
+                       RelNode child,
+                       ImmutableBitSet groupSet,
+                       List<ImmutableBitSet> groupSets,
+                       List<AggregateCall> aggCalls,
+                       OperatorPhase phase) throws InvalidRelException {
+    super(cluster, traits, child, groupSet, groupSets, aggCalls, phase);
+  }
 
-
+  @Deprecated // Will be removed before Calcite 2.0
   public StreamAggPrel(RelOptCluster cluster,
                        RelTraitSet traits,
                        RelNode child,
@@ -53,6 +62,15 @@ public class StreamAggPrel extends AggPrelBase implements Prel{
                        List<AggregateCall> aggCalls,
                        OperatorPhase phase) throws InvalidRelException {
     super(cluster, traits, child, indicator, groupSet, groupSets, aggCalls, phase);
+  }
+
+  @Override
+  public Aggregate copy(RelTraitSet traitSet, RelNode input, ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
+    try {
+      return new StreamAggPrel(getCluster(), traitSet, input, groupSet, groupSets, aggCalls, this.getOperatorPhase());
+    } catch (InvalidRelException e) {
+      throw new AssertionError(e);
+    }
   }
 
   @Override

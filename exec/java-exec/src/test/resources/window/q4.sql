@@ -5,5 +5,5 @@ SELECT
 FROM (
   SELECT *
   FROM dfs.`window/b4.p4`
-  ORDER BY position_id, employee_id
+  ORDER BY position_id, employee_id LIMIT 100
 )

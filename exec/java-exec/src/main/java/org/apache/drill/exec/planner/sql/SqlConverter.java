@@ -27,6 +27,7 @@ import java.util.Properties;
 import java.util.Set;
 
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.rel.metadata.JaninoRelMetadataProvider;
 import org.apache.calcite.util.Static;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.exec.planner.sql.parser.DrillParserUtil;
@@ -34,6 +35,10 @@ import org.apache.drill.exec.planner.sql.parser.impl.DrillSqlParseException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.base.MetadataProviderManager;
 import org.apache.drill.exec.physical.base.TableMetadataProvider;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.util.Pair;
+import org.apache.drill.exec.util.Utilities;
 import org.apache.drill.shaded.guava.com.google.common.cache.CacheBuilder;
 import org.apache.drill.shaded.guava.com.google.common.cache.CacheLoader;
 import org.apache.drill.shaded.guava.com.google.common.cache.LoadingCache;
@@ -120,6 +125,7 @@ public class SqlConverter {
   private final RelOptCostFactory costFactory;
   private final DrillValidator validator;
   private final boolean isInnerQuery;
+  private final boolean isExpandedView;
   private final UdfUtilities util;
   private final FunctionImplementationRegistry functions;
   private final String temporarySchema;
@@ -146,6 +152,7 @@ public class SqlConverter {
     this.parserConfig = new DrillParserConfig(settings);
     this.sqlToRelConverterConfig = new SqlToRelConverterConfig();
     this.isInnerQuery = false;
+    this.isExpandedView = false;
     this.typeFactory = new JavaTypeFactoryImpl(DRILL_TYPE_SYSTEM);
     this.defaultSchema = context.getNewDefaultSchema();
     this.rootSchema = rootSchema(defaultSchema);
@@ -174,6 +181,7 @@ public class SqlConverter {
     this.functions = parent.functions;
     this.util = parent.util;
     this.isInnerQuery = true;
+    this.isExpandedView = true;
     this.typeFactory = parent.typeFactory;
     this.costFactory = parent.costFactory;
     this.settings = parent.settings;
@@ -403,8 +411,20 @@ public class SqlConverter {
         new SqlToRelConverter(new Expander(), validator, catalog, cluster, DrillConvertletTable.INSTANCE,
             sqlToRelConverterConfig);
 
-    //To avoid unexpected column errors set a value of top to false
-    final RelRoot rel = sqlToRelConverter.convertQuery(validatedNode, false, false);
+    RelRoot rel = sqlToRelConverter.convertQuery(validatedNode, false, !isInnerQuery || isExpandedView);
+
+    // If extra expressions used in ORDER BY were added to the project list,
+    // add another project to remove them.
+    if ((!isInnerQuery || isExpandedView) && rel.rel.getRowType().getFieldCount() - rel.fields.size() > 0) {
+      List<RexNode> exprs = new ArrayList<>();
+      RexBuilder builder = rel.rel.getCluster().getRexBuilder();
+      for (Pair<Integer, String> field : rel.fields) {
+        exprs.add(builder.makeInputRef(rel.rel, field.left));
+      }
+
+      RelNode project = LogicalProject.create(rel.rel, exprs, rel.validatedRowType);
+      rel = RelRoot.of(project, rel.validatedRowType, rel.kind);
+    }
     return rel.withRel(sqlToRelConverter.flattenTypes(rel.rel, true));
   }
 
@@ -559,6 +579,9 @@ public class SqlConverter {
 
   private void initCluster() {
     cluster = RelOptCluster.create(planner, new DrillRexBuilder(typeFactory));
+    JaninoRelMetadataProvider relMetadataProvider = Utilities.registerJaninoRelMetadataProvider();
+
+    cluster.setMetadataProvider(relMetadataProvider);
   }
 
   private static class DrillRexBuilder extends RexBuilder {
