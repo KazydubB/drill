@@ -571,6 +571,17 @@ public abstract class PruneScanRule extends StoragePluginOptimizerRule {
     }
   }
 
+  /**
+   * A rule which transforms {@link TableScan} into {@link DrillValuesRel} to avoid
+   * unnecessary scanning of selected files. The rule is applied when query references
+   * directory columns only and has {@code DISTINCT} or {@code GROUP BY} operation.
+   *
+   * Resulting {@link DrillValuesRel} will be populated with constant literals obtained from:
+   * <ol>
+   *   <li>metadata directory file if it exists</li>
+   *   <li>or from file selection</li>
+   * </ol>
+   */
   private static class PruneFilesOnScanRule extends PruneScanRule {
 
     private final Pattern dirPattern;
@@ -758,11 +769,9 @@ public abstract class PruneScanRule extends StoragePluginOptimizerRule {
 
     private List<String> getValues(List<PartitionLocation> partitions, List<Integer> indexes) {
       List<String> values = new ArrayList<>(partitions.size() * indexes.size());
-      for (PartitionLocation partition : partitions) {
-        for (int index : indexes) {
-          values.add(partition.getPartitionValue(index));
-        }
-      }
+      partitions.forEach(partition -> indexes.forEach(
+          index -> values.add(partition.getPartitionValue(index)))
+      );
       return values;
     }
 

@@ -243,33 +243,6 @@ public class ColumnExplorer {
     return diffDirectoryNames;
   }
 
-  public static List<String> listPartitionValuesDirectory(String dirPath, String root) {
-    if (dirPath == null || root == null) {
-      return Collections.emptyList();
-    }
-
-    int rootDepth = new Path(root).depth();
-    Path path = new Path(dirPath);
-    int thisDepth = path.depth();
-
-    int diffCount = thisDepth - rootDepth;
-
-    if (diffCount < 1) {
-      return Collections.emptyList();
-    }
-
-    String[] diffDirectoryNames = new String[diffCount];
-
-    // start filling in array from the end
-    for (int i = rootDepth; thisDepth > i; i++) {
-      // place in the end of array
-      diffDirectoryNames[thisDepth - i - 1] = path.getName();
-      path = path.getParent();
-    }
-
-    return Arrays.asList(diffDirectoryNames);
-  }
-
   public boolean isStarQuery() {
     return isStarQuery;
   }

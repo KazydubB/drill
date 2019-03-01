@@ -18,7 +18,6 @@
 package org.apache.drill;
 
 import org.apache.drill.categories.PlannerTest;
-import org.apache.drill.exec.store.parquet.TestParquetMetadataCache;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -53,7 +52,7 @@ public class TestPartitionPruning extends PlanTestBase {
   @Test
   public void testPartitionPruningWithMetadataCache() throws Exception {
     test("refresh table metadata dfs.`%s`", TABLE_WITH_METADATA);
-    TestParquetMetadataCache.checkForMetadataFile(TABLE_WITH_METADATA);
+    checkForMetadataFile(TABLE_WITH_METADATA);
     String query = String.format("select distinct dir0, dir1 from dfs.`%s`", TABLE_WITH_METADATA);
     PlanTestBase.testPlanMatchingPatterns(query, new String[]{"Values\\(tuples="}, null);
   }
