@@ -48,7 +48,9 @@ import org.apache.parquet.hadoop.metadata.ParquetMetadata;
 import org.apache.parquet.io.ColumnIOFactory;
 import org.apache.parquet.io.MessageColumnIO;
 import org.apache.parquet.io.RecordReader;
+import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.MessageType;
+import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.Type;
 import org.apache.parquet.schema.Types;
 import org.slf4j.Logger;
@@ -123,13 +125,21 @@ public class DrillParquetReader extends CommonParquetRecordReader {
     Set<SchemaPath> selectedSchemaPaths = new LinkedHashSet<>();
 
     // get a list of modified columns which have the array elements removed from the schema path since parquet schema doesn't include array elements
+    // or if field is MAP then array/name segments are removed from the schema as well as obtaining elements by key is handled in EvaluationVisitor.
     List<SchemaPath> modifiedColumns = new LinkedList<>();
     for (SchemaPath path : columns) {
 
       List<String> segments = new ArrayList<>();
+      Type segmentType = schema;
       for (PathSegment seg = path.getRootSegment(); seg != null; seg = seg.getChild()) {
+
+        segmentType = getType(segmentType, seg);
+        boolean isMap = segmentType != null && segmentType.getOriginalType() == OriginalType.MAP;
         if (seg.isNamed()) {
           segments.add(seg.getNameSegment().getPath());
+        }
+        if (isMap) {
+          break;
         }
       }
 
@@ -144,7 +154,6 @@ public class DrillParquetReader extends CommonParquetRecordReader {
       SchemaPath schemaPath = SchemaPath.getCompoundPath(schemaColDesc);
       schemaPaths.add(schemaPath);
     }
-
     // loop through projection columns and add any columns that are missing from parquet schema to columnsNotFound list
     for (SchemaPath columnPath : modifiedColumns) {
       boolean notFound = true;
@@ -177,6 +186,38 @@ public class DrillParquetReader extends CommonParquetRecordReader {
       }
     }
     return projection;
+  }
+
+  /**
+   * Get type from the supplied {@code type} corresponding to given {@code segment}.
+   * @param type type to extract field corresponding to segment
+   * @param segment segment which type will be returned
+   * @return type corresponding to the {@code segment} or {@code null} if there is no field found in {@code type}.
+   */
+  private static Type getType(Type type, PathSegment segment) {
+    Type result = null;
+    if (type != null && !type.isPrimitive()) {
+      GroupType groupType = type.asGroupType();
+      if (segment.isNamed()) {
+        boolean found = false;
+        String fieldName = segment.getNameSegment().getPath();
+        for (Type field : groupType.getFields()) {
+          if (field.getName().equalsIgnoreCase(fieldName)) {
+            fieldName = field.getName();
+            found = true;
+            break;
+          }
+        }
+        result = found ? groupType.getType(fieldName) : null;
+      } else {
+        // the segment is array index
+        if (groupType.getOriginalType() == OriginalType.LIST) {
+          // get element type of the list
+          result = groupType.getType(0).asGroupType().getType(0);
+        }
+      }
+    }
+    return result;
   }
 
   @Override

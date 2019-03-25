@@ -327,6 +327,7 @@ public class RecordBatchSizer {
 
     public boolean isComplex() {
       return metadata.getType().getMinorType() == MinorType.MAP ||
+        metadata.getType().getMinorType() == MinorType.TRUEMAP ||
         metadata.getType().getMinorType() == MinorType.UNION ||
         metadata.getType().getMinorType() == MinorType.LIST;
     }
@@ -761,9 +762,10 @@ public class RecordBatchSizer {
     ColumnSize colSize = new ColumnSize(v, prefix);
     switch (v.getField().getType().getMinorType()) {
       case MAP:
+      case TRUEMAP:
         // Maps consume no size themselves. However, their contained
         // vectors do consume space, so visit columns recursively.
-        expandMap(colSize, (AbstractMapVector) v, prefix + v.getField().getName() + ".");
+        expandMap(colSize, v, prefix + v.getField().getName() + ".");
         break;
       case LIST:
         // complex ListVector cannot be casted to RepeatedListVector.
@@ -783,16 +785,15 @@ public class RecordBatchSizer {
     return colSize;
   }
 
-  private void expandMap(ColumnSize colSize, AbstractMapVector mapVector, String prefix) {
+  private void expandMap(ColumnSize colSize, ValueVector mapVector, String prefix) {
     for (ValueVector vector : mapVector) {
       colSize.children.put(vector.getField().getName(), measureColumn(vector, prefix));
     }
 
     // For a repeated map, we need the memory for the offset vector (only).
     // Map elements are recursively expanded above.
-
     if (mapVector.getField().getDataMode() == DataMode.REPEATED) {
-      ((RepeatedMapVector) mapVector).getOffsetVector().collectLedgers(ledgers);
+      ((RepeatedValueVector) mapVector).getOffsetVector().collectLedgers(ledgers);
     }
   }
 

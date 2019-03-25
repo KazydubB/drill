@@ -49,6 +49,7 @@ public class Types {
     switch(type.getMinorType()) {
     case LIST:
     case MAP:
+    case TRUEMAP:
       return true;
     default:
       return false;
@@ -188,6 +189,7 @@ public class Types {
       // or not) except ARRAY types (handled above):
 
       case MAP:             return "STRUCT"; // Drill map represents struct and in future will be renamed
+      case TRUEMAP:        return "MAP";
       case LATE:            return "ANY";
       case NULL:            return "NULL";
       case UNION:           return "UNION";
@@ -270,6 +272,7 @@ public class Types {
       case "INTERVAL YEAR TO MONTH":        return java.sql.Types.OTHER;
       case "INTERVAL DAY TO SECOND":        return java.sql.Types.OTHER;
       case "STRUCT":                        return java.sql.Types.OTHER; // Drill doesn't support java.sql.Struct
+      case "MAP":                           return java.sql.Types.OTHER;
       case "NATIONAL CHARACTER VARYING":    return java.sql.Types.NVARCHAR;
       case "NATIONAL CHARACTER":            return java.sql.Types.NCHAR;
       case "NULL":                          return java.sql.Types.NULL;
@@ -344,6 +347,7 @@ public class Types {
           case LATE:
           case LIST:
           case MAP:
+          case TRUEMAP:
           case UNION:
           case NULL:
           case TIMETZ:      // SQL TIME WITH TIME ZONE
@@ -431,6 +435,7 @@ public class Types {
 
       case INTERVAL:
       case MAP:
+      case TRUEMAP:
       case LATE:
       case NULL:
       case UNION:
@@ -575,7 +580,6 @@ public class Types {
 
   public static MinorType getMinorTypeFromName(String typeName) {
     typeName = typeName.toLowerCase();
-
     switch (typeName) {
     case "bool":
     case "boolean":
@@ -728,8 +732,10 @@ public class Types {
    * @return true if type can be used in ORDER BY clause
    */
   public static boolean isSortable(MinorType type) {
-    // Currently only map and list columns are not sortable.
-    return type != MinorType.MAP && type != MinorType.LIST;
+    // Currently only map, list and truemap columns are not sortable.
+    return type != MinorType.MAP
+        && type != MinorType.LIST
+        && type != MinorType.TRUEMAP;
   }
 
   /**

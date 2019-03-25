@@ -214,6 +214,14 @@ public class UnionVector implements ValueVector {
     return mapVector;
   }
 
+  public TrueMapVector getTrueMap() {
+    TrueMapVector trueMapVector = subtype(MinorType.TRUEMAP);
+    if (trueMapVector == null) {
+      trueMapVector = classicAddType(MinorType.TRUEMAP, TrueMapVector.class);
+    }
+    return trueMapVector;
+  }
+
   public ListVector getList() {
     ListVector listVector = subtype(MinorType.LIST);
     if (listVector == null) {

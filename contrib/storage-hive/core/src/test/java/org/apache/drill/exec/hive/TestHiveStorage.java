@@ -471,5 +471,4 @@ public class TestHiveStorage extends HiveTestBase {
       assertTrue("Column should be nullable", columnMetadata.getIsNullable());
     }
   }
-
 }

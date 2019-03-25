@@ -238,6 +238,8 @@ public class StatisticsAggBatch extends StreamingAggBatch {
       mTypeStr = "LIST";
     } else if (mf.getType().getMinorType() == TypeProtos.MinorType.MAP) {
       mTypeStr = "MAP";
+    } else if (mf.getType().getMinorType() == TypeProtos.MinorType.TRUEMAP) {
+      mTypeStr = "TRUEMAP";
     } else if (mf.getType().getMinorType() == TypeProtos.MinorType.UNION) {
       mTypeStr = "UNION";
     }
