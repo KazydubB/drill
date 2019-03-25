@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 
 import org.apache.drill.exec.util.JsonStringArrayList;
 import org.apache.drill.test.BaseTestQuery;
+import org.apache.drill.test.TestBuilder;
 import org.junit.Test;
 
 public class TestParquetComplex extends BaseTestQuery {
@@ -218,6 +219,512 @@ public class TestParquetComplex extends BaseTestQuery {
         .unOrdered()
         .baselineColumns("decimal_int32", "decimal_int64", "decimal_fixedLen", "decimal_binary")
         .baselineValues(ints, longs, fixedLen, fixedLen)
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapBigIntValue() throws Exception {
+    String query = "select order_items from cp.`store/parquet/complex/simple_map.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("order_items")
+        .baselineValues(TestBuilder.mapOfObject("Pencils", 1L))
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapStructValue() throws Exception {
+    String query = "select order_id, order_items from cp.`store/parquet/complex/map/m_a.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("order_id", "order_items")
+        .baselineValues(1L,
+            TestBuilder.mapOfObject(
+                101L,
+                TestBuilder.mapOfObject(false, "item_amount", 1L, "item_type", "Pencils"),
+                102L,
+                TestBuilder.mapOfObject(false, "item_amount", 2L, "item_type", "Eraser")
+            )
+        )
+        .baselineValues(1L,
+            TestBuilder.mapOfObject(
+                102L,
+                TestBuilder.mapOfObject(false, "item_amount", 3L, "item_type", "Eraser"),
+                103L,
+                TestBuilder.mapOfObject(false, "item_amount", 4L, "item_type", "Coke")
+            )
+        )
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapIntArrayValue() throws Exception {
+    /*
+      3 {3:[3,4,5],5:[5,3]}
+      1 {1:[1,2,3,4,5]}
+      2 {1:[1,2,3,4,5],2:[2,3]}
+     */
+    String query = "select id, mapcol from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by id asc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "mapcol")
+        .baselineValues(
+            1, TestBuilder.mapOfObject(
+                1, TestBuilder.listOf(1, 2, 3, 4, 5)
+            )
+        )
+        .baselineValues(
+            2, TestBuilder.mapOfObject(
+                1, TestBuilder.listOf(1, 2, 3, 4, 5),
+                2, TestBuilder.listOf(2, 3)
+            )
+        )
+        .baselineValues(
+            3, TestBuilder.mapOfObject(
+                3, TestBuilder.listOf(3, 4, 5),
+                5, TestBuilder.listOf(5, 3)
+            )
+        )
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapTrueMapValue() throws Exception {
+    /*
+      2 {3:{"a":1,"b":2},4:{"c":3},5:{"d":4,"e":5}}
+      1 {1:{"a":1,"b":2}}
+      2 {2:{"a":1,"b":2},3:{"c":3}}
+     */
+    String query = "select * from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "mapcol")
+        .baselineValues(2, TestBuilder.mapOfObject(
+            3, TestBuilder.mapOfObject("a", 1, "b", 2),
+            4, TestBuilder.mapOfObject("c", 3),
+            5, TestBuilder.mapOfObject("d", 4, "e", 5)
+            )
+        )
+        .baselineValues(1, TestBuilder.mapOfObject(
+            1, TestBuilder.mapOfObject("a", 1, "b", 2)
+            )
+        )
+        .baselineValues(2, TestBuilder.mapOfObject(
+            2, TestBuilder.mapOfObject("a", 1, "b", 2),
+            3, TestBuilder.mapOfObject("c", 3)
+            )
+        )
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapGetByIntKey() throws Exception {
+    /*
+      2 {3:{"a":1,"b":2},4:{"c":3},5:{"d":4,"e":5}}
+      1 {1:{"a":1,"b":2}}
+      2 {2:{"a":1,"b":2},3:{"c":3}}
+     */
+    String query = "select id, mapcol[3] as val from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "val")
+        .baselineValues(2, TestBuilder.mapOfObject("a", 1, "b", 2))
+        .baselineValues(1, TestBuilder.mapOfObject())
+        .baselineValues(2, TestBuilder.mapOfObject("c", 3))
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapGetByStringKey() throws Exception {
+    /*
+      3 {"b":6,"c":7}
+      1 {"a":1,"b":2,"c":3}
+      4 {"b":null,"c":8,"d":9,"e":10}
+      2 {"a":3,"b":4,"c":5}
+     */
+    String query = "select mapcol['a'] val from cp.`store/parquet/complex/map/map_where.parquet` order by id desc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("val")
+        .baselineValuesForSingleColumn(null, null, 3, 1)
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapGetByStringKey2() throws Exception {
+    /*
+      3 {"b":6,"c":7}
+      1 {"a":1,"b":2,"c":3}
+      4 {"b":null,"c":8,"d":9,"e":10}
+      2 {"a":3,"b":4,"c":5}
+     */
+    String query = "select id, mapcol['b'] val from cp.`store/parquet/complex/map/map_where.parquet` order by id desc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "val")
+        .baselineValues(4, null)
+        .baselineValues(3, 6)
+        .baselineValues(2, 4)
+        .baselineValues(1, 2)
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapGetByKeyComplexValue() throws Exception {
+    /*
+      2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
+      1, {1: {"a", 1, "b", 2}}
+      2, {2: {"a", 1, "b", 2}, 3: {"c", 3}}
+     */
+    String query = "select mapcol[2] val from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet` order by id";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("val")
+        .baselineValues(TestBuilder.mapOfObject())
+        .baselineValues(TestBuilder.mapOfObject())
+        .baselineValues(TestBuilder.mapOfObject("a", 1, "b", 2))
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapByKeyComplexValue2() throws Exception {
+    /*
+      1, {1: {"a", 1, "b", 2}}
+      2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
+      2, {2: {"a", 1, "b", 2}, 3: {"c", 3}}
+     */
+    String query = "select id, mapcol[3], mapcol[4]['c'] from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet` order by id asc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "EXPR$1", "EXPR$2")
+        .baselineValues(
+            1, TestBuilder.mapOfObject(), null
+        )
+        .baselineValues(
+            2, TestBuilder.mapOfObject("a", 1, "b", 2), 3
+        )
+        .baselineValues(
+            2, TestBuilder.mapOfObject("c", 3), null
+        )
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapGetByKeyComplexValue3() throws Exception {
+    /*
+      1, {1: {"a", 1, "b", 2}}
+      2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
+      2, {2: {"a", 1, "b", 2}, 3: {"c", 3}}
+     */
+    String query = "select id, mapcol[3]['b'] val from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet` order by id asc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "val")
+        .baselineValues(1, null)
+        .baselineValues(2, 2)
+        .baselineValues(2, null)
+        .go();
+  }
+
+  @Test
+  public void testTrueMapOrderByAnotherField() throws Exception {
+    String query = "select id, mapcol from cp.`store/parquet/complex/map/map_where.parquet` order by id desc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "mapcol")
+        .baselineValues(4, TestBuilder.mapOfObject("b", null, "c", 8, "d", 9, "e", 10))
+        .baselineValues(3, TestBuilder.mapOfObject("b", 6, "c", 7))
+        .baselineValues(2, TestBuilder.mapOfObject("a", 3, "b", 4, "c", 5))
+        .baselineValues(1, TestBuilder.mapOfObject("a", 1, "b", 2, "c", 3))
+        .go();
+  }
+
+  @Test
+  public void testTrueMapWithLimit() throws Exception {
+    /*
+      3 {"b":6,"c":7}
+      1 {"a":1,"b":2,"c":3}
+      4 {"b":null,"c":8,"d":9,"e":10}
+      2 {"a":3,"b":4,"c":5}
+     */
+    String query = "select id, mapcol from cp.`store/parquet/complex/map/map_where.parquet` order by id desc limit 2 offset 2";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "mapcol")
+        .baselineValues(2, TestBuilder.mapOfObject("a", 3, "b", 4, "c", 5))
+        .baselineValues(1, TestBuilder.mapOfObject("a", 1, "b", 2, "c", 3))
+        .go();
+  }
+
+  @Test
+  public void testTrueMapTrueMapArrayValue() throws Exception {
+    String query = "select id, mapcol, map_array from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "mapcol", "map_array")
+        .baselineValues(
+            3,
+            TestBuilder.mapOfObject(7L, 1, 102L, 2, 524L, 3, 901920L, 4),
+            TestBuilder.listOf(
+                TestBuilder.mapOfObject(8L, 1, 9L, 2, 523L, 4, 31L, 3),
+                TestBuilder.mapOfObject(1L, 2, 3L, 1, 5L, 3)
+            )
+        )
+        .baselineValues(
+            1,
+            TestBuilder.mapOfObject(1L, 1, 2L, 2),
+            TestBuilder.listOf(
+                TestBuilder.mapOfObject(1L, 1, 2L, 2)
+            )
+        )
+        .baselineValues(
+            2,
+            TestBuilder.mapOfObject(3L, 1, 1L, 2, 5L, 3),
+            TestBuilder.listOf(
+                TestBuilder.mapOfObject(3L, 1),
+                TestBuilder.mapOfObject(1L, 2)
+            )
+        )
+        .go();
+  }
+
+  @Test
+  public void testTrueMapArrayGetElementByIndex() throws Exception {
+    String query = "select id, map_array[0] as element, mapcol from cp.`store/parquet/complex/map/map_and_map_array.parquet` order by id desc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "element", "mapcol")
+        .baselineValues(
+            3,
+            TestBuilder.mapOfObject(8L, 1, 9L, 2, 523L, 4, 31L, 3),
+            TestBuilder.mapOfObject(7L, 1, 102L, 2, 524L, 3, 901920L, 4)
+        )
+        .baselineValues(
+            2,
+            TestBuilder.mapOfObject(3L, 1),
+            TestBuilder.mapOfObject(3L, 1, 1L, 2, 5L, 3)
+        )
+        .baselineValues(
+            1,
+            TestBuilder.mapOfObject(1L, 1, 2L, 2),
+            TestBuilder.mapOfObject(1L, 1, 2L, 2)
+        )
+        .go();
+  }
+
+  @Test
+  public void testTrueMapGetByLongKey() throws Exception {
+    String query = "select id, mapcol[1] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "val")
+        .baselineValues(3, null)
+        .baselineValues(1, 1)
+        .baselineValues(2, 2)
+        .go();
+  }
+
+  @Test
+  public void testTrueMapOrderByBigIntValue() throws Exception {
+    /*
+      3 {7:1,102:2,524:3,901920:4} [{8:1,9:2,523:4,31:3},{1:2,3:1,5:3}]
+      1 {1:1,2:2} [{1:1,2:2}]
+      2 {3:1,1:2,5:3} [{3:1},{1:2}]
+     */
+    String query = "select mapcol[1] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet` order by mapcol[1] desc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("val")
+        .baselineValuesForSingleColumn(null, 2, 1)
+        .go();
+  }
+
+  @Test
+  public void testTrueMapArrayElementGetByKey() throws Exception {
+    /*
+      3 {7:1,102:2,524:3,901920:4} [{8:1,9:2,523:4,31:3},{1:2,3:1,5:3}]
+      1 {1:1,2:2} [{1:1,2:2}]
+      2 {3:1,1:2,5:3} [{3:1},{1:2}]
+     */
+    String query = "select map_array[1][5] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet` order by map_array[1][5] desc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("val")
+        .baselineValuesForSingleColumn(null, null, 3)
+        .go();
+  }
+
+  @Test
+  public void testTrueMapArrayElementGetByStringKey() throws Exception {
+    /*
+      3 {7:1,102:2,524:3,901920:4} [{8:1,9:2,523:4,31:3},{1:2,3:1,5:3}]
+      1 {1:1,2:2} [{1:1,2:2}]
+      2 {3:1,1:2,5:3} [{3:1},{1:2}]
+     */
+    String query = "select map_array[1]['5'] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("val")
+        .baselineValuesForSingleColumn(3, null, null)
+        .go();
+  }
+
+  @Test
+  public void testTrueMapTypeOf() throws Exception {
+    String query = "select typeof(map_array[0]) as type from cp.`store/parquet/complex/map/map_and_map_array.parquet` limit 1";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("type")
+        .baselineValuesForSingleColumn("TRUEMAP<BIGINT,INT>")
+        .go();
+  }
+
+  @Test
+  public void testTrueMapFlatten() throws Exception {
+    /*
+      1, {1 : [1, 2, 3, 4, 5]}
+      2, {1 : [1, 2, 3, 4, 5], 2 : [2, 3]}
+      3, {3 : [3, 4, 5], 5 : [5, 3]}
+     */
+    String query = "select id, flatten(mapcol) as flat from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by id";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "flat")
+        .baselineValues(1,
+            TestBuilder.mapOfObject(false, "key", 1, "value", TestBuilder.listOf(1, 2, 3, 4, 5))
+        )
+        .baselineValues(2,
+            TestBuilder.mapOfObject(false, "key", 1, "value", TestBuilder.listOf(1, 2, 3, 4, 5))
+        )
+        .baselineValues(2,
+            TestBuilder.mapOfObject(false, "key", 2, "value", TestBuilder.listOf(2, 3))
+        )
+        .baselineValues(3,
+            TestBuilder.mapOfObject(false, "key", 3, "value", TestBuilder.listOf(3, 4, 5))
+        )
+        .baselineValues(3,
+            TestBuilder.mapOfObject(false, "key", 5, "value", TestBuilder.listOf(5, 3))
+        )
+        .go();
+  }
+
+  @Test
+  public void testTrueMapArrayFlatten() throws Exception {
+    /*
+      3 {7:1,102:2,524:3,901920:4} [{8:1,9:2,523:4,31:3},{1:2,3:1,5:3}]
+      1 {1:1,2:2} [{1:1,2:2}]
+      2 {3:1,1:2,5:3} [{3:1},{1:2}]
+     */
+    String query = "select flatten(map_array) flat from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("flat")
+        .baselineValuesForSingleColumn(
+            TestBuilder.mapOfObject(8L, 1, 9L, 2, 523L, 4, 31L, 3),
+            TestBuilder.mapOfObject(1L, 2, 3L, 1, 5L, 3),
+            TestBuilder.mapOfObject(1L, 1, 2L, 2),
+            TestBuilder.mapOfObject(3L, 1),
+            TestBuilder.mapOfObject(1L, 2)
+        )
+        .go();
+  }
+
+  @Test
+  public void testTrueMapArrayAndElementFlatten() throws Exception {
+    /*
+      3 {7:1,102:2,524:3,901920:4} [{8:1,9:2,523:4,31:3},{1:2,3:1,5:3}]
+      1 {1:1,2:2} [{1:1,2:2}]
+      2 {3:1,1:2,5:3} [{3:1},{1:2}]
+     */
+    String query = "select flatten(flatten(map_array)) flat from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("flat")
+        .baselineValuesForSingleColumn(
+            TestBuilder.mapOf("key", 8L, "value", 1),
+            TestBuilder.mapOf("key", 9L, "value", 2),
+            TestBuilder.mapOf("key", 523L, "value", 4),
+            TestBuilder.mapOf("key", 31L, "value", 3),
+            TestBuilder.mapOf("key", 1L, "value", 2),
+            TestBuilder.mapOf("key", 3L, "value", 1),
+            TestBuilder.mapOf("key", 5L, "value", 3),
+            TestBuilder.mapOf("key", 1L, "value", 1),
+            TestBuilder.mapOf("key", 2L, "value", 2),
+            TestBuilder.mapOf("key", 3L, "value", 1),
+            TestBuilder.mapOf("key", 1L, "value", 2)
+        )
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapFlattenListValue() throws Exception {
+    /*
+      1, {1 : [1, 2, 3, 4, 5]}
+      2, {1 : [1, 2, 3, 4, 5], 2 : [2, 3]}
+      3, {3 : [3, 4, 5], 5 : [5, 3]}
+     */
+    String query = "select id, flatten(mapcol[1]) as flat from cp.`store/parquet/complex/map/map_int_to_int_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "flat")
+        .baselineValues(1, 1)
+        .baselineValues(1, 2)
+        .baselineValues(1, 3)
+        .baselineValues(1, 4)
+        .baselineValues(1, 5)
+        .baselineValues(2, 1)
+        .baselineValues(2, 2)
+        .baselineValues(2, 3)
+        .baselineValues(2, 4)
+        .baselineValues(2, 5)
+        .go();
+  }
+
+  @Test
+  public void testTrueMapValueInFilter() throws Exception {
+    String query = "select id, mapcol from cp.`store/parquet/complex/map/map_where.parquet` where mapcol['c'] > 5";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "mapcol")
+        .baselineValues(3, TestBuilder.mapOfObject("b", 6, "c", 7))
+        .baselineValues(4, TestBuilder.mapOfObject("b", null, "c", 8, "d", 9, "e", 10))
+        .go();
+  }
+
+  @Test
+  public void testTrueMapValueInFilter2() throws Exception {
+    String query = "select id, mapcol from cp.`store/parquet/complex/map/map_where.parquet` where mapcol['b'] is not null order by id asc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "mapcol")
+        .baselineValues(1, TestBuilder.mapOfObject("a", 1, "b", 2, "c", 3))
+        .baselineValues(2, TestBuilder.mapOfObject("a", 3, "b", 4, "c", 5))
+        .baselineValues(3, TestBuilder.mapOfObject("b", 6, "c", 7))
         .go();
   }
 }

@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -58,12 +60,12 @@ import org.apache.parquet.hadoop.metadata.ParquetMetadata;
 import org.apache.parquet.io.ColumnIOFactory;
 import org.apache.parquet.io.MessageColumnIO;
 import org.apache.parquet.io.RecordReader;
+import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.MessageType;
+import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.Type;
 
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
-import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
-import org.apache.drill.shaded.guava.com.google.common.collect.Sets;
 import org.apache.parquet.schema.Types;
 
 public class DrillParquetReader extends CommonParquetRecordReader {
@@ -90,7 +92,7 @@ public class DrillParquetReader extends CommonParquetRecordReader {
   // Keeps track of the number of records returned in the case where only columns outside of the file were selected.
   // No actual data needs to be read out of the file, we only need to return batches until we have 'read' the number of
   // records specified in the row group metadata
-  long mockRecordsRead=0;
+  long mockRecordsRead;
   private List<SchemaPath> columnsNotFound;
   boolean noColumnsFound; // true if none of the columns in the projection list is found in the schema
 
@@ -116,16 +118,23 @@ public class DrillParquetReader extends CommonParquetRecordReader {
     // parquet type.union() seems to lose ConvertedType info when merging two columns that are the same type. This can
     // happen when selecting two elements from an array. So to work around this, we use set of SchemaPath to avoid duplicates
     // and then merge the types at the end
-    Set<SchemaPath> selectedSchemaPaths = Sets.newLinkedHashSet();
-
+    Set<SchemaPath> selectedSchemaPaths = new LinkedHashSet<>();
     // get a list of modified columns which have the array elements removed from the schema path since parquet schema doesn't include array elements
-    List<SchemaPath> modifiedColumns = Lists.newLinkedList();
+    // or if field is MAP then array/name segments are removed from the schema as well as obtaining elements by key is handled in EvaluationVisitor.
+    List<SchemaPath> modifiedColumns = new LinkedList<>();
     for (SchemaPath path : columns) {
 
-      List<String> segments = Lists.newArrayList();
+      List<String> segments = new ArrayList<>();
+      Type segmentType = schema;
       for (PathSegment seg = path.getRootSegment(); seg != null; seg = seg.getChild()) {
+
+        segmentType = getType(segmentType, seg);
+        boolean isMap = segmentType != null && segmentType.getOriginalType() == OriginalType.MAP;
         if (seg.isNamed()) {
           segments.add(seg.getNameSegment().getPath());
+        }
+        if (isMap) {
+          break;
         }
       }
 
@@ -134,13 +143,12 @@ public class DrillParquetReader extends CommonParquetRecordReader {
 
     // convert the columns in the parquet schema to a list of SchemaPath columns so that they can be compared in case insensitive manner
     // to the projection columns
-    List<SchemaPath> schemaPaths = Lists.newLinkedList();
+    List<SchemaPath> schemaPaths = new LinkedList<>();
     for (ColumnDescriptor columnDescriptor : schemaColumns) {
       String[] schemaColDesc = Arrays.copyOf(columnDescriptor.getPath(), columnDescriptor.getPath().length);
       SchemaPath schemaPath = SchemaPath.getCompoundPath(schemaColDesc);
       schemaPaths.add(schemaPath);
     }
-
     // loop through projection columns and add any columns that are missing from parquet schema to columnsNotFound list
     for (SchemaPath columnPath : modifiedColumns) {
       boolean notFound = true;
@@ -157,7 +165,7 @@ public class DrillParquetReader extends CommonParquetRecordReader {
 
     // convert SchemaPaths from selectedSchemaPaths and convert to parquet type, and merge into projection schema
     for (SchemaPath schemaPath : selectedSchemaPaths) {
-      List<String> segments = Lists.newArrayList();
+      List<String> segments = new ArrayList<>();
       PathSegment seg = schemaPath.getRootSegment();
       do {
         segments.add(seg.getNameSegment().getPath());
@@ -173,6 +181,38 @@ public class DrillParquetReader extends CommonParquetRecordReader {
       }
     }
     return projection;
+  }
+
+  /**
+   * Get type from the supplied {@code type} corresponding to given {@code segment}.
+   * @param type type to extract field corresponding to segment
+   * @param segment segment which type will be returned
+   * @return type corresponding to the {@code segment} or {@code null} if there is no field found in {@code type}.
+   */
+  private static Type getType(Type type, PathSegment segment) {
+    Type result = null;
+    if (type != null && !type.isPrimitive()) {
+      GroupType groupType = type.asGroupType();
+      if (segment.isNamed()) {
+        boolean found = false;
+        String fieldName = segment.getNameSegment().getPath();
+        for (Type field : groupType.getFields()) {
+          if (field.getName().equalsIgnoreCase(fieldName)) {
+            fieldName = field.getName();
+            found = true;
+            break;
+          }
+        }
+        result = found ? groupType.getType(fieldName) : null;
+      } else {
+        // the segment is array index
+        if (groupType.getOriginalType() == OriginalType.LIST) {
+          // get element type of the list
+          result = groupType.getType(0).asGroupType().getType(0);
+        }
+      }
+    }
+    return result;
   }
 
   @Override

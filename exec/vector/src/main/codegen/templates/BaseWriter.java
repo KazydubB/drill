@@ -64,12 +64,21 @@ package org.apache.drill.exec.vector.complex.writer;
     ListWriter list(String name);
     void start();
     void end();
+    TrueMapWriter trueMap(String name);
+  }
+
+  public interface TrueMapWriter extends MapWriter {
+    void startKeyValuePair();
+    void endKeyValuePair();
+    FieldWriter getKeyWriter();
+    FieldWriter getValueWriter();
   }
 
   public interface ListWriter extends BaseWriter {
     void startList();
     void endList();
     MapWriter map();
+    TrueMapWriter trueMap();
     ListWriter list();
     void copyReader(FieldReader reader);
 

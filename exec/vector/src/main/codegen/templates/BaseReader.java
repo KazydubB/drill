@@ -38,6 +38,7 @@ public interface BaseReader extends Positionable{
   void read(int index, UnionHolder holder);
   void copyAsValue(UnionWriter writer);
   boolean isSet();
+  void read(ValueHolder holder);
 
   public interface MapReader extends BaseReader, Iterable<String>{
     FieldReader reader(String name);
@@ -47,6 +48,14 @@ public interface BaseReader extends Positionable{
     boolean next();
     int size();
     void copyAsValue(MapWriter writer);
+  }
+
+  public interface TrueMapReader extends RepeatedMapReader {
+    void copyAsValue(TrueMapWriter writer);
+    int find(String key);
+    int find(int key);
+    void read(String key, ValueHolder holder);
+    void read(int key, ValueHolder holder);
   }
   
   public interface ListReader extends BaseReader{
@@ -59,7 +68,7 @@ public interface BaseReader extends Positionable{
     void copyAsValue(ListWriter writer);
   }
   
-  public interface ScalarReader extends  
+  public interface ScalarReader extends
   <#list vv.types as type><#list type.minor as minor><#assign name = minor.class?cap_first /> ${name}Reader, </#list></#list> 
   <#list vv.types as type><#list type.minor as minor><#assign name = minor.class?cap_first /> Repeated${name}Reader, </#list></#list>
   BaseReader {}
