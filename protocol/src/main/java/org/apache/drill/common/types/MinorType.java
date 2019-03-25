@@ -60,7 +60,8 @@ public enum MinorType implements com.dyuproject.protostuff.EnumLite<MinorType>
     LIST(40),
     GENERIC_OBJECT(41),
     UNION(42),
-    VARDECIMAL(43);
+    VARDECIMAL(43),
+    DICT(44);
     
     public final int number;
     
@@ -117,6 +118,7 @@ public enum MinorType implements com.dyuproject.protostuff.EnumLite<MinorType>
             case 41: return GENERIC_OBJECT;
             case 42: return UNION;
             case 43: return VARDECIMAL;
+            case 44: return DICT;
             default: return null;
         }
     }

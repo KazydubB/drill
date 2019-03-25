@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.expr;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -72,8 +73,6 @@ import org.apache.drill.exec.vector.ValueHolderHelper;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
 import org.apache.drill.shaded.guava.com.google.common.base.Function;
-import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
-import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
 import com.sun.codemodel.JBlock;
 import com.sun.codemodel.JClass;
 import com.sun.codemodel.JConditional;
@@ -131,7 +130,7 @@ public class EvaluationVisitor {
     }
   }
 
-  Map<ExpressionHolder,HoldingContainer> previousExpressions = Maps.newHashMap();
+  Map<ExpressionHolder,HoldingContainer> previousExpressions = new HashMap<>();
 
   Stack<Map<ExpressionHolder,HoldingContainer>> mapStack = new Stack<>();
 
@@ -212,23 +211,15 @@ public class EvaluationVisitor {
 
       HoldingContainer output = generator.declare(ifExpr.getMajorType());
 
-      JConditional jc = null;
       JBlock conditionalBlock = new JBlock(false, false);
       IfCondition c = ifExpr.ifCondition;
 
       HoldingContainer holdingContainer = c.condition.accept(this, generator);
-      if (jc == null) {
-        if (holdingContainer.isOptional()) {
-          jc = conditionalBlock._if(holdingContainer.getIsSet().eq(JExpr.lit(1)).cand(holdingContainer.getValue().eq(JExpr.lit(1))));
-        } else {
-          jc = conditionalBlock._if(holdingContainer.getValue().eq(JExpr.lit(1)));
-        }
+      JConditional jc;
+      if (holdingContainer.isOptional()) {
+        jc = conditionalBlock._if(holdingContainer.getIsSet().eq(JExpr.lit(1)).cand(holdingContainer.getValue().eq(JExpr.lit(1))));
       } else {
-        if (holdingContainer.isOptional()) {
-          jc = jc._else()._if(holdingContainer.getIsSet().eq(JExpr.lit(1)).cand(holdingContainer.getValue().eq(JExpr.lit(1))));
-        } else {
-          jc = jc._else()._if(holdingContainer.getValue().eq(JExpr.lit(1)));
-        }
+        jc = conditionalBlock._if(holdingContainer.getValue().eq(JExpr.lit(1)));
       }
 
       generator.nestEvalBlock(jc._then());
@@ -485,6 +476,7 @@ public class EvaluationVisitor {
       final boolean listVector = e.getTypedFieldId().isListVector();
 
       if (!hasReadPath && !complex) {
+
         JBlock eval = new JBlock();
 
         if (repeated) {
@@ -515,12 +507,30 @@ public class EvaluationVisitor {
         eval.add(expr.invoke("setPosition").arg(recordIndex));
         int listNum = 0;
 
+        JVar valueIndex = eval.decl(generator.getModel().INT, "valueIndex", JExpr.lit(-1));
+
+        int depth = 0;
+        boolean isDict = e.getFieldId().isDict(depth);
+
         while (seg != null) {
           if (seg.isArray()) {
-            // stop once we get to the last segment and the final type is neither complex nor repeated (map, list, repeated list).
+
+            // stop once we get to the last segment and the final type is neither complex nor repeated (map, dict, list, repeated list).
             // In case of non-complex and non-repeated type, we return Holder, in stead of FieldReader.
             if (seg.isLastPath() && !complex && !repeated && !listVector) {
               break;
+            }
+
+            depth++;
+
+            if (isDict) {
+              JExpression keyExpr = JExpr.lit(seg.getArraySegment().getIndex());
+
+              expr = getDictReaderReadByKeyExpression(generator, eval, expr, keyExpr, valueIndex, isNull);
+
+              seg = seg.getChild();
+              isDict = e.getFieldId().isDict(depth);
+              continue;
             }
 
             JVar list = generator.declareClassField("list", generator.getModel()._ref(FieldReader.class));
@@ -549,6 +559,25 @@ public class EvaluationVisitor {
             expr = list.invoke("reader");
             listNum++;
           } else {
+
+            if (e.getFieldId().isDict(depth)) {
+              depth++;
+              JExpression keyExpr = JExpr.lit(seg.getNameSegment().getPath());
+
+              MajorType finalType = e.getFieldId().getFinalType();
+              if (seg.getChild() == null && !(Types.isComplex(finalType) || Types.isRepeated(finalType))) {
+                // This is the last segment:
+                eval.add(expr.invoke("read").arg(keyExpr).arg(out.getHolder()));
+                return out;
+              }
+
+              expr = getDictReaderReadByKeyExpression(generator, eval, expr, keyExpr, valueIndex, isNull);
+
+              seg = seg.getChild();
+              isDict = e.getFieldId().isDict(depth);
+              continue;
+            }
+
             JExpression fieldName = JExpr.lit(seg.getNameSegment().getPath());
             expr = expr.invoke("reader").arg(fieldName);
           }
@@ -556,7 +585,14 @@ public class EvaluationVisitor {
         }
 
         if (complex || repeated) {
-          // //
+
+          if (isDict) {
+            JVar dictReader = generator.declareClassField("dictReader", generator.getModel()._ref(FieldReader.class));
+            eval.assign(dictReader, expr);
+
+            return new HoldingContainer(e.getMajorType(), dictReader, null, null, false, true);
+          }
+
           JVar complexReader = generator.declareClassField("reader", generator.getModel()._ref(FieldReader.class));
 
           if (isNullReaderLikely) {
@@ -566,12 +602,9 @@ public class EvaluationVisitor {
             JExpression nullReader;
             if (complex) {
               nullReader = nrClass.staticRef("EMPTY_MAP_INSTANCE");
-            } else if (repeated) {
-              nullReader = nrClass.staticRef("EMPTY_LIST_INSTANCE");
             } else {
-              nullReader = nrClass.staticRef("INSTANCE");
+              nullReader = nrClass.staticRef("EMPTY_LIST_INSTANCE");
             }
-
 
             jc._then().assign(complexReader, expr);
             jc._else().assign(complexReader, nullReader);
@@ -583,7 +616,11 @@ public class EvaluationVisitor {
           return hc;
         } else {
           if (seg != null) {
-            eval.add(expr.invoke("read").arg(JExpr.lit(seg.getArraySegment().getIndex())).arg(out.getHolder()));
+            JExpression holderExpr = out.getHolder();
+            if (e.getFieldId().isDict(depth)) {
+              holderExpr = JExpr.cast(generator.getModel()._ref(ValueHolder.class), holderExpr);
+            }
+            eval.add(expr.invoke("read").arg(JExpr.lit(seg.getArraySegment().getIndex())).arg(holderExpr));
           } else {
             eval.add(expr.invoke("read").arg(out.getHolder()));
           }
@@ -612,6 +649,39 @@ public class EvaluationVisitor {
         seg = seg.getChild();
       }
       return false;
+    }
+
+    /**
+     * Adds code to {@code eval} block which reads values by key from {@code expr} which is an instance of
+     * {@link org.apache.drill.exec.vector.complex.reader.BaseReader.DictReader}.
+     *
+     *
+     * @param generator current class generator
+     * @param eval evaluation block the code will be added to
+     * @param expr DICT reader to read values from
+     * @param keyExpr key literal
+     * @param valueIndex current value index (will be reassigned in the method)
+     * @param isNull variable to indicate whether entry with the key exists in the DICT.
+     *               Will be set to {@literal 1} if the key is not present
+     * @return expression corresponding to {@link org.apache.drill.exec.vector.complex.DictVector#FIELD_VALUE_NAME}'s
+     *         reader with its position set to index corresponding to the key
+     */
+    private JExpression getDictReaderReadByKeyExpression(ClassGenerator generator, JBlock eval, JExpression expr,
+                                                         JExpression keyExpr, JVar valueIndex, JVar isNull) {
+      JVar dictReader = generator.declareClassField("dictReader", generator.getModel()._ref(FieldReader.class));
+      eval.assign(dictReader, expr);
+      eval.assign(valueIndex, expr.invoke("find").arg(keyExpr));
+
+      JConditional conditional = eval._if(valueIndex.gt(JExpr.lit(-1)));
+      JBlock ifFound = conditional._then().block();
+      expr = dictReader.invoke("reader").arg(JExpr.lit("value"));
+      ifFound.add(expr.invoke("setPosition").arg(valueIndex));
+
+      JBlock elseBlock = conditional._else().block();
+      elseBlock.add(dictReader.invoke("setPosition").arg(valueIndex));
+      elseBlock.assign(isNull, JExpr.lit(1));
+
+      return expr;
     }
 
     private HoldingContainer visitReturnValueExpression(ReturnValueExpression e, ClassGenerator<?> generator) {
@@ -701,7 +771,7 @@ public class EvaluationVisitor {
         throws RuntimeException {
       String convertFunctionName = e.getConvertFunction() + e.getEncodingType();
 
-      List<LogicalExpression> newArgs = Lists.newArrayList();
+      List<LogicalExpression> newArgs = new ArrayList<>();
       newArgs.add(e.getInput()); // input_expr
 
       FunctionCall fc = new FunctionCall(convertFunctionName, newArgs, e.getPosition());
@@ -712,7 +782,7 @@ public class EvaluationVisitor {
     public HoldingContainer visitAnyValueExpression(AnyValueExpression e, ClassGenerator<?> value)
         throws RuntimeException {
 
-      List<LogicalExpression> newArgs = Lists.newArrayList();
+      List<LogicalExpression> newArgs = new ArrayList<>();
       newArgs.add(e.getInput()); // input_expr
 
       FunctionCall fc = new FunctionCall(AnyValueExpression.ANY_VALUE, newArgs, e.getPosition());

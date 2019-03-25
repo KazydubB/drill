@@ -474,7 +474,7 @@ public class Metadata {
     }
   }
 
-  private static ColTypeInfo getColTypeInfo(MessageType schema, Type type, String[] path, int depth) {
+  private static ColTypeInfo getColTypeInfo(MessageType schema, Type type, String[] path, int depth, List<OriginalType> parentTypes) {
     if (type.isPrimitive()) {
       PrimitiveType primitiveType = (PrimitiveType) type;
       int precision = 0;
@@ -487,21 +487,31 @@ public class Metadata {
       int repetitionLevel = schema.getMaxRepetitionLevel(path);
       int definitionLevel = schema.getMaxDefinitionLevel(path);
 
-      return new ColTypeInfo(type.getOriginalType(), precision, scale, repetitionLevel, definitionLevel);
+      return new ColTypeInfo(type.getOriginalType(), parentTypes, precision, scale, repetitionLevel, definitionLevel);
     }
     Type t = ((GroupType) type).getType(path[depth]);
-    return getColTypeInfo(schema, t, path, depth + 1);
+    if (!t.isPrimitive()) {
+      OriginalType originalType = t.getOriginalType();
+      if (originalType == OriginalType.MAP && !ParquetReaderUtility.isLogicalMapType(t.asGroupType())) {
+        originalType = null;
+      }
+      parentTypes.add(originalType);
+    }
+    return getColTypeInfo(schema, t, path, depth + 1, parentTypes);
   }
 
   private static class ColTypeInfo {
     public OriginalType originalType;
+    public List<OriginalType> parentTypes;
     public int precision;
     public int scale;
     public int repetitionLevel;
     public int definitionLevel;
 
-    ColTypeInfo(OriginalType originalType, int precision, int scale, int repetitionLevel, int definitionLevel) {
+    ColTypeInfo(OriginalType originalType, List<OriginalType> parentTypes,
+                int precision, int scale, int repetitionLevel, int definitionLevel) {
       this.originalType = originalType;
+      this.parentTypes = parentTypes;
       this.precision = precision;
       this.scale = scale;
       this.repetitionLevel = repetitionLevel;
@@ -560,7 +570,7 @@ public class Metadata {
     Map<SchemaPath, ColTypeInfo> colTypeInfoMap = new HashMap<>();
     schema.getPaths();
     for (String[] path : schema.getPaths()) {
-      colTypeInfoMap.put(SchemaPath.getCompoundPath(path), getColTypeInfo(schema, schema, path, 0));
+      colTypeInfoMap.put(SchemaPath.getCompoundPath(path), getColTypeInfo(schema, schema, path, 0, new ArrayList<>()));
     }
 
     List<RowGroupMetadata_v4> rowGroupMetadataList = Lists.newArrayList();
@@ -585,9 +595,18 @@ public class Metadata {
         ColTypeInfo colTypeInfo = colTypeInfoMap.get(columnSchemaName);
         Statistics<?> stats = col.getStatistics();
         long totalNullCount = stats.getNumNulls();
-        ColumnTypeMetadata_v4 columnTypeMetadata =
-            new ColumnTypeMetadata_v4(columnName, col.getPrimitiveType().getPrimitiveTypeName(), colTypeInfo.originalType,
-                colTypeInfo.precision, colTypeInfo.scale, colTypeInfo.repetitionLevel, colTypeInfo.definitionLevel, 0, false);
+        Metadata_V4.ColumnTypeMetadata_v4 columnTypeMetadata = new Metadata_V4.ColumnTypeMetadata_v4.Builder()
+            .name(columnName)
+            .primitiveType(col.getPrimitiveType().getPrimitiveTypeName())
+            .originalType(colTypeInfo.originalType)
+            .precision(colTypeInfo.precision)
+            .scale(colTypeInfo.scale)
+            .repetitionLevel(colTypeInfo.repetitionLevel)
+            .definitionLevel(colTypeInfo.definitionLevel)
+            .totalNullCount(0)
+            .interesting(false)
+            .parentTypes(colTypeInfo.parentTypes)
+            .build();
         if (parquetTableMetadata.getSummary().columnTypeInfo == null) {
           parquetTableMetadata.metadataSummary.columnTypeInfo = new ConcurrentHashMap<>();
         }

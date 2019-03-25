@@ -159,6 +159,7 @@ public interface ColumnMetadata extends Propertied {
   boolean isVariableWidth();
   boolean isMap();
   boolean isVariant();
+  boolean isDict();
 
   /**
    * Determine if the schema represents a column with a LIST type with

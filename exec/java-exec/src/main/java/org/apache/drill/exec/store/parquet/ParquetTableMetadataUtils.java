@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.store.parquet;
 
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
@@ -154,9 +155,12 @@ public class ParquetTableMetadataUtils {
     rowGroupStatistics.put(() -> ExactStatisticsConstants.LENGTH, rowGroupMetadata.getLength());
 
     Map<SchemaPath, TypeProtos.MajorType> columns = getRowGroupFields(tableMetadata, rowGroupMetadata);
+    Map<SchemaPath, TypeProtos.MajorType> intermediateColumns = getIntermediateFields(tableMetadata, rowGroupMetadata);
 
     TupleSchema schema = new TupleSchema();
-    columns.forEach((schemaPath, majorType) -> SchemaPathUtils.addColumnMetadata(schema, schemaPath, majorType));
+    columns.forEach(
+        (schemaPath, majorType) -> SchemaPathUtils.addColumnMetadata(schema, schemaPath, majorType, intermediateColumns)
+    );
 
     return new RowGroupMetadata(
         schema, columnsStatistics, rowGroupStatistics, rowGroupMetadata.getHostAffinity(), rgIndexInFile, location);
@@ -398,14 +402,8 @@ public class ParquetTableMetadataUtils {
   }
 
   private static Integer getInt(Object value) {
-    if (value instanceof Integer) {
-      return (Integer) value;
-    } else if (value instanceof Long) {
-      return ((Long) value).intValue();
-    } else if (value instanceof Float) {
-      return ((Float) value).intValue();
-    } else if (value instanceof Double) {
-      return ((Double) value).intValue();
+    if (value instanceof Number) {
+      return ((Number) value).intValue();
     } else if (value instanceof String) {
       return Integer.parseInt(value.toString());
     } else if (value instanceof byte[]) {
@@ -417,14 +415,8 @@ public class ParquetTableMetadataUtils {
   }
 
   private static Long getLong(Object value) {
-    if (value instanceof Integer) {
-      return Long.valueOf((Integer) value);
-    } else if (value instanceof Long) {
-      return (Long) value;
-    } else if (value instanceof Float) {
-      return ((Float) value).longValue();
-    } else if (value instanceof Double) {
-      return ((Double) value).longValue();
+    if (value instanceof Number) {
+      return ((Number) value).longValue();
     } else if (value instanceof String) {
       return Long.parseLong(value.toString());
     } else if (value instanceof byte[]) {
@@ -436,14 +428,8 @@ public class ParquetTableMetadataUtils {
   }
 
   private static Float getFloat(Object value) {
-    if (value instanceof Integer) {
-      return Float.valueOf((Integer) value);
-    } else if (value instanceof Long) {
-      return Float.valueOf((Long) value);
-    } else if (value instanceof Float) {
-      return (Float) value;
-    } else if (value instanceof Double) {
-      return ((Double) value).floatValue();
+    if (value instanceof Number) {
+      return ((Number) value).floatValue();
     } else if (value instanceof String) {
       return Float.parseFloat(value.toString());
     }
@@ -457,14 +443,8 @@ public class ParquetTableMetadataUtils {
   }
 
   private static Double getDouble(Object value) {
-    if (value instanceof Integer) {
-      return Double.valueOf((Integer) value);
-    } else if (value instanceof Long) {
-      return Double.valueOf((Long) value);
-    } else if (value instanceof Float) {
-      return Double.valueOf((Float) value);
-    } else if (value instanceof Double) {
-      return (Double) value;
+    if (value instanceof Number) {
+      return ((Number) value).doubleValue();
     } else if (value instanceof String) {
       return Double.parseDouble(value.toString());
     }
@@ -609,14 +589,45 @@ public class ParquetTableMetadataUtils {
               .build();
 
       SchemaPath columnPath = SchemaPath.getCompoundPath(column.getName());
-      TypeProtos.MajorType majorType = columns.get(columnPath);
-      if (majorType == null) {
-        columns.put(columnPath, columnType);
-      } else {
-        TypeProtos.MinorType leastRestrictiveType = TypeCastRules.getLeastRestrictiveType(Arrays.asList(majorType.getMinorType(), columnType.getMinorType()));
-        if (leastRestrictiveType != majorType.getMinorType()) {
-          columns.put(columnPath, columnType);
-        }
+      putType(columns, columnPath, columnType);
+    }
+    return columns;
+  }
+
+  /**
+   * Returns map of column names with their Drill types for every {@code NameSegment} in {@code SchemaPath}
+   * in specified {@code rowGroup}. The type for a {@code SchemaPath} can be {@code null} in case when
+   * it is not possible to determine its type. Actually, as of now this hierarchy is of interest solely
+   * because there is a need to account for {@link org.apache.drill.common.types.TypeProtos.MinorType#DICT}
+   * to make sure filters used on {@code DICT}'s values (get by key) are not pruned out before actual filtering
+   * happens.
+   *
+   * @param parquetTableMetadata the source of column types
+   * @param rowGroup row group whose columns should be discovered
+   * @return map of column names with their drill types
+   */
+  public static Map<SchemaPath, TypeProtos.MajorType> getIntermediateFields(
+      MetadataBase.ParquetTableMetadataBase parquetTableMetadata, MetadataBase.RowGroupMetadata rowGroup) {
+    Map<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
+
+    MetadataVersion metadataVersion = new MetadataVersion(parquetTableMetadata.getMetadataVersion());
+    boolean hasParentTypes = parquetTableMetadata.hasColumnMetadata()
+        && metadataVersion.compareTo(new MetadataVersion(4, 1)) >= 0;
+
+    if (!hasParentTypes) {
+      return Collections.emptyMap();
+    }
+
+    for (MetadataBase.ColumnMetadata column : rowGroup.getColumns()) {
+      Metadata_V4.ColumnTypeMetadata_v4 columnTypeMetadata =
+          ((Metadata_V4.ParquetTableMetadata_v4) parquetTableMetadata).getColumnTypeInfo(column.getName());
+      List<OriginalType> parentTypes = columnTypeMetadata.parentTypes;
+      List<TypeProtos.MajorType> drillTypes = ParquetReaderUtility.getComplexTypes(parentTypes);
+
+      for (int i = 0; i < drillTypes.size(); i++) {
+        SchemaPath columnPath = SchemaPath.getCompoundPath(i + 1, column.getName());
+        TypeProtos.MajorType drillType = drillTypes.get(i);
+        putType(columns, columnPath, drillType);
       }
     }
     return columns;
@@ -662,21 +673,11 @@ public class ParquetTableMetadataUtils {
    * @return map of column names with their drill types
    */
   static Map<SchemaPath, TypeProtos.MajorType> resolveFields(MetadataBase.ParquetTableMetadataBase parquetTableMetadata) {
-    LinkedHashMap<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
+    Map<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
     for (MetadataBase.ParquetFileMetadata file : parquetTableMetadata.getFiles()) {
       // row groups in the file have the same schema, so using the first one
       Map<SchemaPath, TypeProtos.MajorType> fileColumns = getFileFields(parquetTableMetadata, file);
-      fileColumns.forEach((columnPath, type) -> {
-        TypeProtos.MajorType majorType = columns.get(columnPath);
-        if (majorType == null) {
-          columns.put(columnPath, type);
-        } else {
-          TypeProtos.MinorType leastRestrictiveType = TypeCastRules.getLeastRestrictiveType(Arrays.asList(majorType.getMinorType(), type.getMinorType()));
-          if (leastRestrictiveType != majorType.getMinorType()) {
-            columns.put(columnPath, type);
-          }
-        }
-      });
+      fileColumns.forEach((columnPath, type) -> putType(columns, columnPath, type));
     }
     return columns;
   }
@@ -698,5 +699,27 @@ public class ParquetTableMetadataUtils {
             ImmutableList.of(ColumnStatisticsKind.NULLS_COUNT), null);
 
     return tableMetadata.cloneWithStats(columnsStatistics, newStats);
+  }
+
+  static Map<SchemaPath, TypeProtos.MajorType> resolveIntermediateFields(MetadataBase.ParquetTableMetadataBase parquetTableMetadata) {
+    Map<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
+    for (MetadataBase.ParquetFileMetadata file : parquetTableMetadata.getFiles()) {
+      // row groups in the file have the same schema, so using the first one
+      Map<SchemaPath, TypeProtos.MajorType> fileColumns = getIntermediateFields(parquetTableMetadata, file.getRowGroups().iterator().next());
+      fileColumns.forEach((columnPath, type) -> putType(columns, columnPath, type));
+    }
+    return columns;
+  }
+
+  private static void putType(Map<SchemaPath, TypeProtos.MajorType> columns, SchemaPath columnPath, TypeProtos.MajorType type) {
+    TypeProtos.MajorType majorType = columns.get(columnPath);
+    if (majorType == null) {
+      columns.put(columnPath, type);
+    } else if (!majorType.equals(type)) {
+      TypeProtos.MinorType leastRestrictiveType = TypeCastRules.getLeastRestrictiveType(Arrays.asList(majorType.getMinorType(), type.getMinorType()));
+      if (leastRestrictiveType != majorType.getMinorType()) {
+        columns.put(columnPath, type);
+      }
+    }
   }
 }

@@ -288,7 +288,8 @@ public class SystemOptionManager extends BaseOptionManager implements AutoClosea
       new OptionDefinition(ExecConstants.RM_QUERY_TAGS_VALIDATOR, new OptionMetaData(OptionValue.AccessibleScopes.SESSION_AND_QUERY, false, false)),
       new OptionDefinition(ExecConstants.RM_QUEUES_WAIT_FOR_PREFERRED_NODES_VALIDATOR),
       new OptionDefinition(ExecConstants.TDIGEST_COMPRESSION_VALIDATOR),
-      new OptionDefinition(ExecConstants.QUERY_MAX_ROWS_VALIDATOR, new OptionMetaData(OptionValue.AccessibleScopes.ALL, true, false))
+      new OptionDefinition(ExecConstants.QUERY_MAX_ROWS_VALIDATOR, new OptionMetaData(OptionValue.AccessibleScopes.ALL, true, false)),
+      new OptionDefinition(ExecConstants.PARQUET_READER_ENABLE_MAP_SUPPORT_VALIDATOR, new OptionMetaData(OptionValue.AccessibleScopes.SYSTEM_AND_SESSION, false, false))
     };
 
     CaseInsensitiveMap<OptionDefinition> map = Arrays.stream(definitions)
