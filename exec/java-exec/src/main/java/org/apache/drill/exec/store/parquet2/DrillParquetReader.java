@@ -111,18 +111,20 @@ public class DrillParquetReader extends CommonParquetRecordReader {
                                            List<SchemaPath> columnsNotFound) {
     MessageType projection = null;
 
-    String messageName = schema.getName();
+    String messageName = schema.getName();//messageName.equals("hive_schema")
     List<ColumnDescriptor> schemaColumns = schema.getColumns();
     // parquet type.union() seems to lose ConvertedType info when merging two columns that are the same type. This can
     // happen when selecting two elements from an array. So to work around this, we use set of SchemaPath to avoid duplicates
     // and then merge the types at the end
     Set<SchemaPath> selectedSchemaPaths = Sets.newLinkedHashSet();
-
+// todo: create 'correct' PathSegment for Map type (the info is obtainable from schema, amirite?)
     // get a list of modified columns which have the array elements removed from the schema path since parquet schema doesn't include array elements
     List<SchemaPath> modifiedColumns = Lists.newLinkedList();
     for (SchemaPath path : columns) {
 
       List<String> segments = Lists.newArrayList();
+//      Type rootType = schema.getFields().get(0);
+//      boolean isMap = rootType.getOriginalType() == OriginalType.MAP;
       for (PathSegment seg = path.getRootSegment(); seg != null; seg = seg.getChild()) {
         if (seg.isNamed()) {
           segments.add(seg.getNameSegment().getPath());
@@ -140,7 +142,7 @@ public class DrillParquetReader extends CommonParquetRecordReader {
       SchemaPath schemaPath = SchemaPath.getCompoundPath(schemaColDesc);
       schemaPaths.add(schemaPath);
     }
-
+// todo: schemaPaths.size == 3: order_items.map -key-, -value.item_amount- and -value.item_type-
     // loop through projection columns and add any columns that are missing from parquet schema to columnsNotFound list
     for (SchemaPath columnPath : modifiedColumns) {
       boolean notFound = true;
@@ -197,7 +199,10 @@ public class DrillParquetReader extends CommonParquetRecordReader {
       if (isStarQuery()) {
         projection = schema;
       } else {
-        columnsNotFound = new ArrayList<>();
+        columnsNotFound = new ArrayList<>();// todo: this projection..
+        /*if (schema.getName().equals("hive_schema")) {
+          rewriteColumns(schema);
+        }*/
         projection = getProjection(schema, getColumns(), columnsNotFound);
         if (projection == null) {
             projection = schema;

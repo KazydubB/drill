@@ -29,7 +29,7 @@ public class FieldPathHelper {
   /**
    * Returns {@link SchemaPath} equivalent of the specified {@link FieldPath}.
    */
-  public static SchemaPath fieldPath2SchemaPath(FieldPath fieldPath) {
+  public static SchemaPath fieldPath2SchemaPath(FieldPath fieldPath) { // todo: see if this method is invoked
     Stack<FieldSegment> fieldSegments = new Stack<FieldSegment>();
     FieldSegment seg = fieldPath.getRootSegment();
     while (seg != null) {

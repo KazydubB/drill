@@ -447,7 +447,7 @@ public class EvaluationVisitor {
 
       return null;
     }
-
+// todo; this is crucial
     private HoldingContainer visitValueVectorReadExpression(ValueVectorReadExpression e, ClassGenerator<?> generator)
         throws RuntimeException {
       // declare value vector
@@ -548,6 +548,8 @@ public class EvaluationVisitor {
 
             expr = list.invoke("reader");
             listNum++;
+          } else if (seg.isMap()) { // todo: add Map case
+              // todo: reader.read(seg.getMapSegment().getPath())
           } else {
             JExpression fieldName = JExpr.lit(seg.getNameSegment().getPath());
             expr = expr.invoke("reader").arg(fieldName);

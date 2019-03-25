@@ -536,7 +536,7 @@ public abstract class DrillRelOptUtil {
         return new PathSegment.NameSegment(itemStarFieldName);
       }
 
-      if (SqlStdOperatorTable.ITEM.equals(call.getOperator())) {
+      if (SqlStdOperatorTable.ITEM.equals(call.getOperator())) { // todo: of interest
         PathSegment mapOrArray = call.operands.get(0).accept(this);
         if (mapOrArray != null) {
           if (call.operands.get(1) instanceof RexLiteral) {

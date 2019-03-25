@@ -15,6 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import org.apache.drill.common.types.TypeProtos;
+
 <@pp.dropOutputFile />
 <@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/writer/BaseWriter.java" />
 
@@ -64,6 +67,9 @@ package org.apache.drill.exec.vector.complex.writer;
     ListWriter list(String name);
     void start();
     void end();
+    TrueMapWriter trueMap(String name, MajorType keyType, MajorType valueType);
+    FieldWriter getKeyWriter();
+    FieldWriter getValueWriter();
   }
 
   public interface ListWriter extends BaseWriter {

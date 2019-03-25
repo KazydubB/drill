@@ -17,24 +17,24 @@
  */
 package org.apache.drill.exec.vector.complex.impl;
 
-
 import java.util.Map;
 
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.complex.MapVector;
+import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter;
 
 import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
 
+// todo: nest in TrueMapVector?
 @SuppressWarnings("unused")
-public class SingleMapReaderImpl extends AbstractFieldReader{
+public class SingleTrueMapReaderImpl extends AbstractFieldReader{
 
-  private final MapVector vector;
+  private final TrueMapVector vector;
   private final Map<String, FieldReader> fields = Maps.newHashMap();
 
-  public SingleMapReaderImpl(MapVector vector) {
+  public SingleTrueMapReaderImpl(TrueMapVector vector) {
     this.vector = vector;
   }
 
@@ -45,7 +45,7 @@ public class SingleMapReaderImpl extends AbstractFieldReader{
   }
 
   @Override
-  public FieldReader reader(String name){ // todo: this should not be present for real map?
+  public FieldReader reader(String name){
     FieldReader reader = fields.get(name);
     if(reader == null){
       ValueVector child = vector.getChild(name);
@@ -70,7 +70,7 @@ public class SingleMapReaderImpl extends AbstractFieldReader{
 
   @Override
   public Object readObject() {
-    return vector.getAccessor().getObject(idx()); // todo: this...
+    return vector.getAccessor().getObject(idx());
   }
 
   @Override
@@ -90,14 +90,14 @@ public class SingleMapReaderImpl extends AbstractFieldReader{
 
   @Override
   public void copyAsValue(MapWriter writer){
-    SingleMapWriter impl = (SingleMapWriter) writer;
-    impl.container.copyFromSafe(idx(), impl.idx(), vector);
+    //SingleMapWriter impl = (SingleTrueMapWriter) writer;
+    //impl.container.copyFromSafe(idx(), impl.idx(), vector);
   }
 
   @Override
   public void copyAsField(String name, MapWriter writer){
     SingleMapWriter impl = (SingleMapWriter) writer.map(name);
-    impl.container.copyFromSafe(idx(), impl.idx(), vector);
+    // impl.container.copyFromSafe(idx(), impl.idx(), vector);
   }
 
 

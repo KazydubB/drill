@@ -41,7 +41,7 @@ public class TypedFieldId {
   final int[] fieldIds;
   final boolean isHyperReader;
   final boolean isListVector;
-  final PathSegment remainder;
+  final PathSegment remainder; // todo: use this one for maps!
 
   public TypedFieldId(MajorType type, int... fieldIds) {
     this(type, type, type, false, null, fieldIds);
@@ -147,6 +147,7 @@ public class TypedFieldId {
     boolean hyperReader = false;
     boolean withIndex = false;
     boolean isListVector = false;
+    boolean withKey;
 
     public Builder addId(int id) {
       ids.add(id);
@@ -155,6 +156,11 @@ public class TypedFieldId {
 
     public Builder withIndex() {
       withIndex = true;
+      return this;
+    }
+
+    public Builder withKey() {
+      withKey = true;
       return this;
     }
 

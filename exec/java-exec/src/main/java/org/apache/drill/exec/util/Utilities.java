@@ -121,7 +121,7 @@ public class Utilities {
   public static PathSegment convertLiteral(RexLiteral literal) {
     switch (literal.getType().getSqlTypeName()) {
       case CHAR:
-        return new PathSegment.NameSegment(RexLiteral.stringValue(literal));
+        return new PathSegment.MapSegment(RexLiteral.stringValue(literal));
       case INTEGER:
         return new PathSegment.ArraySegment(RexLiteral.intValue(literal));
       default:

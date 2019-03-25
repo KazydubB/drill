@@ -295,7 +295,7 @@ public class VectorContainer implements VectorAccessible {
 
   @Override
   public TypedFieldId getValueVectorId(SchemaPath path) {
-    for (int i = 0; i < wrappers.size(); i++) {
+    for (int i = 0; i < wrappers.size(); i++) { // todo: there should be check if wrappers.get(i).vector is Map and treat path as key
       VectorWrapper<?> va = wrappers.get(i);
       TypedFieldId id = va.getFieldIdIfMatches(i, path);
       if (id != null) {

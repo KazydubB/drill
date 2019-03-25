@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.vector.UntypedNullHolder;
 import org.apache.drill.exec.vector.UntypedNullVector;
 import org.apache.drill.exec.vector.complex.impl.UntypedHolderReaderImpl;
@@ -73,6 +74,18 @@ public class BasicTypeHelper {
     throw new UnsupportedOperationException(buildErrorMessage("get size", major));
   }
 
+  public static TrueMapVector getNewMapVector(String name, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
+      // case MAP:
+        // switch (type.getMode()) {
+          // case REQUIRED:
+          // case OPTIONAL:
+    MaterializedField field = MaterializedField.create(name, TrueMapVector.TYPE);
+            return new TrueMapVector(field, allocator, callBack, keyType, valueType);
+          /*case REPEATED:
+            return new RepeatedMapVector(field, allocator, callBack);*/
+        // }
+  }
+
   public static Class<? extends ValueVector> getValueVectorClass(MinorType type, DataMode mode){
     switch (type) {
     case UNION:
@@ -80,11 +93,21 @@ public class BasicTypeHelper {
     case MAP:
       switch (mode) {
       case OPTIONAL:
-      case REQUIRED:
+        case REQUIRED: // todo: change to TrueMapVector
         return MapVector.class;
       case REPEATED:
         return RepeatedMapVector.class;
       }
+
+      /*case TRUE_MAP:
+        switch (mode) {
+          case OPTIONAL:
+          case REQUIRED: // todo: change to TrueMapVector
+            return TrueMapVector.class;
+          case REPEATED:
+            // return RepeatedMapVector.class;
+            throw new IllegalArgumentException("No true repeated map!!!!")
+        }*/
 
     case LIST:
       switch (mode) {

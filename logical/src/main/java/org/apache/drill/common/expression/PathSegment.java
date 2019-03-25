@@ -19,12 +19,17 @@ package org.apache.drill.common.expression;
 
 public abstract class PathSegment {
 
+  public enum Type { // todo: add getType() method to PathSegment
+    ARRAY, NAME, MAP
+  }
+
   private PathSegment child;
-
+  private final Type type;
   private int hash;
-
-  public PathSegment(PathSegment child) {
+// todo: DRILL-4264 may be useful
+  public PathSegment(PathSegment child, Type type) {
     this.child = child;
+    this.type = type;
   }
 
   public abstract PathSegment cloneWithNewChild(PathSegment segment);
@@ -44,13 +49,13 @@ public abstract class PathSegment {
     }
 
     public ArraySegment(int index, PathSegment child) {
-      super(child);
+      super(child, Type.ARRAY);
       this.index = index;
       assert index >= 0;
     }
 
     public ArraySegment(PathSegment child) {
-      super(child);
+      super(child, Type.ARRAY);
       this.index = -1;
     }
 
@@ -59,7 +64,7 @@ public abstract class PathSegment {
     }
 
     public ArraySegment(int index) {
-      super(null);
+      super(null, Type.ARRAY);
       if (index < 0 ) {
         throw new IllegalArgumentException();
       }
@@ -77,6 +82,11 @@ public abstract class PathSegment {
 
     @Override
     public boolean isNamed() {
+      return false;
+    }
+
+    @Override
+    public boolean isMap() {
       return false;
     }
 
@@ -132,12 +142,12 @@ public abstract class PathSegment {
     private final String path;
 
     public NameSegment(CharSequence n, PathSegment child) {
-      super(child);
+      super(child, Type.NAME);
       this.path = n.toString();
     }
 
     public NameSegment(CharSequence n) {
-      super(null);
+      super(null, Type.NAME);
       this.path = n.toString();
     }
 
@@ -148,6 +158,11 @@ public abstract class PathSegment {
 
     @Override
     public boolean isNamed() { return true; }
+
+    @Override
+    public boolean isMap() {
+      return false;
+    }
 
     @Override
     public NameSegment getNameSegment() { return this; }
@@ -213,8 +228,20 @@ public abstract class PathSegment {
     throw new UnsupportedOperationException();
   }
 
+  public MapSegment getMapSegment() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Deprecated
   public abstract boolean isArray();
+  @Deprecated
   public abstract boolean isNamed();
+  @Deprecated
+  public abstract boolean isMap();
+
+  public Type getType() {
+    return type;
+  }
 
   public boolean isLastPath() {
     return child == null;
@@ -301,7 +328,7 @@ public abstract class PathSegment {
     if (getClass() != otherSeg.getClass()) {
       return false;
     }
-
+// todo: add check for map?
     if (!segmentEquals(otherSeg)) {
       return false;
     }
@@ -309,6 +336,104 @@ public abstract class PathSegment {
       return true;
     } else {
       return child.contains(otherSeg.child);
+    }
+  }
+
+  public static final class MapSegment extends PathSegment {
+    public static final String MAP_PREFIX = "___MAP___";
+
+    // private final String path;
+    private final Object key;
+// todo: child is needed?
+    public MapSegment(Object key, PathSegment child) {
+      super(child, Type.MAP);
+      // this.path = n.toString();
+      this.key = key;
+    }
+
+    public MapSegment(Object key) {
+      super(null, Type.MAP);
+      // this.path = n.toString();
+      this.key = key;
+    }
+
+    // public String getPath() { return MAP_PREFIX + /*path +*/ "[" + key + "]"; }
+    public String getPath() {
+      return key.toString();
+    }
+
+    public Object getKey() {
+      return key;
+    }
+
+    @Override
+    public boolean isArray() { return false; }
+
+    @Override
+    public boolean isNamed() { return false; }
+
+    @Override
+    public boolean isMap() {
+      return true;
+    }
+
+    @Override
+    public MapSegment getMapSegment() {
+      return this;
+    }
+
+    @Override
+    public String toString() {
+      return "MapSegment [path=" +/* path +*/ ", key=" + key + ", getChild()=" + getChild() + "]";
+    }
+
+    @Override
+    public int segmentHashCode() {
+      // return ((path == null) ? 0 : path.toLowerCase().hashCode());
+      return 0;
+    }
+
+    @Override
+    public boolean segmentEquals(PathSegment obj) {
+      if (this == obj) {
+        return true;
+      } else if (obj == null) {
+        return false;
+      } else if (getClass() != obj.getClass()) {
+        return false;
+      }
+
+      MapSegment other = (MapSegment) obj;
+      if (key == null) {
+        return other.key == null;
+      }
+      // return key.equalsIgnoreCase(other.key);
+      return key.equals(other.key);
+    }
+
+    public boolean nameEquals(String name) {
+      return key == null && name == null ||
+          key != null && key.equals(name);
+    }
+
+    @Override
+    public MapSegment clone() {
+      MapSegment s = new MapSegment(/*this.path, */key);
+      /*if (getChild() != null) {
+        s.setChild(getChild().clone());
+      }*/
+      return s;
+    }
+
+    @Override
+    public MapSegment cloneWithNewChild(PathSegment newChild) {
+      MapSegment s = new MapSegment(/*this.path, */key);
+      /*if (getChild() != null) {
+        s.setChild(getChild().cloneWithNewChild(newChild));
+      } else {
+        s.setChild(newChild);
+      }*/
+      return s;
     }
   }
 }

@@ -335,6 +335,8 @@ public final class TypeProtos {
      * <code>VARDECIMAL = 43;</code>
      */
     VARDECIMAL(43),
+
+    TRUE_MAP(44);
     ;
 
     /**
@@ -691,6 +693,7 @@ public final class TypeProtos {
         case 41: return GENERIC_OBJECT;
         case 42: return UNION;
         case 43: return VARDECIMAL;
+        case 44: return TRUE_MAP;
         default: return null;
       }
     }

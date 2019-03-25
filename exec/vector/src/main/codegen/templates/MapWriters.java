@@ -16,14 +16,17 @@
  * limitations under the License.
  */
 <@pp.dropOutputFile />
-<#list ["Single", "Repeated"] as mode>
+<#list ["Single", "Repeated", "True"] as mode>
 <@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/impl/${mode}MapWriter.java" />
 <#if mode == "Single">
 <#assign containerClass = "MapVector" />
 <#assign index = "idx()">
-<#else>
+<#elseif mode == "Repeated">
 <#assign containerClass = "RepeatedMapVector" />
 <#assign index = "currentChildIndex">
+<#elseif mode == "True">
+<#assign containerClass = "TrueMapVector" />
+<#assign index = "idx()"> // todo: not sure
 </#if>
 
 <#include "/@includes/license.ftl" />
@@ -32,14 +35,16 @@ package org.apache.drill.exec.vector.complex.impl;
 
 <#include "/@includes/vv_imports.ftl" />
 import java.util.Map;
+import java.util.HashMap;
 
 import org.apache.drill.common.types.TypeProtos.DataMode;
 import org.apache.drill.exec.expr.holders.RepeatedMapHolder;
 import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.FieldWriter;
-
-import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
+<#if mode == "True">
+import org.apache.drill.common.types.TypeProtos;
+</#if>
 
 /*
  * This class is generated using FreeMarker and the ${.template_name} template.
@@ -48,19 +53,30 @@ import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
 public class ${mode}MapWriter extends AbstractFieldWriter {
 
   protected final ${containerClass} container;
-  private final Map<String, FieldWriter> fields = Maps.newHashMap();
+  <#if mode != "True">private final Map<String, FieldWriter> fields = new HashMap<>(); // todo: exclude form TrueMap?</#if>
+  <#if mode == "True">
+  private TypeProtos.MajorType keyType; // todo: final?
+  private TypeProtos.MajorType valueType;
+  private FieldWriter keyWriter;
+  private FieldWriter valueWriter;
+  </#if>
   <#if mode == "Repeated">private int currentChildIndex = 0;</#if>
 
-  private final boolean unionEnabled;
+  private final boolean unionEnabled; // todo: discard for True?
 
-  public ${mode}MapWriter(${containerClass} container, FieldWriter parent, boolean unionEnabled) {
+  public ${mode}MapWriter(${containerClass} container, FieldWriter parent,
+    boolean unionEnabled<#if mode == "True">, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType</#if>) {
     super(parent);
     this.container = container;
     this.unionEnabled = unionEnabled;
+    <#if mode == "True">
+    this.keyType = keyType;
+    this.valueType = valueType;
+    </#if>
   }
 
-  public ${mode}MapWriter(${containerClass} container, FieldWriter parent) {
-    this(container, parent, false);
+  public ${mode}MapWriter(${containerClass} container, FieldWriter parent<#if mode == "True">, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType</#if>) {
+    this(container, parent, false<#if mode == "True">, keyType, valueType</#if>);
   }
 
   @Override
@@ -80,6 +96,7 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
 
   @Override
   public MapWriter map(String name) {
+    <#if mode != "True">
       FieldWriter writer = fields.get(name.toLowerCase());
     if(writer == null){
       int vectorCount=container.size();
@@ -96,7 +113,81 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
       fields.put(name.toLowerCase(), writer);
     }
     return writer;
+    <#else>
+    throw new UnsupportedOperationException("Not for true map!");
+    </#if>
   }
+
+  <#if mode == "True">
+  // todo: change this!?
+  @Override
+  public TrueMapWriter trueMap(String name, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType) {
+    <#if mode == "True">
+    throw new UnsupportedOperationException("Not yet for True map!");
+    <#else>
+    /*FieldWriter writer = fields.get(name.toLowerCase());
+    if(writer == null){
+    int vectorCount=container.size();
+    MapVector vector = container.addOrGet(name, MapVector.TYPE, MapVector.class);
+    if(!unionEnabled){
+    writer = new SingleMapWriter(vector, this);
+    } else {
+    writer = new PromotableWriter(vector, container);
+    }
+    if(vectorCount != container.size()) {
+    writer.allocate();
+    }
+    writer.setPosition(idx());
+    fields.put(name.toLowerCase(), writer);
+    }
+    return writer;*/
+    <#if mode != "True">
+    FieldWriter writer = fields.get(name.toLowerCase());
+    <#else>
+
+    </#if>
+    if (writer == null) {
+      int vectorCount=container.size();
+
+      TrueMapVector vector = container.addOrGet(name, keyType, valueType);
+
+      TrueMapWriter writer = new TrueMapWriter(vector, this, keyType, valueType);
+      //ValueVector keyVector=container.addOrGet("key",keyType,TypeHelper.getValueVectorClass(keyType.getMinorType(),keyType.getMode()));
+      //ValueVector valueVector=container.addOrGet("value",valueType,TypeHelper.getValueVectorClass(valueType.getMinorType(),valueType.getMode()));
+      //keyWriterClass=BasicTypeHelper.getWriterImpl(keyType.getMinorType(),keyType.getMode());
+      //valueWriterClass=BasicTypeHelper.getWriterImpl(valueType.getMinorType(),valueType.getMode()); // todo: that's not correct way to create writer implementation
+      // keyWriter=keyWriterClass.getDeclaredConstructor(keyVector.getClass(),AbstractFieldWriter.class).newInstance(keyVector,this);
+      //valueWriter=valueWriterClass.getDeclaredConstructor(valueVector.getClass(),AbstractFieldWriter.class).newInstance(valueVector,this);
+      // keyWriter.allocate();
+      //valueWriter.allocate();
+      //keyWriter.setPosition(${index});
+      //valueWriter.setPosition(${index});
+
+
+      if(vectorCount != container.size()) {
+        writer.allocate();
+      }
+      writer.setPosition(${index});
+      <#if mode != "True">
+      fields.put(name.toLowerCase(), writer);
+      <#else>
+
+      </#if>
+    }
+    return writer; // todo: implement properly!
+    </#if>
+  }
+
+  @Override
+  public FieldWriter getKeyWriter() {
+    return keyWriter;
+  }
+
+  @Override
+  public FieldWriter getValueWriter() {
+    return valueWriter;
+  }
+  </#if>
 
   @Override
   public void close() throws Exception {
@@ -107,19 +198,31 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
   @Override
   public void allocate() {
     container.allocateNew();
+    <#if mode != "True">
     for(final FieldWriter w : fields.values()) {
       w.allocate();
     }
+    <#else>
+    keyWriter.allocate();
+    valueWriter.allocate();
+    </#if>
   }
 
   @Override
   public void clear() {
     container.clear();
+    <#if mode != "True">
     for(final FieldWriter w : fields.values()) {
       w.clear();
     }
+    <#else>
+    keyWriter.clear();
+    valueWriter.clear();
+    </#if>
   }
 
+  <#if mode != "True">
+// todo: UnsupportedOpException for True?
   @Override
   public ListWriter list(String name) {
     FieldWriter writer = fields.get(name.toLowerCase());
@@ -138,7 +241,7 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
     }
     return writer;
   }
-
+  </#if>
   <#if mode == "Repeated">
   public void start() {
       // update the repeated vector to state that there is current+1 objects.
@@ -174,9 +277,14 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
   @Override
   public void setPosition(int index) {
     super.setPosition(index);
+<#if mode != "True">
     for(final FieldWriter w: fields.values()) {
       w.setPosition(index);
     }
+    <#else>
+    keyWriter.setPosition(index);
+    valueWriter.setPosition(index);
+    </#if>
   }
 
   @Override
@@ -189,6 +297,7 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
 
   </#if>
 
+<#if mode != "True">
   <#list vv.types as type><#list type.minor as minor>
   <#assign lowerName = minor.class?uncap_first />
   <#if lowerName == "int" ><#assign lowerName = "integer" /></#if>
@@ -237,6 +346,6 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
   }
 
   </#list></#list>
-
+</#if>
 }
 </#list>

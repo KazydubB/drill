@@ -142,4 +142,8 @@ public abstract class AbstractContainerVector implements ValueVector {
 
   // return the child vector's ordinal in the composite container
   public abstract VectorWithOrdinal getChildVectorWithOrdinal(String name);
+
+  public VectorWithOrdinal getByKey(Object key) { // todo: allow keys of different types or probably pass key type as well
+    throw new UnsupportedOperationException(getClass().getName() + " does not support retrieving value by key");
+  }
 }

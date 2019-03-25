@@ -481,7 +481,7 @@ public class RepeatedMapVector extends AbstractMapVector
       final List<Object> list = new JsonStringArrayList<>();
       final int end = offsets.getAccessor().get(index+1);
       String fieldName;
-      for (int i =  offsets.getAccessor().get(index); i < end; i++) {
+      for (int i =  offsets.getAccessor().get(index); i < end; i++) { // todo: interesting
         final Map<String, Object> vv = Maps.newLinkedHashMap();
         for (final MaterializedField field : getField().getChildren()) {
           if (!field.equals(BaseRepeatedValueVector.OFFSETS_FIELD)) {

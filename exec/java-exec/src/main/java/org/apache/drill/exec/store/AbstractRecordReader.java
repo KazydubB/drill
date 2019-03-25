@@ -37,7 +37,7 @@ public abstract class AbstractRecordReader implements RecordReader {
   // For text reader, the default columns to read is "columns[0]".
   protected static final List<SchemaPath> DEFAULT_TEXT_COLS_TO_READ = ImmutableList.of(new SchemaPath(new PathSegment.NameSegment("columns", new PathSegment.ArraySegment(0))));
 
-  private Collection<SchemaPath> columns = null;
+  protected Collection<SchemaPath> columns = null;
   private boolean isStarQuery = false;
   private boolean isSkipQuery = false;
 
@@ -69,7 +69,7 @@ public abstract class AbstractRecordReader implements RecordReader {
     }
 
     isStarQuery = Utilities.isStarQuery(columnsToRead);
-    columns = transformColumns(columnsToRead);
+    columns = transformColumns(columnsToRead); // todo: this could be used to transform columns
 
     logger.debug("columns to read : {}", columns);
   }
@@ -77,7 +77,7 @@ public abstract class AbstractRecordReader implements RecordReader {
   protected Collection<SchemaPath> getColumns() {
     return columns;
   }
-
+// todo: it is possible to override the method in DrillParquetReader!
   protected Collection<SchemaPath> transformColumns(Collection<SchemaPath> projected) {
     return projected;
   }

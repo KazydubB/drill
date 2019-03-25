@@ -36,11 +36,23 @@ public interface BaseReader extends Positionable{
   void reset();
   void read(UnionHolder holder);
   void read(int index, UnionHolder holder);
+  // todo: add method read(Object key, holder)
   void copyAsValue(UnionWriter writer);
   boolean isSet();
 
   public interface MapReader extends BaseReader, Iterable<String>{
     FieldReader reader(String name);
+    <#list vv.types as type>
+      <#list type.minor as minor>
+        <#assign name = minor.class?cap_first />
+    default void read(Object key, ${name}Holder h) {
+      throw new UnsupportedOperationException("Can't read value by key for " + h.getClass().getName());
+    }
+    default void read(String key, Nullable${name}Holder h) {
+      throw new UnsupportedOperationException("Can't read value by key for " + h.getClass().getName());
+    }
+      </#list>
+    </#list>
   }
   
   public interface RepeatedMapReader extends MapReader{

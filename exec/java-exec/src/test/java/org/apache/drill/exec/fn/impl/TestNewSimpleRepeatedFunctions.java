@@ -322,4 +322,28 @@ public class TestNewSimpleRepeatedFunctions extends ClusterTest {
         .baselineValuesForSingleColumn(3, 0, 2)
         .go();
   }
+
+  @Test
+  public void test() throws Exception {
+    String query = "select order_items['map'] from dfs.`functions/repeated/map_parquet`";
+    /*testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns(COLUMN_NAME)
+        .baselineValuesForSingleColumn(3, 0, 2)
+        .go();*/
+    runAndPrint(query);
+  }
+
+  @Test
+  public void testR() throws Exception {
+    String query = "select date_list[1] from cp.`store/parquet/complex/repeated_types.parquet`";
+    /*testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns(COLUMN_NAME)
+        .baselineValuesForSingleColumn(3, 0, 2)
+        .go();*/
+    runAndPrint(query);
+  }
 }

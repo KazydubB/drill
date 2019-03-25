@@ -59,10 +59,10 @@ public class FieldIdUtil {
 
 
   public static TypedFieldId getFieldIdIfMatches(ValueVector vector, TypedFieldId.Builder builder, boolean addToBreadCrumb, PathSegment seg) {
-    if (vector instanceof RepeatedMapVector && seg != null && seg.isArray() && !seg.isLastPath()) {
+    if (vector instanceof RepeatedMapVector && seg != null && seg.isArray() && !seg.isLastPath()) { // todo:?
       if (addToBreadCrumb) {
         addToBreadCrumb = false;
-        builder.remainder(seg);
+        builder.remainder(seg); // todo: make analogy for Map
       }
       // skip the first array segment as there is no corresponding child vector.
       seg = seg.getChild();
@@ -72,7 +72,7 @@ public class FieldIdUtil {
       if (seg.isArray()) {
         return null;
       }
-    }
+    } // else if (vector instanceof MapVector && seg != null && seg.isMap() )
 
     if (seg == null) {
       if (addToBreadCrumb) {
@@ -85,7 +85,7 @@ public class FieldIdUtil {
       if (seg.isLastPath()) {
         MajorType type;
         if (vector instanceof AbstractContainerVector) {
-          type = ((AbstractContainerVector) vector).getLastPathType();
+          type = ((AbstractContainerVector) vector).getLastPathType(); // todo: this could be of interest (map)
         } else if (vector instanceof ListVector) {
           type = ((ListVector) vector).getDataVector().getField().getType();
           builder.listVector();
@@ -109,6 +109,34 @@ public class FieldIdUtil {
           builder.remainder(seg);
         }
       }
+    } else if (seg.isMap()) {
+      if (seg.isLastPath()) {
+        MajorType type;
+        if (vector instanceof AbstractContainerVector) {
+          type = ((AbstractContainerVector) vector).getLastPathType(); // todo: this could be of interest (map)
+        } /*else if (vector instanceof ListVector) {
+          type = ((ListVector) vector).getDataVector().getField().getType();
+          builder.listVector();
+        }*/ else {
+          throw new UnsupportedOperationException("FieldIdUtil does not support vector of type " + vector.getField().getType());
+        }
+        builder //
+            // .withIndex() //
+            .finalType(type);
+
+        // remainder starts with the 1st array segment in SchemaPath.
+        // only set remainder when it's the only array segment.
+        if (addToBreadCrumb) {
+          addToBreadCrumb = false;
+          builder.remainder(seg);
+        }
+        return builder.build();
+      } else {
+        if (addToBreadCrumb) {
+          addToBreadCrumb = false;
+          builder.remainder(seg);
+        }
+      }
     } else {
       if (vector instanceof ListVector) {
         return null;
@@ -116,8 +144,14 @@ public class FieldIdUtil {
     }
 
     ValueVector v;
-    if (vector instanceof AbstractContainerVector) {
-      VectorWithOrdinal vord = ((AbstractContainerVector) vector).getChildVectorWithOrdinal(seg.isArray() ? null : seg.getNameSegment().getPath());
+    if (vector instanceof AbstractContainerVector) { // todo: next line. Changes for 'true' map should be done here. Pass key value
+      String fieldName = null;
+      if (seg.isMap()) {
+        fieldName = (String) seg.getMapSegment().getKey();
+      } else if (seg.isNamed()) {
+        fieldName = seg.getNameSegment().getPath();
+      }
+      VectorWithOrdinal vord = ((AbstractContainerVector) vector).getChildVectorWithOrdinal(seg.isArray() ? null : fieldName); // todo: should not be here!
       if (vord == null) {
         return null;
       }
@@ -179,7 +213,7 @@ public class FieldIdUtil {
     TypedFieldId.Builder builder = TypedFieldId.newBuilder();
     if (hyper) {
       builder.hyper();
-    }
+    } // todo: add instance of 'true' vector and handle
     if (vector instanceof UnionVector) {
       builder.addId(id).remainder(expectedPath.getRootSegment().getChild());
       List<MinorType> minorTypes = ((UnionVector) vector).getSubTypes();
@@ -201,7 +235,7 @@ public class FieldIdUtil {
       builder.addId(id);
       return getFieldIdIfMatches(list, builder, true, expectedPath.getRootSegment().getChild());
     } else
-    if (vector instanceof AbstractContainerVector) {
+    if (vector instanceof AbstractContainerVector) { // todo: probably handle MapSegment?
       // we're looking for a multi path.
       AbstractContainerVector c = (AbstractContainerVector) vector;
       builder.intermediateType(vector.getField().getType());
@@ -216,10 +250,10 @@ public class FieldIdUtil {
         return builder.build();
       } else {
         PathSegment child = seg.getChild();
-        if (child.isArray() && child.isLastPath()) {
+        if (child.isArray() && child.isLastPath()) { // todo: should map be handled here?
           builder.remainder(child);
           builder.withIndex();
-          builder.finalType(vector.getField().getType().toBuilder().setMode(DataMode.OPTIONAL).build());
+          builder.finalType(vector.getField().getType().toBuilder().setMode(DataMode.OPTIONAL).build()); // todo: perform smth similar for map?
           return builder.build();
         } else {
           return null;
