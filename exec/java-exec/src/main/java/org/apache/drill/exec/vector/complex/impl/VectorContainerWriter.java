@@ -20,10 +20,12 @@ package org.apache.drill.exec.vector.complex.impl;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.physical.impl.OutputMutator;
+import org.apache.drill.exec.physical.impl.ScanBatch;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.MapVector;
+import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
 
 public class VectorContainerWriter extends AbstractFieldWriter implements ComplexWriter {
@@ -36,7 +38,7 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
   public VectorContainerWriter(OutputMutator mutator, boolean unionEnabled) {
     super(null);
     this.mutator = mutator;
-    mapVector = new SpecialMapVector(mutator.getCallBack());
+    mapVector = new SpecialMapVector(mutator.getCallBack()); // todo: what's so special?
     mapRoot = new SingleMapWriter(mapVector, this, unionEnabled);
   }
 
@@ -107,6 +109,19 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
         final ValueVector v = mutator.addField(MaterializedField.create(name, type), clazz);
         putChild(name, v);
         return this.typeify(v, clazz);
+      } catch (SchemaChangeException e) {
+        throw new IllegalStateException(e);
+      }
+    }
+
+    @Override
+    public TrueMapVector addOrGet(String name, MajorType keyType, MajorType valueType) {
+      try {
+        // TrueMapVector vector = BasicTypeHelper.getNewMapVector(name, allocator, callBack, keyType, valueType);
+        TrueMapVector vector = ((ScanBatch.Mutator) mutator).addField(MaterializedField.create(name, TrueMapVector.TYPE), keyType, valueType, TrueMapVector.class);
+        putChild(name, vector);
+        // return this.typeify(vector, TrueMapVector.class);
+        return vector;
       } catch (SchemaChangeException e) {
         throw new IllegalStateException(e);
       }

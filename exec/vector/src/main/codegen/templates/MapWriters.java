@@ -44,6 +44,7 @@ import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 <#if mode == "True">
 import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.exec.expr.BasicTypeHelper;
 </#if>
 
 /*
@@ -72,12 +73,84 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
     <#if mode == "True">
     this.keyType = keyType;
     this.valueType = valueType;
+
+    ValueVector keyVector=container.addOrGet("key",keyType, BasicTypeHelper.getValueVectorClass(keyType.getMinorType(),keyType.getMode()));
+    ValueVector valueVector=container.addOrGet("value",valueType, BasicTypeHelper.getValueVectorClass(valueType.getMinorType(),valueType.getMode()));
+    Class<?> keyWriterClass=BasicTypeHelper.getWriterImpl(keyType.getMinorType(),keyType.getMode());
+    Class<?> valueWriterClass=BasicTypeHelper.getWriterImpl(valueType.getMinorType(),valueType.getMode()); // todo: that's not correct way to create writer implementation
+    try {
+      this.keyWriter = (FieldWriter) keyWriterClass.getDeclaredConstructor(keyVector.getClass(), AbstractFieldWriter.class).newInstance(keyVector, this);
+      this.valueWriter = (FieldWriter) valueWriterClass.getDeclaredConstructor(valueVector.getClass(), AbstractFieldWriter.class).newInstance(valueVector, this);
+    } catch (Exception e) {
+      throw new DrillRuntimeException("Unable to create TrueMapWriter", e);
+    }
+    //keyWriter.allocate();
+    //valueWriter.allocate();
+    //keyWriter.setPosition(${index});
+    //valueWriter.setPosition(${index});
     </#if>
   }
 
   public ${mode}MapWriter(${containerClass} container, FieldWriter parent<#if mode == "True">, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType</#if>) {
     this(container, parent, false<#if mode == "True">, keyType, valueType</#if>);
   }
+
+  // todo: evolve
+  <#if mode == "True">
+// todo: evolve
+public void writeKey(ValueHolder holder) {
+    // todo: perform key specific operations here
+    write(keyWriter, holder);
+    }
+
+public void writeValue(ValueHolder holder) {
+    // todo: perform key specific operations here
+    write(valueWriter, holder);
+    }
+
+public void write(FieldWriter writer, ValueHolder holder) {
+    //TypeProtos.DataMode mode = keyType.getMode();
+    // MinorType type = keyType.getMinorType();
+    MinorType type = writer.getField().getType().getMinorType();
+    switch (type) {
+    case BIGINT:
+    writer.write((BigIntHolder) holder);
+    break;
+    case INT:
+        /*switch (mode) {
+          case REQUIRED:*/
+    writer.write((IntHolder) holder); // todo: actually better to writeInt(((IntHolder) holder).value)
+            /*break;
+          case OPTIONAL:
+            NullableIntHolder nullableHolder = (NullableIntHolder) holder;
+            if (nullableHolder.isSet == 1) {
+              writer.write(holder);
+            } else {
+              ((AbstractFieldWriter) writer).writeNull();
+            }
+            break;
+        }*/
+    break;
+    case VARCHAR:
+        /*switch (mode) {
+          case REQUIRED:*/
+    writer.write((VarCharHolder) holder); // todo: actually better to writeInt(((IntHolder) holder).value)
+            /*break;
+          case OPTIONAL:
+            NullableVarCharHolder nullableHolder = (NullableIntHolder) holder;
+            if (nullableHolder.isSet == 1) {
+              writer.write(holder);
+            } else {
+              ((AbstractFieldWriter) writer).writeNull();
+            }
+            break;
+        }*/
+    break;
+default:
+    throw new IllegalArgumentException("Unsupported key type: " + type);
+    }
+    }
+  </#if>
 
   @Override
   public int getValueCapacity() {
@@ -118,10 +191,9 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
     </#if>
   }
 
-  <#if mode == "True">
   // todo: change this!?
   @Override
-  public TrueMapWriter trueMap(String name, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType) {
+  public TrueMapWriter trueMap(String name, MajorType keyType, MajorType valueType) {
     <#if mode == "True">
     throw new UnsupportedOperationException("Not yet for True map!");
     <#else>
@@ -142,7 +214,8 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
     }
     return writer;*/
     <#if mode != "True">
-    FieldWriter writer = fields.get(name.toLowerCase());
+    // todo: change to FieldWriter?
+    TrueMapWriter writer = (TrueMapWriter) fields.get(name.toLowerCase());
     <#else>
 
     </#if>
@@ -151,7 +224,7 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
 
       TrueMapVector vector = container.addOrGet(name, keyType, valueType);
 
-      TrueMapWriter writer = new TrueMapWriter(vector, this, keyType, valueType);
+      writer = new TrueMapWriter(vector, this, keyType, valueType);
       //ValueVector keyVector=container.addOrGet("key",keyType,TypeHelper.getValueVectorClass(keyType.getMinorType(),keyType.getMode()));
       //ValueVector valueVector=container.addOrGet("value",valueType,TypeHelper.getValueVectorClass(valueType.getMinorType(),valueType.getMode()));
       //keyWriterClass=BasicTypeHelper.getWriterImpl(keyType.getMinorType(),keyType.getMode());
@@ -178,6 +251,7 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
     </#if>
   }
 
+  <#if mode == "True">
   @Override
   public FieldWriter getKeyWriter() {
     return keyWriter;

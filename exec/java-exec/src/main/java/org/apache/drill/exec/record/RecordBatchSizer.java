@@ -327,6 +327,7 @@ public class RecordBatchSizer {
 
     public boolean isComplex() {
       return metadata.getType().getMinorType() == MinorType.MAP ||
+        metadata.getType().getMinorType() == MinorType.TRUEMAP ||
         metadata.getType().getMinorType() == MinorType.UNION ||
         metadata.getType().getMinorType() == MinorType.LIST;
     }
@@ -438,7 +439,7 @@ public class RecordBatchSizer {
           if (isVariableWidth) {
             totalDataSize = ((VariableWidthVector) v).getCurrentSizeInBytes();
           } else {
-            totalDataSize = v.getPayloadByteCount(valueCount);
+            totalDataSize = v.getPayloadByteCount(valueCount); // todo: this should be not zero
           }
           break;
 
@@ -756,7 +757,7 @@ public class RecordBatchSizer {
     if ( arg <= 32 ) { return 32; }
     return 64;
   }
-
+// todo: important!?
   private ColumnSize measureColumn(ValueVector v, String prefix) {
     ColumnSize colSize = new ColumnSize(v, prefix);
     switch (v.getField().getType().getMinorType()) {

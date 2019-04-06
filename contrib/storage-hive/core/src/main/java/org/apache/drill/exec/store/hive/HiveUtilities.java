@@ -356,8 +356,13 @@ public class HiveUtilities {
         return typeBuilder.build();
       }
 
+      case MAP: // todo: add support to this one
+        return MajorType.newBuilder()
+            .setMinorType(MinorType.TRUEMAP)
+            .setMode(DataMode.OPTIONAL)
+            .build();
+
       case LIST:
-      case MAP:
       case STRUCT:
       case UNION:
       default:

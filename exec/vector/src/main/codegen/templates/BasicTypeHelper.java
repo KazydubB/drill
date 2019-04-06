@@ -18,6 +18,7 @@
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.vector.UntypedNullHolder;
 import org.apache.drill.exec.vector.UntypedNullVector;
+import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.impl.UntypedHolderReaderImpl;
 
 <@pp.dropOutputFile />
@@ -34,9 +35,12 @@ import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.vector.complex.RepeatedMapVector;
+import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.shaded.guava.com.google.common.annotations.VisibleForTesting;
+
+import java.util.List;
 
 /*
  * This class is generated using freemarker and the ${.template_name} template.
@@ -74,16 +78,25 @@ public class BasicTypeHelper {
     throw new UnsupportedOperationException(buildErrorMessage("get size", major));
   }
 
-  public static TrueMapVector getNewMapVector(String name, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
+  /*public static TrueMapVector getNewMapVector(String name, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
       // case MAP:
         // switch (type.getMode()) {
           // case REQUIRED:
           // case OPTIONAL:
     MaterializedField field = MaterializedField.create(name, TrueMapVector.TYPE);
             return new TrueMapVector(field, allocator, callBack, keyType, valueType);
-          /*case REPEATED:
-            return new RepeatedMapVector(field, allocator, callBack);*/
+          *//*case REPEATED:
+            return new RepeatedMapVector(field, allocator, callBack);*//*
         // }
+  }*/
+
+  public static TrueMapVector getNewMapVector(String name, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
+    MaterializedField field = MaterializedField.create(name, TrueMapVector.TYPE);
+    return getNewMapVector(field, allocator, callBack, keyType, valueType);
+  }
+
+  public static TrueMapVector getNewMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
+    return new TrueMapVector(field, allocator, callBack, keyType, valueType);
   }
 
   public static Class<? extends ValueVector> getValueVectorClass(MinorType type, DataMode mode){
@@ -99,16 +112,15 @@ public class BasicTypeHelper {
         return RepeatedMapVector.class;
       }
 
-      /*case TRUE_MAP:
-        switch (mode) {
-          case OPTIONAL:
-          case REQUIRED: // todo: change to TrueMapVector
-            return TrueMapVector.class;
-          case REPEATED:
-            // return RepeatedMapVector.class;
-            throw new IllegalArgumentException("No true repeated map!!!!")
-        }*/
-
+    case TRUEMAP:
+      switch (mode) {
+        case OPTIONAL:
+        case REQUIRED: // todo: change to TrueMapVector
+          return TrueMapVector.class;
+        case REPEATED:
+        // return RepeatedMapVector.class;
+          throw new IllegalArgumentException("No true repeated map!!!!");
+      }
     case LIST:
       switch (mode) {
       case REPEATED:
@@ -152,6 +164,19 @@ public class BasicTypeHelper {
       case REPEATED:
           return RepeatedMapReaderImpl.class;
       }
+    case TRUEMAP:
+      switch (mode) {
+        case REQUIRED:
+          if (!isSingularRepeated) {
+            return SingleTrueMapReaderImpl.class;
+          } else {
+            // return SingleLikeRepeatedMapReaderImpl.class;
+            throw new UnsupportedOperationException("TrueMapVector required singular repeated reader is not supported yet");
+          }
+        case REPEATED:
+          // return RepeatedMapReaderImpl.class;
+          throw new UnsupportedOperationException("TrueMapVector repeated reader is not supported yet");
+      }
     case LIST:
       switch (mode) {
       case REQUIRED:
@@ -183,6 +208,7 @@ public class BasicTypeHelper {
     switch (type) {
     case UNION: return UnionWriter.class;
     case MAP: return MapWriter.class;
+    case TRUEMAP: return TrueMapWriter.class; // todo: change!
     case LIST: return ListWriter.class;
 <#list vv.types as type>
   <#list type.minor as minor>
@@ -206,6 +232,16 @@ public class BasicTypeHelper {
         return SingleMapWriter.class;
       case REPEATED:
         return RepeatedMapWriter.class;
+      }
+    case TRUEMAP:
+      switch (mode) {
+        case REQUIRED:
+        case OPTIONAL:
+          // return SingleMapWriter.class;
+          return TrueMapWriter.class;
+        case REPEATED:
+          // return RepeatedMapWriter.class;
+          throw new UnsupportedOperationException("Reapeated writer for TrueMapVector is not supported yet");
       }
     case LIST:
       switch (mode) {
@@ -296,6 +332,10 @@ public class BasicTypeHelper {
   }
 
   public static ValueVector getNewVector(MaterializedField field, BufferAllocator allocator, CallBack callBack) {
+    if (field.getType().getMinorType() == MinorType.TRUEMAP) {
+      List<MaterializedField> children = (List<MaterializedField>) field.getChildren();
+      return getNewMapVector(field, allocator, callBack, children.get(0).getType(), children.get(1).getType());
+    }
     return getNewVector(field, field.getType(), allocator, callBack);
   }
 
@@ -316,6 +356,16 @@ public class BasicTypeHelper {
         return new MapVector(field, allocator, callBack);
       case REPEATED:
         return new RepeatedMapVector(field, allocator, callBack);
+      }
+    case TRUEMAP:
+      switch (type.getMode()) {
+        case REQUIRED:
+        case OPTIONAL:
+          return new TrueMapVector(field, allocator, callBack);
+        case REPEATED:
+          throw new UnsupportedOperationException("Repeated TrueMapVector is not supported yet!!!");
+          // case REPEATED:
+          // return new RepeatedMapVector(field, allocator, callBack);
       }
     case LIST:
       switch (type.getMode()) {
@@ -598,7 +648,7 @@ public class BasicTypeHelper {
         throw new UnsupportedOperationException(buildErrorMessage("nullify", type));
     }
   }
-
+// todo:
   public static MajorType getValueHolderType(ValueHolder holder) {
 
     if (0 == 1) {

@@ -26,6 +26,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import io.netty.buffer.DrillBuf;
+import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.exec.vector.complex.impl.TrueMapWriter;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
@@ -80,12 +82,20 @@ import static org.apache.drill.exec.store.parquet.ParquetReaderUtility.NanoTimeU
 
 public class DrillParquetGroupConverter extends GroupConverter {
 
-  private final List<Converter> converters;
-  private final BaseWriter baseWriter;
-  private final OutputMutator mutator;
-  private final OptionManager options;
+//  private final List<Converter> converters;
+  private BaseWriter baseWriter;
+//  private final OutputMutator mutator;
+//  private final OptionManager options;
+  List<Converter> converters;
+//  MapWriter mapWriter;
+  OutputMutator mutator;
+  OptionManager options;
   // See DRILL-4203
-  private final ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates;
+  ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates;
+
+  DrillParquetGroupConverter() {
+    converterName = "wfawgawgawgawg";
+  }
 
   /**
    * Debugging information in form of "parent">fieldName[WriterClassName-hashCode()],
@@ -109,6 +119,15 @@ public class DrillParquetGroupConverter extends GroupConverter {
    * @param parentName             name of group converter which called the constructor
    */
   public DrillParquetGroupConverter(OutputMutator mutator, BaseWriter baseWriter, GroupType schema,
+//  public DrillParquetGroupConverter(OutputMutator mutator, ComplexWriterImpl complexWriter, MessageType schema,
+//                                    Collection<SchemaPath> columns, OptionManager options,
+//                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
+//    this(mutator, complexWriter.rootAsMap(), schema, columns, options, containsCorruptedDates);
+//  }
+// todo: this is of interest!
+  // This function assumes that the fields in the schema parameter are in the same order as the fields in the columns parameter. The
+  // columns parameter may have fields that are not present in the schema, though.
+//  public DrillParquetGroupConverter(OutputMutator mutator, MapWriter mapWriter, GroupType schema,
                                     Collection<SchemaPath> columns, OptionManager options,
                                     ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates,
                                     boolean skipRepeated, String parentName) {
@@ -171,6 +190,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
           converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
               containsCorruptedDates, false, converterName);
         }
+//        converters.add(converter);
       } else {
         writer = getWriter(name, (m, s) -> m.map(s), l -> l.map());
         converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
@@ -180,6 +200,16 @@ public class DrillParquetGroupConverter extends GroupConverter {
     }
     return converter;
   }
+
+//  public DrillParquetGroupConverter(OutputMutator mutator, MapWriter mapWriter, GroupType schema,
+//                                    Collection<SchemaPath> columns, OptionManager options,
+//                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates, boolean init) {
+//    this.mapWriter = mapWriter;
+//    this.mutator = mutator;
+//    this.containsCorruptedDates = containsCorruptedDates;
+//    converters = Lists.newArrayList();
+//    this.options = options;
+//  }
 
   /**
    * Checks whether group field approximately matches pattern for Logical Lists:

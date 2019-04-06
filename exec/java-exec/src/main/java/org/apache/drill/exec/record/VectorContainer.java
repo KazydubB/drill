@@ -32,6 +32,8 @@ import org.apache.drill.exec.record.selection.SelectionVector2;
 import org.apache.drill.exec.record.selection.SelectionVector4;
 import org.apache.drill.exec.vector.SchemaChangeCallBack;
 import org.apache.drill.exec.vector.ValueVector;
+
+import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 import org.apache.drill.shaded.guava.com.google.common.collect.Sets;
@@ -39,7 +41,7 @@ import org.apache.drill.shaded.guava.com.google.common.collect.Sets;
 public class VectorContainer implements VectorAccessible {
 
   private final BufferAllocator allocator;
-  protected final List<VectorWrapper<?>> wrappers = Lists.newArrayList();
+  protected final List<VectorWrapper<?>> wrappers = Lists.newArrayList(); // todo: VectorWrapper for TrueMapVector?
   private BatchSchema schema;
 
   private int recordCount = 0;
@@ -159,6 +161,23 @@ public class VectorContainer implements VectorAccessible {
       add(vector);
     }
     return (T) vector;
+  }
+
+  public TrueMapVector addOrGet(final MaterializedField field, MajorType keyType, MajorType valueType, final SchemaChangeCallBack callBack) {
+    final TypedFieldId id = getValueVectorId(SchemaPath.getSimplePath(field.getName()));
+    final TrueMapVector vector;
+    if (id != null) {
+      vector = (TrueMapVector) getValueAccessorById(id.getFieldIds()).getValueVector();
+      if (id.getFieldIds().length == 1 && !vector.getField().getType().equals(field.getType())) {
+        TrueMapVector newVector = TypeHelper.getNewMapVector(field.getName(), this.getAllocator(), callBack, keyType, valueType);
+        replace(vector, newVector);
+        return newVector;
+      }
+    } else {
+      vector = TypeHelper.getNewMapVector(field.getName(), this.getAllocator(), callBack, keyType, valueType);
+      add(vector);
+    }
+    return vector;
   }
 
   public <T extends ValueVector> T addOrGet(String name, MajorType type, Class<T> clazz) {

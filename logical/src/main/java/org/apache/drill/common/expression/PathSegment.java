@@ -338,7 +338,7 @@ public abstract class PathSegment {
       return child.contains(otherSeg.child);
     }
   }
-
+  // todo: consider MapSegment extends NameSegment?
   public static final class MapSegment extends PathSegment {
     public static final String MAP_PREFIX = "___MAP___";
 
@@ -384,7 +384,7 @@ public abstract class PathSegment {
 
     @Override
     public String toString() {
-      return "MapSegment [path=" +/* path +*/ ", key=" + key + ", getChild()=" + getChild() + "]";
+      return "MapSegment [key=" + key + ", getChild()=" + getChild() + "]";
     }
 
     @Override

@@ -45,12 +45,12 @@ public interface BaseReader extends Positionable{
     <#list vv.types as type>
       <#list type.minor as minor>
         <#assign name = minor.class?cap_first />
-    default void read(Object key, ${name}Holder h) {
+    /*default void read(Object key, ${name}Holder h) {
       throw new UnsupportedOperationException("Can't read value by key for " + h.getClass().getName());
     }
-    default void read(String key, Nullable${name}Holder h) {
+    default void read(Object key, Nullable${name}Holder h) {
       throw new UnsupportedOperationException("Can't read value by key for " + h.getClass().getName());
-    }
+    }*/
       </#list>
     </#list>
   }

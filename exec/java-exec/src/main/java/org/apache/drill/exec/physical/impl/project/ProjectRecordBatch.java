@@ -303,7 +303,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
   }
 
   private boolean doAlloc(int recordCount) {
-    //Allocate vv in the allocationVectors.
+    //Allocate vv in the allocationVectors. // todo: why this allocationVectors are empty?
     for (final ValueVector v : this.allocationVectors) {
       AllocationHelper.allocateNew(v, recordCount);
     }
@@ -359,7 +359,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
     return expr.getPath().contains(SchemaPath.DYNAMIC_STAR);
   }
 
-  private void setupNewSchemaFromInput(RecordBatch incomingBatch) throws SchemaChangeException {
+  private void setupNewSchemaFromInput(RecordBatch incomingBatch) throws SchemaChangeException { // todo: incomingBatch is not empty!
     long setupNewSchemaStartTime = System.currentTimeMillis();
     // get the output batch size from config.
     int configuredBatchSize = (int) context.getOptions().getOption(ExecConstants.OUTPUT_BATCH_SIZE_VALIDATOR);
@@ -502,14 +502,19 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
 
         final ValueVectorReadExpression vectorRead = (ValueVectorReadExpression) expr;
         final TypedFieldId id = vectorRead.getFieldId();
-        final ValueVector vvIn = incomingBatch.getValueAccessorById(id.getIntermediateClass(), id.getFieldIds()).getValueVector();
-        Preconditions.checkNotNull(incomingBatch);
+        final ValueVector vvIn = incomingBatch.getValueAccessorById(id.getIntermediateClass(), id.getFieldIds()).getValueVector(); // todo: intermediateClass is ObjectVector?!
+        Preconditions.checkNotNull(incomingBatch); // todo: vvIn still not empty
 
         final FieldReference ref = getRef(namedExpression);
-        final ValueVector vvOut =
-          container.addOrGet(MaterializedField.create(ref.getLastSegment().getNameSegment().getPath(),
-            vectorRead.getMajorType()), callBack);
-        final TransferPair tp = vvIn.makeTransferPair(vvOut);
+        final ValueVector vvOut; // todo: git gud
+        if (vvIn.getField().getType().getMinorType() != MinorType.TRUEMAP) { // todo: there
+          vvOut = container.addOrGet(MaterializedField.create(ref.getLastSegment().getNameSegment().getPath(), vectorRead.getMajorType()), callBack);
+        } else {
+          List<MaterializedField> children = (List<MaterializedField>) vvIn.getField().getChildren();
+          vvOut = container.addOrGet(MaterializedField.create(ref.getLastSegment().getNameSegment().getPath(), vectorRead.getMajorType()),
+              children.get(0).getType(), children.get(1).getType(), callBack);
+        }
+        final TransferPair tp = vvIn.makeTransferPair(vvOut); // todo: probably the crap is here
         memoryManager.addTransferField(vvIn, TypedFieldId.getPath(id, incomingBatch), vvOut.getField().getName());
         transfers.add(tp);
         transferFieldIds.add(vectorRead.getFieldId().getFieldIds()[0]);
@@ -568,7 +573,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
     } catch (ClassTransformationException | IOException e) {
       throw new SchemaChangeException("Failure while attempting to load generated class", e);
     }
-
+// transfers.to is empty...
     long setupNewSchemaEndTime = System.currentTimeMillis();
       logger.trace("setupNewSchemaFromInput: time {}  ms, Project {}, incoming {}",
                   (setupNewSchemaEndTime - setupNewSchemaStartTime), this, incomingBatch);

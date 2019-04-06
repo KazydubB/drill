@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+import com.sun.codemodel.JStatement;
 import io.netty.buffer.DrillBuf;
 import org.apache.calcite.util.Pair;
 import org.apache.drill.common.expression.AnyValueExpression;
@@ -447,7 +448,7 @@ public class EvaluationVisitor {
 
       return null;
     }
-// todo; this is crucial
+// todo; this is crucial!!!! Pay attention to this one!
     private HoldingContainer visitValueVectorReadExpression(ValueVectorReadExpression e, ClassGenerator<?> generator)
         throws RuntimeException {
       // declare value vector
@@ -483,8 +484,30 @@ public class EvaluationVisitor {
       final boolean complex = Types.isComplex(e.getMajorType());
       final boolean repeated = Types.isRepeated(e.getMajorType());
       final boolean listVector = e.getTypedFieldId().isListVector();
+// todo: see if this (accessing maps by keys) is working when block below is commented
+      PathSegment segment = e.getReadPath();
+      // if (!complex && e.getFieldId().getIntermediateType().getMinorType() == TypeProtos.MinorType.TRUEMAP && segment.isMap()) { // todo: this works
+      if (!complex && e.getFieldId().getIntermediateType().getMinorType() == TypeProtos.MinorType.TRUEMAP && (segment.isMap() || segment.isArray())) {
+        // recordIndex = DirectExpression.direct(e.getReadPath().getMapSegment().getKey());
+        // JExpression expr = vv1.invoke("get").arg(e.getReadPath().getMapSegment().getKey().toString()).arg(out.getHolder());
+        JExpression expr = vv1.invoke("getReader");
+        JBlock eval = new JBlock();
+        // eval.add((vv1.invoke("get").arg(e.getReadPath().getMapSegment().getKey().toString())).arg(out.getHolder()));
+        JExpression keyExpr;
+        if (!segment.isArray()) {
+          keyExpr = JExpr.lit(e.getReadPath().getMapSegment().getKey().toString());
+        } else {
+          JExpression literal = JExpr.lit(e.getReadPath().getArraySegment().getIndex()); // todo: cast to Object
+          keyExpr = JExpr.cast(generator.getModel()._ref(Object.class), literal);
+        }
+        JStatement readStatement = expr.invoke("read").arg(keyExpr).arg(out.getHolder());
+        eval.add(readStatement);
+        // eval.add(expr);
+        generator.getEvalBlock().add(eval);
+        return out;
+      }
 
-      if (!hasReadPath && !complex) {
+      if (!hasReadPath && !complex /*&& e.getFieldId().getIntermediateType().getMinorType() != TypeProtos.MinorType.TRUEMAP*/) {
         JBlock eval = new JBlock();
 
         if (repeated) {
@@ -548,7 +571,7 @@ public class EvaluationVisitor {
 
             expr = list.invoke("reader");
             listNum++;
-          } else if (seg.isMap()) { // todo: add Map case
+          // } else if (seg.isMap()) { // todo: add Map case
               // todo: reader.read(seg.getMapSegment().getPath())
           } else {
             JExpression fieldName = JExpr.lit(seg.getNameSegment().getPath());
