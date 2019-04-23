@@ -50,6 +50,7 @@ import org.apache.drill.metastore.ColumnStatistics;
 import org.apache.drill.metastore.ColumnStatisticsKind;
 import org.apache.drill.metastore.FileMetadata;
 import org.apache.drill.metastore.LocationProvider;
+import org.apache.drill.metastore.NonInterestingColumnsMetadata;
 import org.apache.drill.metastore.PartitionMetadata;
 import org.apache.drill.metastore.TableMetadata;
 import org.apache.drill.metastore.TableStatisticsKind;
@@ -85,6 +86,7 @@ public abstract class AbstractGroupScanWithMetadata extends AbstractFileGroupSca
   // partition metadata info: mixed partition values for all partition keys in the same list
   protected List<PartitionMetadata> partitions;
 
+  protected NonInterestingColumnsMetadata nonInterestingColumnsMetadata;
   protected List<SchemaPath> partitionColumns;
   protected LogicalExpression filter;
   protected List<SchemaPath> columns;
@@ -114,7 +116,7 @@ public abstract class AbstractGroupScanWithMetadata extends AbstractFileGroupSca
     this.partitionColumns = that.partitionColumns;
     this.partitions = that.partitions;
     this.files = that.files;
-
+    this.nonInterestingColumnsMetadata = that.nonInterestingColumnsMetadata;
     this.fileSet = that.fileSet == null ? null : new HashSet<>(that.fileSet);
   }
 
@@ -150,15 +152,26 @@ public abstract class AbstractGroupScanWithMetadata extends AbstractFileGroupSca
    */
   @Override
   public long getColumnValueCount(SchemaPath column) {
-    long tableRowCount = (long) TableStatisticsKind.ROW_COUNT.getValue(getTableMetadata());
+    long tableRowCount, colNulls;
+    Long nulls;
     ColumnStatistics columnStats = getTableMetadata().getColumnStatistics(column);
-    long colNulls;
-    if (columnStats != null) {
-      Long nulls = (Long) columnStats.getStatistic(ColumnStatisticsKind.NULLS_COUNT);
-      colNulls = nulls != null ? nulls : GroupScan.NO_COLUMN_STATS;
-    } else {
-      return 0;
+    ColumnStatistics nonInterestingColStats = null;
+    if (columnStats == null) {
+      nonInterestingColStats = getNonInterestingColumnsMetadata().getColumnStatistics(column);
     }
+
+    if (columnStats != null) {
+      tableRowCount = (long) TableStatisticsKind.ROW_COUNT.getValue(getTableMetadata());
+    } else if (nonInterestingColStats != null) {
+      tableRowCount = (long) TableStatisticsKind.ROW_COUNT.getValue(getNonInterestingColumnsMetadata());
+    } else {
+      return 0; // returns 0 if the column doesn't exist in the table.
+    }
+
+    columnStats = columnStats != null ? columnStats : nonInterestingColStats;
+    nulls = (Long) columnStats.getStatistic(ColumnStatisticsKind.NULLS_COUNT);
+    colNulls = nulls != null ? nulls : GroupScan.NO_COLUMN_STATS;
+
     return GroupScan.NO_COLUMN_STATS == tableRowCount
         || GroupScan.NO_COLUMN_STATS == colNulls
         ? GroupScan.NO_COLUMN_STATS : tableRowCount - colNulls;
@@ -265,6 +278,7 @@ public abstract class AbstractGroupScanWithMetadata extends AbstractFileGroupSca
       filteredMetadata.withTable(getTableMetadata())
           .withPartitions(getNextOrEmpty(getPartitionsMetadata()))
           .withFiles(filesMap)
+          .withNonInterestingColumns(getNonInterestingColumnsMetadata())
           .withMatching(false);
     }
 
@@ -386,6 +400,7 @@ public abstract class AbstractGroupScanWithMetadata extends AbstractFileGroupSca
         .withTable(getTableMetadata())
         .withPartitions(getPartitionsMetadata())
         .withFiles(filesMap)
+        .withNonInterestingColumns(getNonInterestingColumnsMetadata())
         .withMatching(matchAllMetadata)
         .build();
   }
@@ -519,6 +534,14 @@ public abstract class AbstractGroupScanWithMetadata extends AbstractFileGroupSca
     return partitions;
   }
 
+  @JsonIgnore
+  public NonInterestingColumnsMetadata getNonInterestingColumnsMetadata() {
+    if (nonInterestingColumnsMetadata == null) {
+      nonInterestingColumnsMetadata = metadataProvider.getNonInterestingColumnsMeta();
+    }
+    return nonInterestingColumnsMetadata;
+  }
+
   /**
    * This class is responsible for filtering different metadata levels.
    */
@@ -530,6 +553,7 @@ public abstract class AbstractGroupScanWithMetadata extends AbstractFileGroupSca
     protected TableMetadata tableMetadata;
     protected List<PartitionMetadata> partitions = Collections.emptyList();
     protected Map<Path, FileMetadata> files = Collections.emptyMap();
+    protected NonInterestingColumnsMetadata nonInterestingColumnsMetadata;
 
     // for the case when filtering is possible for partitions, but files count exceeds
     // PARQUET_ROWGROUP_FILTER_PUSHDOWN_PLANNING_THRESHOLD, new group scan with at least filtered partitions
@@ -554,6 +578,11 @@ public abstract class AbstractGroupScanWithMetadata extends AbstractFileGroupSca
 
     public GroupScanWithMetadataFilterer withPartitions(List<PartitionMetadata> partitions) {
       this.partitions = partitions;
+      return this;
+    }
+
+    public GroupScanWithMetadataFilterer withNonInterestingColumns(NonInterestingColumnsMetadata nonInterestingColumns) {
+      this.nonInterestingColumnsMetadata = nonInterestingColumns;
       return this;
     }
 
@@ -728,6 +757,9 @@ public abstract class AbstractGroupScanWithMetadata extends AbstractFileGroupSca
               locationProvider.getLocation(), source.supportsFileImplicitColumns());
         }
 
+        if (source.getNonInterestingColumnsMetadata() != null) {
+          columnsStatistics.putAll(source.getNonInterestingColumnsMetadata().getColumnsStatistics());
+        }
         RowsMatch match = FilterEvaluatorUtils.matches(filterPredicate,
             columnsStatistics, (long) metadata.getStatistic(TableStatisticsKind.ROW_COUNT),
             metadata.getSchema(), schemaPathsInExpr);
