@@ -20,6 +20,7 @@ package org.apache.drill.exec.planner.logical;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.sql.SemiJoinType;
@@ -31,12 +32,11 @@ import org.apache.drill.exec.planner.common.DrillLateralJoinRelBase;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class DrillLateralJoinRel extends DrillLateralJoinRelBase implements DrillRel {
 
-  protected DrillLateralJoinRel(RelOptCluster cluster, RelTraitSet traits, RelNode left, RelNode right, boolean includeCorrelateVar,
+  protected DrillLateralJoinRel(RelOptCluster cluster, RelTraitSet traits, RelNode left, RelNode right, boolean excludeCorrelateCol,
                                 CorrelationId correlationId, ImmutableBitSet requiredColumns, SemiJoinType semiJoinType) {
-    super(cluster, traits, left, right, includeCorrelateVar, correlationId, requiredColumns, semiJoinType);
+    super(cluster, traits, left, right, excludeCorrelateCol, correlationId, requiredColumns, semiJoinType);
   }
 
   @Override
@@ -45,6 +45,11 @@ public class DrillLateralJoinRel extends DrillLateralJoinRelBase implements Dril
         ImmutableBitSet requiredColumns, SemiJoinType joinType) {
     return new DrillLateralJoinRel(this.getCluster(), this.getTraitSet(), left, right, this.excludeCorrelateColumn, correlationId, requiredColumns,
         this.getJoinType());
+  }
+
+  @Override
+  public RelWriter explainTerms(RelWriter pw) {
+    return super.explainTerms(pw).item("exclude correlate column: ", excludeCorrelateColumn);
   }
 
   @Override

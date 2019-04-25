@@ -81,12 +81,12 @@ public class DrillJoinRule extends RelOptRule {
         addFilter = true;
         newJoinCondition = buildJoinCondition(convertedLeft, convertedRight, leftKeys, rightKeys, filterNulls, join.getCluster().getRexBuilder());
       }
-    } else {
+    } else { // todo: filterNulls contains true
       newJoinCondition = buildJoinCondition(convertedLeft, convertedRight, leftKeys, rightKeys, filterNulls, join.getCluster().getRexBuilder());
     }
 
     try {
-      if (!addFilter) {
+      if (!addFilter) { // todo: was here
        RelNode joinRel = new DrillJoinRel(join.getCluster(), traits, convertedLeft, convertedRight, newJoinCondition,
                                          join.getJoinType(), leftKeys, rightKeys);
        call.transformTo(joinRel);
@@ -111,7 +111,7 @@ public class DrillJoinRule extends RelOptRule {
       int leftKeyOrdinal = leftKeys.get(i);
       int rightKeyOrdinal = rightKeys.get(i);
 
-      equijoinList.add(builder.makeCall(
+      equijoinList.add(builder.makeCall( // todo: was here
            filterNulls.get(i) ? SqlStdOperatorTable.EQUALS : SqlStdOperatorTable.IS_NOT_DISTINCT_FROM,
            builder.makeInputRef(leftTypes.get(leftKeyOrdinal).getType(), leftKeyOrdinal),
            builder.makeInputRef(rightTypes.get(rightKeyOrdinal).getType(), rightKeyOrdinal + numLeftFields)

@@ -46,7 +46,7 @@ public class DrillCorrelateRule extends RelOptRule {
 
     final RelTraitSet traits = correlate.getTraitSet().plus(DrillRel.DRILL_LOGICAL);
     DrillLateralJoinRel lateralJoinRel = new DrillLateralJoinRel(correlate.getCluster(),
-        traits, convertedLeft, convertedRight, false, correlate.getCorrelationId(),
+        traits, convertedLeft, convertedRight, false, correlate.getCorrelationId(), // todo: includeCorrelateVar? or exclude
         correlate.getRequiredColumns(), correlate.getJoinType());
     call.transformTo(lateralJoinRel);
   }

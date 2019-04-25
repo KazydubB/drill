@@ -32,7 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
+// todo: this rule causes discrepancy
 public class DrillProjectPushIntoLateralJoinRule extends RelOptRule {
 
   public static final DrillProjectPushIntoLateralJoinRule INSTANCE =
@@ -72,15 +72,18 @@ public class DrillProjectPushIntoLateralJoinRule extends RelOptRule {
     final RelNode convertedRight = convert(right, right.getTraitSet().plus(DrillRel.DRILL_LOGICAL).simplify());
 
     final RelTraitSet traits = corr.getTraitSet().plus(DrillRel.DRILL_LOGICAL);
-    RelNode relNode = new DrillLateralJoinRel(corr.getCluster(),
-                            traits, convertedLeft, convertedRight, true, corr.getCorrelationId(),
+    boolean trivial = DrillRelOptUtil.isTrivialProject(origProj, true);
+    RelNode relNode = new DrillLateralJoinRel(corr.getCluster(), // todo: the second one is created here (with single required column)
+                            // traits, convertedLeft, convertedRight, false, corr.getCorrelationId(), // todo: works
+                            traits, convertedLeft, convertedRight, /*trivial*/true, corr.getCorrelationId(),
                             corr.getRequiredColumns(), corr.getJoinType());
 
-    if (!DrillRelOptUtil.isTrivialProject(origProj, true)) {
+    // if (!DrillRelOptUtil.isTrivialProject(origProj, true)) {
+    if (!trivial) {
       Map<Integer, Integer> mapWithoutCorr = buildMapWithoutCorrColumn(corr, correlationIndex);
       List<RexNode> outputExprs = DrillRelOptUtil.transformExprs(origProj.getCluster().getRexBuilder(), origProj.getChildExps(), mapWithoutCorr);
 
-      relNode = new DrillProjectRel(origProj.getCluster(),
+      relNode = new DrillProjectRel(origProj.getCluster(), // todo: this one
                                     left.getTraitSet().plus(DrillRel.DRILL_LOGICAL),
                                     relNode, outputExprs, origProj.getRowType());
     }

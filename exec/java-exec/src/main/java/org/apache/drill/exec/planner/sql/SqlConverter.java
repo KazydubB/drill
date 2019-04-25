@@ -123,6 +123,7 @@ public class SqlConverter {
   private final RelOptCostFactory costFactory;
   private final DrillValidator validator;
   private final boolean isInnerQuery;
+  private final boolean isExpandedView;
   private final UdfUtilities util;
   private final FunctionImplementationRegistry functions;
   private final String temporarySchema;
@@ -149,6 +150,7 @@ public class SqlConverter {
     this.parserConfig = new DrillParserConfig(settings);
     this.sqlToRelConverterConfig = new SqlToRelConverterConfig();
     this.isInnerQuery = false;
+    this.isExpandedView = false; // todo: was false;
     this.typeFactory = new JavaTypeFactoryImpl(DRILL_TYPE_SYSTEM);
     this.defaultSchema = context.getNewDefaultSchema();
     this.rootSchema = rootSchema(defaultSchema);
@@ -177,6 +179,7 @@ public class SqlConverter {
     this.functions = parent.functions;
     this.util = parent.util;
     this.isInnerQuery = true;
+    this.isExpandedView = true;
     this.typeFactory = parent.typeFactory;
     this.costFactory = parent.costFactory;
     this.settings = parent.settings;
@@ -406,11 +409,12 @@ public class SqlConverter {
         new SqlToRelConverter(new Expander(), validator, catalog, cluster, DrillConvertletTable.INSTANCE,
             sqlToRelConverterConfig);
 
-    RelRoot rel = sqlToRelConverter.convertQuery(validatedNode, false, !isInnerQuery);
+    // boolean isExpandedView = true;
+    RelRoot rel = sqlToRelConverter.convertQuery(validatedNode, false, !isInnerQuery || isExpandedView);
 
     // If extra expressions used in ORDER BY were added to the project list,
     // add another project to remove them.
-    if (!isInnerQuery && rel.rel.getRowType().getFieldCount() - rel.fields.size() > 0) {
+    if ((!isInnerQuery || isExpandedView) && rel.rel.getRowType().getFieldCount() - rel.fields.size() > 0) {
       List<RexNode> exprs = new ArrayList<>();
       RexBuilder builder = rel.rel.getCluster().getRexBuilder();
       for (Pair<Integer, String> field : rel.fields) {
@@ -438,7 +442,7 @@ public class SqlConverter {
       return expandView(queryString, parser);
     }
 
-    @Override
+    @Override // todo: this query contains expanded view which is innerQuery...
     public RelRoot expandView(RelDataType rowType, String queryString, SchemaPlus rootSchema, List<String> schemaPath) {
       final DrillCalciteCatalogReader catalogReader = new DrillCalciteCatalogReader(
           rootSchema,
@@ -464,7 +468,7 @@ public class SqlConverter {
 
         schema = newSchema;
       }
-      SqlConverter parser = new SqlConverter(SqlConverter.this, schema, rootSchema, catalogReader);
+      SqlConverter parser = new SqlConverter(SqlConverter.this, schema, rootSchema, catalogReader); // todo: pass top?
       return expandView(queryString, parser);
     }
 
