@@ -246,7 +246,9 @@ public class FilterBuilder extends AbstractExprVisitor<LogicalExpression, Set<Lo
       return handleCompareFunction(funcHolderExpr, value);
     }
 
-    if (isIsFunction(funcName)) {
+    if (isIsFunction(funcName) ||
+        (!funcHolderExpr.args.isEmpty() && !(funcHolderExpr.args.get(0) instanceof DrillFuncHolderExpr) && FunctionGenerationHelper.NOT.equals(funcName))) { // todo: probably move
+      // to out?
       return handleIsFunction(funcHolderExpr, value);
     }
 
@@ -258,7 +260,7 @@ public class FilterBuilder extends AbstractExprVisitor<LogicalExpression, Set<Lo
 
       return funcHolderExpr.copy(newArgs);
     } else {
-      return null;
+      return null; // todo: this one is returned for NOT
     }
   }
 
