@@ -19,7 +19,6 @@ package org.apache.drill.exec.physical.impl.limit;
 
 import org.apache.drill.test.BaseTestQuery;
 import org.apache.drill.PlanTestBase;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.drill.exec.ExecConstants.LATE_LIMIT0_OPT_KEY;
@@ -88,7 +87,7 @@ public class TestLateLimit0Optimization extends BaseTestQuery {
   }
 
   @Test
-  @Ignore("Uncomment me!")
+  // @Ignore("Uncomment me!")
   public void flatten3() throws Exception {
     checkThatQueryIsNotOptimized("select s.evnts.evnt_id from (select d.type type, flatten(d.events) evnts from " +
         "cp.`tpch/region.parquet` d where d.type='web' order by d.uid) s " +

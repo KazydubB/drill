@@ -46,7 +46,7 @@ public class DrillPushFilterPastProjectRule extends RelOptRule {
   static {
     BANNED_OPERATORS = new ArrayList<>(2);
     BANNED_OPERATORS.add("flatten");
-    BANNED_OPERATORS.add("item");
+    // BANNED_OPERATORS.add("item");
   }
 
   private DrillPushFilterPastProjectRule(RelBuilderFactory relBuilderFactory) {
