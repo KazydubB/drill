@@ -26,8 +26,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import io.netty.buffer.DrillBuf;
-import org.apache.drill.common.types.TypeProtos;
-import org.apache.drill.exec.vector.complex.impl.TrueMapWriter;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
@@ -82,26 +80,31 @@ import static org.apache.drill.exec.store.parquet.ParquetReaderUtility.NanoTimeU
 
 public class DrillParquetGroupConverter extends GroupConverter {
 
-//  private final List<Converter> converters;
-  private BaseWriter baseWriter;
-//  private final OutputMutator mutator;
+  //  private final List<Converter> converters;
+  protected BaseWriter baseWriter;
+
+  //  private final OutputMutator mutator;
 //  private final OptionManager options;
   List<Converter> converters;
-//  MapWriter mapWriter;
+
+  //  MapWriter mapWriter;
   OutputMutator mutator;
+
   OptionManager options;
+//  protected MapWriter mapWriter;
+
   // See DRILL-4203
   ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates;
 
   DrillParquetGroupConverter() {
-    converterName = "wfawgawgawgawg";
+//    converterName = "wfawgawgawgawg";
   }
 
   /**
    * Debugging information in form of "parent">fieldName[WriterClassName-hashCode()],
    * where "parent" is parent converterName.
    */
-  private final String converterName;
+  private String converterName;
 
   /**
    * The constructor is responsible for creation of converters tree and may invoke itself for
@@ -128,9 +131,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
   // This function assumes that the fields in the schema parameter are in the same order as the fields in the columns parameter. The
   // columns parameter may have fields that are not present in the schema, though.
 //  public DrillParquetGroupConverter(OutputMutator mutator, MapWriter mapWriter, GroupType schema,
-                                    Collection<SchemaPath> columns, OptionManager options,
-                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates,
-                                    boolean skipRepeated, String parentName) {
+                                    Collection<SchemaPath> columns, OptionManager options, ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates, boolean skipRepeated, String parentName) {
     this.converterName = String.format("%s>%s[%s-%d]", parentName, schema.getName(), baseWriter.getClass().getSimpleName(), baseWriter.hashCode());
     this.baseWriter = baseWriter;
     this.mutator = mutator;
@@ -148,9 +149,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
       while (colIterator.hasNext()) {
         PathSegment colPath = colIterator.next().getRootSegment();
         String colPathName;
-        if (colPath.isNamed() &&
-            !DYNAMIC_STAR.equals(colPathName = colPath.getNameSegment().getPath()) &&
-            colPathName.equalsIgnoreCase(name)) {
+        if (colPath.isNamed() && !DYNAMIC_STAR.equals(colPathName = colPath.getNameSegment().getPath()) && colPathName.equalsIgnoreCase(name)) {
           name = colPathName;
           colNextChild = colPath.getChild();
           break;
@@ -171,45 +170,40 @@ public class DrillParquetGroupConverter extends GroupConverter {
         colNextChild = colNextChild.getChild();
       }
 
-      Collection<SchemaPath> columns = colNextChild == null
-          ? Collections.emptyList()
-          : Collections.singletonList(new SchemaPath(colNextChild.getNameSegment()));
+      Collection<SchemaPath> columns = colNextChild == null ? Collections.emptyList() : Collections.singletonList(new SchemaPath(colNextChild.getNameSegment()));
 
       BaseWriter writer;
       GroupType fieldGroupType = fieldType.asGroupType();
       if (isLogicalListType(fieldGroupType)) {
         writer = getWriter(name, (m, s) -> m.list(s), l -> l.list());
-        converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
-            containsCorruptedDates, true, converterName);
+        converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options, containsCorruptedDates, true, converterName);
       } else if (fieldType.isRepetition(Repetition.REPEATED)) {
         if (skipRepeated) {
-          converter = new DrillIntermediateParquetGroupConverter(mutator, baseWriter, fieldGroupType, columns, options,
-              containsCorruptedDates, false, converterName);
+          converter = new DrillIntermediateParquetGroupConverter(mutator, baseWriter, fieldGroupType, columns, options, containsCorruptedDates, false, converterName);
         } else {
           writer = getWriter(name, (m, s) -> m.list(s).map(), l -> l.list().map());
-          converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
-              containsCorruptedDates, false, converterName);
+          converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options, containsCorruptedDates, false, converterName);
         }
 //        converters.add(converter);
       } else {
         writer = getWriter(name, (m, s) -> m.map(s), l -> l.map());
-        converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
-            containsCorruptedDates, false, converterName);
+        converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options, containsCorruptedDates, false, converterName);
       }
 
     }
     return converter;
   }
 
-//  public DrillParquetGroupConverter(OutputMutator mutator, MapWriter mapWriter, GroupType schema,
-//                                    Collection<SchemaPath> columns, OptionManager options,
-//                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates, boolean init) {
+  protected DrillParquetGroupConverter(OutputMutator mutator, MapWriter mapWriter, GroupType schema,
+                                    Collection<SchemaPath> columns, OptionManager options,
+                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates, boolean init) {
 //    this.mapWriter = mapWriter;
-//    this.mutator = mutator;
-//    this.containsCorruptedDates = containsCorruptedDates;
-//    converters = Lists.newArrayList();
-//    this.options = options;
-//  }
+    this.baseWriter = baseWriter; // todo:???
+    this.mutator = mutator;
+    this.containsCorruptedDates = containsCorruptedDates;
+    converters = new ArrayList<>();
+    this.options = options;
+  }
 
   /**
    * Checks whether group field approximately matches pattern for Logical Lists:
