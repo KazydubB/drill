@@ -773,7 +773,7 @@ public class TestExampleQueries extends BaseTestQuery {
         .sqlQuery("select s.id from " +
           "(select id " +
           "from cp.`store/json/orderByArrayElement.json` " +
-          "order by list[0] limit 5) s")
+          "order by list[0]) s")
         .ordered()
         .baselineColumns("id")
         .baselineValues((long) 1)
