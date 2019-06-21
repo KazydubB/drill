@@ -39,7 +39,7 @@ public class ComplexCopier {
   public static void copy(FieldReader input, FieldWriter output) {
     writeValue(input, output);
   }
-
+  // todo: use this for TrueMAP too
   private static void writeValue(FieldReader reader, FieldWriter writer) {
     final DataMode m = reader.getType().getMode();
     final MinorType mt = reader.getType().getMinorType();
@@ -70,6 +70,21 @@ public class ComplexCopier {
         }
         writer.end();
         break;
+        case TRUEMAP:
+          TrueMapWriter wr = (TrueMapWriter) writer;
+          wr.start();
+          if (reader.isSet()) { // todo: add else?
+            while (reader.next()) {
+              wr.startKeyValuePair();
+              // writeValue(reader, getTrueMapWriterForReader(reader, wr));
+              // wr.write((SingleTrueMapReaderImpl) reader);
+              writeValue(reader.reader(TrueMapVector.FIELD_KEY_NAME), wr.getKeyWriter());
+              writeValue(reader.reader(TrueMapVector.FIELD_VALUE_NAME), wr.getValueWriter());
+              wr.endKeyValuePair();
+            }
+          }
+          wr.end();
+          break;
   <#list vv.types as type><#list type.minor as minor><#assign name = minor.class?cap_first />
   <#assign fields = minor.fields!type.fields />
   <#assign uncappedName = name?uncap_first/>

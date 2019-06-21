@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 
 import org.apache.drill.exec.util.JsonStringArrayList;
 import org.apache.drill.test.BaseTestQuery;
+import org.apache.drill.test.TestBuilder;
 import org.junit.Test;
 
 public class TestParquetComplex extends BaseTestQuery {
@@ -94,6 +95,68 @@ public class TestParquetComplex extends BaseTestQuery {
             .jsonBaselineFile("store/parquet/complex/baseline5.json")
             .build()
             .run();
+  }
+
+  @Test
+  public void selectTrueMap() throws Exception {
+    String query = "select * from cp.`store/parquet/complex/simple_map.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("order_items")
+        .baselineValues(TestBuilder.mapOfObject("Pencils", 1L))
+        .go();
+  }
+
+  @Test
+  public void selectTrueMap2() throws Exception {
+    String query = "select * from cp.`store/parquet/complex/map/m_a.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("order_id", "order_items")
+        .baselineValues(1L, TestBuilder.mapOfObject("Pencils", 1L))
+        .baselineValues(1L, TestBuilder.mapOfObject("Pencils", 1L))
+        .go();
+  }
+
+  @Test
+  public void selectTrueMap3() throws Exception {
+    String query = "select * from cp.`store/parquet/complex/map/map_int_to_int_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "mapcol")
+        .baselineValues(1L, TestBuilder.mapOfObject("Pencils", 1L))
+        .baselineValues(1L, TestBuilder.mapOfObject("Pencils", 1L))
+        .baselineValues(1L, TestBuilder.mapOfObject("Pencils", 1L))
+        .go();
+  }
+
+  @Test
+  public void selectTrueMap4() throws Exception {
+    //String query = "select mapcol[2] from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet`"; // todo: add order by `id`
+    String query = "select * from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet`"; // todo: add order by `id`
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "mapcol")
+        .baselineValues(2L, TestBuilder.mapOfObject(
+              3, TestBuilder.mapOfObject("a", 1, "b", 2),
+              4, TestBuilder.mapOfObject("c", 3),
+              5, TestBuilder.mapOfObject("d", 4, "e", 5)
+            )
+        )
+        .baselineValues(1L, TestBuilder.mapOfObject(
+              1, TestBuilder.mapOfObject("a", 1, "b", 2)
+            )
+        )
+        .baselineValues(2L, TestBuilder.mapOfObject(
+              2, TestBuilder.mapOfObject("a", 1, "b", 2),
+              3, TestBuilder.mapOfObject("c", 3)
+            )
+        )
+        .go();
   }
 
   @Test

@@ -27,7 +27,7 @@ import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.MapVector;
 import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
-
+// todo: take a look
 public class VectorContainerWriter extends AbstractFieldWriter implements ComplexWriter {
   //private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(VectorContainerWriter.class);
 
@@ -114,7 +114,8 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
       }
     }
 
-    @Override
+    @Override // todo: remove
+    @Deprecated
     public TrueMapVector addOrGet(String name, MajorType keyType, MajorType valueType) {
       try {
         // TrueMapVector vector = BasicTypeHelper.getNewMapVector(name, allocator, callBack, keyType, valueType);

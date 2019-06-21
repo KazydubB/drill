@@ -231,7 +231,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
     return false;
   }
 
-  private PrimitiveConverter getConverterForType(String name, PrimitiveType type) {
+  protected PrimitiveConverter getConverterForType(String name, PrimitiveType type) {
     switch(type.getPrimitiveTypeName()) {
       case INT32: {
         if (type.getOriginalType() == null) {

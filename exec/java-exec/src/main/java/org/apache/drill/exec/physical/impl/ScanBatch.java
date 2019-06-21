@@ -551,7 +551,8 @@ public class ScanBatch implements CloseableRecordBatch {
 
       return clazz.cast(v);
     }
-
+    // todo: remove
+    @Deprecated
     public <T extends ValueVector> T addField(MaterializedField field, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType, // todo: change return type
                                                Class<T> clazz/*, boolean isImplicitField*/) throws SchemaChangeException { // todo: remove clazz
       Map<String, ValueVector> fieldVectorMap;

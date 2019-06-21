@@ -42,6 +42,10 @@ public abstract class AbstractFieldReader extends AbstractBaseReader implements 
     return true;
   }
 
+  public void read(int index, ValueHolder holder) {
+    fail("read(int index, ValueHolder holder)");
+  }
+
   <#list ["Object", "BigDecimal", "Integer", "Long", "Boolean",
           "Character", "LocalDate", "LocalTime", "LocalDateTime", "Period", "Double", "Float",
           "Text", "String", "Byte", "Short", "byte[]"] as friendlyType>

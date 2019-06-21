@@ -487,9 +487,114 @@ public class EvaluationVisitor {
 // todo: see if this (accessing maps by keys) is working when block below is commented
       PathSegment segment = e.getReadPath();
       // if (!complex && e.getFieldId().getIntermediateType().getMinorType() == TypeProtos.MinorType.TRUEMAP && segment.isMap()) { // todo: this works
-      if (!complex && e.getFieldId().getIntermediateType().getMinorType() == TypeProtos.MinorType.TRUEMAP && (segment.isMap() || segment.isArray())) {
+      // todo: remove the last part of if
+      if (/*!complex &&*/ e.getFieldId().getIntermediateType().getMinorType() == TypeProtos.MinorType.TRUEMAP && (segment.isMap() || segment.isArray())) {
+        // todo: get child, perhaps, and perform following checks on it?
         // recordIndex = DirectExpression.direct(e.getReadPath().getMapSegment().getKey());
         // JExpression expr = vv1.invoke("get").arg(e.getReadPath().getMapSegment().getKey().toString()).arg(out.getHolder());
+        // while (seg != null) {
+        if (complex || repeated) {
+          if (segment != null && segment.isArray()) { // todo: remove the segment != null check
+            // stop once we get to the last segment and the final type is neither complex nor repeated (map, list, repeated list).
+            // In case of non-complex and non-repeated type, we return Holder, in stead of FieldReader.
+            /*if (seg.isLastPath() && !complex && !repeated && !listVector) {
+              break;
+            }*/
+
+            JExpression expr = vv1.invoke("getReader");
+            // JBlock eval = new JBlock();
+            // eval.add((vv1.invoke("get").arg(e.getReadPath().getMapSegment().getKey().toString())).arg(out.getHolder()));
+            JExpression keyExpr;
+            if (!segment.isArray()) {
+              // todo: discard the map segment and use named segment instead
+              // keyExpr = JExpr.lit(e.getReadPath().getNameSegment().getChild().getNameSegment().getPath());
+              keyExpr = JExpr.lit(e.getReadPath().getMapSegment().getKey().toString());
+            } else {
+              JExpression literal = JExpr.lit(e.getReadPath().getArraySegment().getIndex()); // todo: cast to Object
+              keyExpr = JExpr.cast(generator.getModel()._ref(Object.class), literal);
+            }
+
+            JBlock eval = generator.getEvalBlock().block();
+            JVar list = generator.declareClassField("list", generator.getModel()._ref(FieldReader.class));
+            eval.assign(list, expr);
+
+            // if this is an array, set a single position for the expression to
+            // allow us to read the right data lower down.
+            JVar valueIndex = eval.decl(generator.getModel().INT, "valueIndex",
+                // JExpr.lit(seg.getArraySegment().getIndex()));
+                expr.invoke("find").arg(keyExpr));
+            // start with negative one so that we are at zero after first call
+            // to next.
+            // JVar currentIndex = eval.decl(generator.getModel().INT, "currentIndex" + listNum, JExpr.lit(-1));
+
+            /*eval._while( //
+                currentIndex.lt(desiredIndex) //
+                    .cand(list.invoke("next"))).body().assign(currentIndex, currentIndex.plus(JExpr.lit(1)));*/
+            JBlock ifFound = eval._if(valueIndex.gt(JExpr.lit(-1)))._then().block();
+            /*if (out.isOptional()) {
+              ifFound
+            }*/
+            ifFound.add(list.invoke("setPosition").arg(valueIndex));
+
+            /*JBlock ifNoVal = eval._if(desiredIndex.ne(currentIndex))._then().block();
+            if (out.isOptional()) {
+              ifNoVal.assign(out.getIsSet(), JExpr.lit(0));
+            }
+            ifNoVal.assign(isNull, JExpr.lit(1));
+            ifNoVal._break(label);*/
+
+            expr = list.invoke("reader");
+            // listNum++;
+            // } else if (seg.isMap()) { // todo: add Map case
+            // todo: reader.read(seg.getMapSegment().getPath())
+          }/* else {
+            JExpression fieldName = JExpr.lit(seg.getNameSegment().getPath());
+            expr = expr.invoke("reader").arg(fieldName);
+          }*/
+          // segment = segment.getChild();
+        // }
+
+        //if (complex || repeated) {
+          JExpression expr = vv1.invoke("getReader");
+          PathSegment seg = e.getReadPath();
+
+          boolean isNullReaderLikely = isNullReaderLikely(seg, complex || repeated || listVector);
+          // if (isNullReaderLikely) {
+          JVar isNull = generator.getEvalBlock().decl(generator.getModel().INT, generator.getNextVar("entryIndex"), JExpr.lit(-1));
+          // }
+
+          JLabel label = generator.getEvalBlock().label("complex");
+          JBlock eval = generator.getEvalBlock().block();
+
+          // position to the correct value.
+          eval.add(expr.invoke("reset"));
+          eval.add(expr.invoke("setPosition").arg(recordIndex));
+
+          JVar complexReader = generator.declareClassField("reader", generator.getModel()._ref(FieldReader.class));
+
+          if (isNullReaderLikely) {
+            JConditional jc = generator.getEvalBlock()._if(isNull.eq(JExpr.lit(0)));
+
+            JClass nrClass = generator.getModel().ref(org.apache.drill.exec.vector.complex.impl.NullReader.class);
+            JExpression nullReader;
+            if (complex) {
+              nullReader = nrClass.staticRef("EMPTY_MAP_INSTANCE");
+            } else if (repeated) {
+              nullReader = nrClass.staticRef("EMPTY_LIST_INSTANCE");
+            } else {
+              nullReader = nrClass.staticRef("INSTANCE");
+            }
+
+            jc._then().assign(complexReader, expr);
+            jc._else().assign(complexReader, nullReader);
+          } else {
+            eval.assign(complexReader, expr);
+          }
+
+          HoldingContainer hc = new HoldingContainer(e.getMajorType(), complexReader, null, null, false, true);
+          return hc;
+        }
+
         JExpression expr = vv1.invoke("getReader");
         JBlock eval = new JBlock();
         // eval.add((vv1.invoke("get").arg(e.getReadPath().getMapSegment().getKey().toString())).arg(out.getHolder()));
@@ -500,6 +605,8 @@ public class EvaluationVisitor {
           JExpression literal = JExpr.lit(e.getReadPath().getArraySegment().getIndex()); // todo: cast to Object
           keyExpr = JExpr.cast(generator.getModel()._ref(Object.class), literal);
         }
+        // todo: in case of TRUEMAP
+        eval.add(expr.invoke("setPosition").arg(batchIndex));
         JStatement readStatement = expr.invoke("read").arg(keyExpr).arg(out.getHolder());
         eval.add(readStatement);
         // eval.add(expr);
@@ -574,7 +681,7 @@ public class EvaluationVisitor {
           // } else if (seg.isMap()) { // todo: add Map case
               // todo: reader.read(seg.getMapSegment().getPath())
           } else {
-            JExpression fieldName = JExpr.lit(seg.getNameSegment().getPath());
+            JExpression fieldName = JExpr.lit(seg.isNamed() ? seg.getNameSegment().getPath() : seg.getMapSegment().getKey().toString()); // todo: <--- this :)
             expr = expr.invoke("reader").arg(fieldName);
           }
           seg = seg.getChild();
@@ -596,7 +703,6 @@ public class EvaluationVisitor {
             } else {
               nullReader = nrClass.staticRef("INSTANCE");
             }
-
 
             jc._then().assign(complexReader, expr);
             jc._else().assign(complexReader, nullReader);

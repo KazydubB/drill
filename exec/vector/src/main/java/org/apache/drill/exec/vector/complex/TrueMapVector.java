@@ -21,6 +21,7 @@ import io.netty.buffer.DrillBuf;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -29,13 +30,14 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.expr.BasicTypeHelper;
 import org.apache.drill.exec.expr.holders.ComplexHolder;
-import org.apache.drill.exec.expr.holders.NullableIntHolder;
+import org.apache.drill.exec.expr.holders.TrueMapHolder;
 import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.apache.drill.exec.memory.AllocationManager;
 import org.apache.drill.exec.memory.BufferAllocator;
@@ -45,73 +47,126 @@ import org.apache.drill.exec.record.TransferPair;
 import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.util.JsonStringHashMap;
 import org.apache.drill.exec.vector.BaseValueVector;
-import org.apache.drill.exec.vector.NullableIntVector;
-import org.apache.drill.exec.vector.NullableVarCharVector;
+import org.apache.drill.exec.vector.SchemaChangeCallBack;
 import org.apache.drill.exec.vector.UInt4Vector;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.complex.RepeatedMapVector.MapSingleCopier;
 import org.apache.drill.exec.vector.complex.impl.AbstractFieldReader;
+import org.apache.drill.exec.vector.complex.impl.ComplexCopier;
 import org.apache.drill.exec.vector.complex.impl.NullReader;
 import org.apache.drill.exec.vector.complex.impl.SingleMapWriter;
 import org.apache.drill.exec.vector.complex.impl.TrueMapWriter;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
+import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.drill.shaded.guava.com.google.common.collect.Ordering;
 import org.apache.drill.shaded.guava.com.google.common.primitives.Ints;
-
+// todo: consider implementing RepeatedValueVector...
 public class TrueMapVector extends AbstractContainerVector {
 
   public final static MajorType TYPE = Types.required(MinorType.TRUEMAP); // todo: change!
   private final static List<MinorType> supportedKeyTypes = Collections.unmodifiableList(Arrays.asList(MinorType.INT, MinorType.VARCHAR, MinorType.BIGINT));
+  private final static List<MinorType> complexTypes = Collections.unmodifiableList(Arrays.asList(MinorType.MAP, MinorType.TRUEMAP, MinorType.LIST, MinorType.UNION));
+
+  // todo: remove:
+  private static int created;
+  private static int removed;
 
   public static final String FIELD_KEY_NAME = "key";
   public static final String FIELD_VALUE_NAME = "value";
+  // todo: do not use name for the field and use getOffsets()
   public static final String FIELD_OFFSET_NAME = "$offset$";
+  @Deprecated
   public static final String FIELD_LENGTH_NAME = "$length$"; // todo: remove if unneeded
+  public static final List<String> fieldNames = Collections.unmodifiableList(Arrays.asList(FIELD_KEY_NAME, FIELD_VALUE_NAME, FIELD_OFFSET_NAME, FIELD_LENGTH_NAME));
+  public static final int NUMBER_OF_CHILDREN = 4;
 
   // todo: make sure it's OK to have static field for the purpose
   private static final MaterializedField OFFSETS_FIELD = MaterializedField.create(FIELD_OFFSET_NAME, Types.required(TypeProtos.MinorType.UINT4));
   private static final MaterializedField LENGTHS_FIELD = MaterializedField.create(FIELD_LENGTH_NAME, Types.required(TypeProtos.MinorType.UINT4));
 
+  // todo: add parent writer? probably not
   // todo: consider fixed 'name's for vectors (key and value) // todo: make final
   private ValueVector keys;
   private ValueVector values; // private final List<ValueVector> children; // todo: uncomment
+  @Deprecated
   private UInt4Vector lengths; // todo: make vectors final fields? // todo: rename to offsets!
+  // NOTE: offsets doesn't store the first 0 offset.
   private UInt4Vector offsets; // todo: remove lengths vector and use offsets only!
+  // todo: consider bits vv for nullability...
+  @Deprecated
+  private TrueMapWriter writer; // todo: remove!?
 
-  private final List<ValueVector> children;
+  private /*final*/ List<ValueVector> children = Collections.emptyList(); // todo: this may be tricky
   // todo: remove the types?
-  private final MajorType keyType;
-  private final MajorType valueType;
+  private /*final*/ MajorType keyType;
+  private /*final*/ MajorType valueType;
 
-  private final SingleTrueMapReaderImpl reader = new SingleTrueMapReaderImpl(TrueMapVector.this);
+  private /*final*/ boolean primitiveValueType;
+
+  private final SingleTrueMapReaderImpl reader;//  = new SingleTrueMapReaderImpl(TrueMapVector.this);
 
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
   private int valueCount;
 
-  @Deprecated // todo: remove the method
+  private boolean initialized; // todo: remove
+
+  // todo: remove DEPRECATION?
+  // @Deprecated // todo: remove the method
   public TrueMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack) {
-    this(field, allocator, callBack, null, null);
+    super(field, allocator, callBack);
+    // boolean keyTypeSupported =
+        // keyType.getMode() != TypeProtos.DataMode.REPEATED && supportedKeyTypes.contains(keyType.getMinorType());
+        // keyType.getMode() == TypeProtos.DataMode.REQUIRED && supportedKeyTypes.contains(keyType.getMinorType());
+    // Preconditions.checkArgument(keyTypeSupported, "Unsupported key type in TRUEMAP: " + keyType + ". Key should be REQUIRED primitive type");
+//    this.keyType = keyType;
+//    this.valueType = valueType;
+//    keys = BasicTypeHelper.getNewVector(FIELD_KEY_NAME, allocator, keyType, callBack);
+//    values = BasicTypeHelper.getNewVector(FIELD_VALUE_NAME, allocator, valueType, callBack);
+    offsets = new UInt4Vector(OFFSETS_FIELD, allocator);
+    lengths = new UInt4Vector(LENGTHS_FIELD, allocator);
+    // todo: might want to remove:
+    // children = Collections.unmodifiableList(Arrays.asList(keys, values, lengths, offsets));
+    // children = Arrays.asList(lengths, offsets); // todo: order matters!
+//    for (ValueVector child : children) { // todo: ListVector does not add children to field, for example. Maybe discard it here also?
+//      // todo: this may be not safe as the same map field can be reused (recursively or...). For ex., this can modify value field if value is a TrueMap
+//      field.addChild(child.getField());
+//    }
+    MinorType k = keyType == null ? null : keyType.getMinorType();
+    MinorType v = valueType == null ? null : valueType.getMinorType();
+//    System.out.println(String.format("TrueMapVector(%s, %s) created: %d", k, v, ++created));
+    reader = new SingleTrueMapReaderImpl(TrueMapVector.this, true);
   }
 
   public TrueMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
     super(field, allocator, callBack);
     boolean keyTypeSupported =
-        keyType.getMode() != TypeProtos.DataMode.REPEATED && supportedKeyTypes.contains(keyType.getMinorType());
-    Preconditions.checkArgument(keyTypeSupported, "Unsupported key type in TRUEMAP: " + keyType);
+        // keyType.getMode() != TypeProtos.DataMode.REPEATED && supportedKeyTypes.contains(keyType.getMinorType());
+        keyType.getMode() == TypeProtos.DataMode.REQUIRED && supportedKeyTypes.contains(keyType.getMinorType());
+    Preconditions.checkArgument(keyTypeSupported, "Unsupported key type in TRUEMAP: " + keyType + ". Key should be REQUIRED primitive type");
     this.keyType = keyType;
     this.valueType = valueType;
     keys = BasicTypeHelper.getNewVector(FIELD_KEY_NAME, allocator, keyType, callBack);
-    values = BasicTypeHelper.getNewVector(FIELD_VALUE_NAME, allocator, valueType, callBack);
+    values = BasicTypeHelper.getNewVector(FIELD_VALUE_NAME, allocator, valueType, callBack); // todo: handle values of Complex types separately?
     offsets = new UInt4Vector(OFFSETS_FIELD, allocator);
     lengths = new UInt4Vector(LENGTHS_FIELD, allocator);
-    children = Collections.unmodifiableList(Arrays.asList(keys, values, lengths, offsets));
-    for (ValueVector child : children) { // todo: ListVector does not add children to field, for example. Maybe discard it here also?
-      field.addChild(child.getField());
-    }
+//    children = Collections.unmodifiableList(Arrays.asList(keys, values, lengths, offsets));
+//    for (ValueVector child : children) { // todo: ListVector does not add children to field, for example. Maybe discard it here also?
+//      // todo: this may be not safe as the same map field can be reused (recursively or...). For ex., this can modify value field if value is a TrueMap
+//      field.addChild(child.getField());
+//    }
+    allocateChildren();
+
+    reader = new SingleTrueMapReaderImpl(TrueMapVector.this);
+
+    primitiveValueType = valueType.getMode() != TypeProtos.DataMode.REPEATED && !complexTypes.contains(valueType.getMinorType());
+
+    initialized = true;
+    MinorType k = keyType == null ? null : keyType.getMinorType();
+    MinorType v = valueType == null ? null : valueType.getMinorType();
+//    System.out.println(String.format("TrueMapVector(%s, %s) created: %d", k, v, ++created));
   }
 
   @Override
@@ -119,30 +174,47 @@ public class TrueMapVector extends AbstractContainerVector {
     return reader;
   }
 
-  transient private MapTransferPair ephPair;
-  transient private MapSingleCopier ephPair2;
+  // transient private MapTransferPair ephPair;
+  // transient private MapSingleCopier ephPair2;
 
-  public void copyFromSafe(int fromIndex, int thisIndex, MapVector from) {
-    /*if (ephPair == null || ephPair.from != from) {
-      ephPair = (MapTransferPair) from.makeTransferPair(this);
-    }*/
-    ephPair.copyValueSafe(fromIndex, thisIndex);
+//  public void copyFromSafe(int fromIndex, int thisIndex, TrueMapVector from) {
+//    if (ephPair == null || ephPair.from != from) {
+//      ephPair = (MapTransferPair) from.makeTransferPair(this);
+//    }
+//    ephPair.copyValueSafe(fromIndex, thisIndex);
+//  }
+
+  public void copyFromSafe(int inIndex, int outIndex, TrueMapVector from) {
+    copyFrom(inIndex, outIndex, from);
   }
 
-  public void copyFromSafe(int fromSubIndex, int thisIndex, RepeatedMapVector from) { // todo: not sure what is the purpose
-    if (ephPair2 == null || ephPair2.from != from) {
-      // ephPair2 = from.makeSingularCopier(this);
-    }
-    // ephPair2.copySafe(fromSubIndex, thisIndex);
+  public void copyFrom(int inIndex, int outIndex, TrueMapVector from) { // todo: get inspired
+    final FieldReader in = from.getReader();
+    in.setPosition(inIndex);
+    final FieldWriter out = getWriter();
+    out.setPosition(outIndex);
+    ComplexCopier.copy(in, out);
   }
+
+  // todo: Make RepeatedTrueMapVector
+//  public void copyFromSafe(int fromSubIndex, int thisIndex, RepeatedMapVector from) { // todo: not sure what is the purpose
+//    if (ephPair2 == null || ephPair2.from != from) {
+//      // ephPair2 = from.makeSingularCopier(this);
+//    }
+//    // ephPair2.copySafe(fromSubIndex, thisIndex);
+//  }
   // todo: looks like this one is used when query contains LIMIT
   @Override
   public void copyEntry(int toIndex, ValueVector from, int fromIndex) {
-    System.out.println("No idea!");// copyFromSafe(fromIndex, toIndex, (MapVector) from);
+    // System.out.println("No idea!");// copyFromSafe(fromIndex, toIndex, (MapVector) from); // todo: implement for where clause?
+    copyFromSafe(fromIndex, toIndex, (TrueMapVector) from);
   }
 
-  @Override
-  protected boolean supportsDirectRead() { return true; }
+  @Deprecated
+  @Override // todo: remove
+  protected boolean supportsDirectRead() { // todo: what the heck?
+    return true;
+  }
 
   public Iterator<String> fieldNameIterator() {
     return getChildFieldNames().iterator();
@@ -215,6 +287,21 @@ public class TrueMapVector extends AbstractContainerVector {
   }
 
   @Override
+  protected Collection<String> getChildFieldNames() {
+    return fieldNames;
+  }
+
+  public void transferTo(TrueMapVector target) {
+    throw new AssertionError("TrueMapVector#transferTo(TrueMapVector) is not implemented");
+//    offsets.makeTransferPair(target.offsets).transfer();
+//    bits.makeTransferPair(target.bits).transfer();
+//    if (target.getDataVector() instanceof ZeroVector) {
+//      target.addOrGetVector(new VectorDescriptor(vector.getField().getType()));
+//    }
+//    getDataVector().makeTransferPair(target.getDataVector()).transfer();
+  }
+
+  @Override
   public TransferPair getTransferPair(BufferAllocator allocator) { // todo: see this!
     return new MapTransferPair(this, getField().getName(), allocator);
   }
@@ -233,10 +320,10 @@ public class TrueMapVector extends AbstractContainerVector {
     private final TransferPair[] pairs;
     private final TrueMapVector from;
     private final TrueMapVector to;
-
+// todo: getField()?
     public MapTransferPair(TrueMapVector from, String path, BufferAllocator allocator) {
-      // this(from, new TrueMapVector(MaterializedField.create(path, TYPE), allocator, new SchemaChangeCallBack()), false);
-      this(from, null, false);
+      this(from, new TrueMapVector(MaterializedField.create(path, TYPE), allocator, new SchemaChangeCallBack(), from.getKeyType(), from.getValueType()), false);
+      // this(from, new TrueMapVector(), false);
     }
 
     public MapTransferPair(TrueMapVector from, TrueMapVector to) {
@@ -246,9 +333,13 @@ public class TrueMapVector extends AbstractContainerVector {
     protected MapTransferPair(TrueMapVector from, TrueMapVector to, boolean allocate) {
       this.from = from;
       this.to = to;
+      this.to.keyType = this.from.keyType;
+      this.to.valueType = this.from.valueType;
+      // todo: not sure if to remove
+      // this.to.valueCount = this.from.valueCount;
       this.pairs = new TransferPair[from.size()];
-      this.to.ephPair = null;
-      this.to.ephPair2 = null;
+//      this.to.ephPair = null;
+//      this.to.ephPair2 = null;
 
       int i = 0;
       ValueVector vector;
@@ -267,8 +358,16 @@ public class TrueMapVector extends AbstractContainerVector {
         // (This is similar to what happens in ScanBatch where the children cannot be added till they are
         // read). To take care of this, we ensure that the hashCode of the MaterializedField does not
         // include the hashCode of the children but is based only on MaterializedField$key.
-        final ValueVector newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
-        if (allocate /*&& to.size() != preSize*/) { // todo: uncomment? Revise!
+        final ValueVector newVector;
+        if (vector.getField().getType().getMinorType() == MinorType.TRUEMAP) {
+          TrueMapVector mapVector = (TrueMapVector) vector;
+          newVector = to.addOrGet(child, mapVector.getField().getType(), mapVector.getKeyType(), mapVector.getValueType());
+          // todo: handle children here?
+        } else {
+          newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
+        }
+        if (allocate && to.size() != preSize) { // todo: uncomment? Revise!
+//          System.out.println("Allocated child: " + child);
           newVector.allocateNew(); // todo: do not allocate everytime!
         }
         pairs[i++] = vector.makeTransferPair(newVector); // todo: make sure this one is ok
@@ -281,6 +380,8 @@ public class TrueMapVector extends AbstractContainerVector {
         p.transfer();
       }
       to.valueCount = from.valueCount;
+      // todo: remove?
+      // to.offsets.getMutator().setValueCount(from.offsets.getAccessor().getValueCount());
       from.clear();
     }
 
@@ -292,7 +393,7 @@ public class TrueMapVector extends AbstractContainerVector {
     @Override
     public void copyValueSafe(int from, int to) {
       for (TransferPair p : pairs) {
-        p.copyValueSafe(from, to);
+        p.copyValueSafe(from, to); // todo: is the problem here/
       }
     }
 
@@ -307,9 +408,9 @@ public class TrueMapVector extends AbstractContainerVector {
 
   @Override
   public int getValueCapacity() {
-    /*if (size() == 0) { // todo: this can be removed as this always has 4 children
+    if (size() == 0) { // todo: this can be removed as this always has 4 children
       return 0;
-    }*/
+    }
 
     final Ordering<ValueVector> natural = new Ordering<ValueVector>() {
       @Override
@@ -340,11 +441,12 @@ public class TrueMapVector extends AbstractContainerVector {
       MaterializedField fieldDef = MaterializedField.create(child);
 
       ValueVector vector = getChild(fieldDef.getName());
-      /*if (vector == null) { // todo: this should not be the case, should it?
+      // ValueVector vector = addOrGet(fieldDef.getName(), )
+      if (vector == null) { // todo: this should not be the case, should it?
         // if we arrive here, we didn't have a matching vector.
         vector = BasicTypeHelper.getNewVector(fieldDef, allocator);
         putChild(fieldDef.getName(), vector); // todo: what to do?
-      }*/
+      }
       if (child.getValueCount() == 0) {
         vector.clear();
       } else {
@@ -364,7 +466,7 @@ public class TrueMapVector extends AbstractContainerVector {
    *
    * Note that this method does not enforce any vector type check nor throws a schema change exception.
    */
-  @Deprecated
+  @Deprecated // todo: not sure if to deprecate yet
   public void putChild(String name, ValueVector vector) {
     putVector(name, vector);
     field.addChild(vector.getField());
@@ -383,15 +485,18 @@ public class TrueMapVector extends AbstractContainerVector {
         Preconditions.checkNotNull(vector, "vector cannot be null")
     );*/
     // ValueVector old = null;
+    MajorType type = vector.getField().getType();
     if (FIELD_KEY_NAME.equals(name)) {
       // old = keys;
       keys = vector;
+      keyType = type;
     } else if (FIELD_VALUE_NAME.equals(name)) {
       // old = values;
       values = vector;
-    } else if (FIELD_OFFSET_NAME.equals(name)) {
+      valueType = type;
+    } else if (FIELD_OFFSET_NAME.equals(name)) { // todo: this should be removed
       offsets = (UInt4Vector) vector; // todo: revise
-    } else if (FIELD_LENGTH_NAME.equals(name)) {
+    } else if (FIELD_LENGTH_NAME.equals(name)) { // todo: this should be removed
       lengths = (UInt4Vector) vector; // todo: revise
     } else {
       logger.warn("Unknown field name '{}' put into {}", name, getClass().getName());
@@ -424,6 +529,15 @@ public class TrueMapVector extends AbstractContainerVector {
 
     @Override
     public Object getObject(int index) {
+//      if (index > 0) {
+//        offset = offsets.getAccessor().get(index - 1);
+//        length = offsets.getAccessor().get(index) - offset;
+//      }
+//      for (int i = 0; i < length; i++) {
+//        int valIndex = offset + i;
+//        Object keyVal = keys.getAccessor().getObject(valIndex);
+//        result.put(keyVal, values.getAccessor().getObject(valIndex));
+//      }
       Map<Object, Object> result = new JsonStringHashMap<>(); // todo: change (probably to LinkedHashMap)
       int offset = 0;
       if (index > 0) {
@@ -438,11 +552,27 @@ public class TrueMapVector extends AbstractContainerVector {
       return result;
     }
 
-    // todo: what to do?
-    public void get(int index, ComplexHolder holder) {
-      reader.setPosition(index);
-      holder.reader = reader;
+    @Override
+    public boolean isNull(int index) {
+      return false; // todo: redefine if Nullable
     }
+
+    // todo: what to do?
+    /*public void get(int index, ComplexHolder holder) {
+      reader.setPosition(index); // todo: this is likely not right!
+      holder.reader = reader;
+    }*/
+
+    public void get(int index, TrueMapHolder holder) {
+      // reader.setPosition(index); // todo: this is likely not right!
+      holder.vector = TrueMapVector.this;
+      holder.reader = reader;
+      holder.start = index > 0 ? offsets.getAccessor().get(index - 1) : 0;
+      holder.end =  offsets.getAccessor().get(index);
+    }
+
+    // todo: introduce getKey(int index, ValueHolder holder)?
+    // todo: introduce getValue(int index, ValueHolder holder)?
 
     @Override
     public int getValueCount() {
@@ -464,16 +594,18 @@ public class TrueMapVector extends AbstractContainerVector {
   // todo: move this logic to TrueMapWriter?
   public class Mutator extends BaseValueVector.BaseMutator {
     // todo: move to TrueMapVector?
-    private int currentRow = -1;
+    /*private int currentRow = -1;
     private int length = -1; // (designates length for current row)
     private boolean rowStarted;
 
+    @Deprecated
     public void startRow() {
       currentRow++;
       length = 0;
       rowStarted = true;
     }
 
+    @Deprecated
     public void endRow() {
       // todo: implement if needed
       rowStarted = false;
@@ -485,6 +617,7 @@ public class TrueMapVector extends AbstractContainerVector {
       lengths.getMutator().setSafe(currentRow, length); // todo:
     }
 
+    @Deprecated
     public void put(int outputIndex, Object key, Object value) { // todo: outputIndex?
       assert rowStarted : "Must start row (startRow()) before put";
 
@@ -499,29 +632,35 @@ public class TrueMapVector extends AbstractContainerVector {
     }
 
     private void setValue(ValueVector vector, Object value, int index) {
-      if (vector instanceof NullableIntVector) {
+      if (vector instanceof NullableIntVector) { // todo: not instanceof but type?
         ((NullableIntVector) vector).getMutator().setSafe(index, (int) value);
       } else if (vector instanceof NullableVarCharVector) {
         byte[] keyData = (byte[]) value;
         ((NullableVarCharVector) vector).getMutator().setSafe(index, keyData, 0, keyData.length);
       }
-    }
+    }*/
 
     @Override
     public void setValueCount(int valueCount) { // todo: change keys and values to reflect offset as count?
       int childValueCount = valueCount > 0 ? offsets.getAccessor().get(valueCount - 1) : 0;
-      keys.getMutator().setValueCount(childValueCount);
-      values.getMutator().setValueCount(childValueCount);
+      keys.getMutator().setValueCount(childValueCount); // todo: revisit
+//      if (keys.getField().getType().getMinorType() == MinorType.TRUEMAP) {
+//        ((TrueMapVector) values).getMutator().setValueCount(c);
+//      } else {
+//        values.getMutator().setValueCount(childValueCount); // todo: revisit this one!
+//      }
+//      if (values.getField().getType().getMinorType() != MinorType.TRUEMAP) {
+        values.getMutator().setValueCount(childValueCount);
+//      }
       offsets.getMutator().setValueCount(valueCount);
       lengths.getMutator().setValueCount(valueCount);
       setMapValueCount(valueCount);
     }
 
-    public void setNull() {
+    /*public void setNull() {
+    }*/
 
-    }
-
-    @Override
+    @Override // todo: override?
     public void reset() {
     }
 
@@ -532,21 +671,73 @@ public class TrueMapVector extends AbstractContainerVector {
 
   @Override
   public void clear() { // todo: uncomment
+//    if (!initialized) {
+//      return;
+//    }
     for (ValueVector v : children) {
       v.clear();
     }
+//    if (data != null) {
+//      data.release();
+//    }
+//    data = allocator.getEmpty();
+//    super.clear();
+
+    // todo: probably remove?
+    // children.clear();
     valueCount = 0;
+    // todo: remove
+//    for (ValueVector v : this) {
+//      v.clear();
+//    }
+
+    MinorType k = keyType != null ? keyType.getMinorType() : null;
+    MinorType v = valueType != null ? valueType.getMinorType() : null;
+//    System.out.println("Clearing TrueMapVector: (" + k + ", " + v + ")");
+    // System.out.println("TrueMapVector removed: " + ++removed);
   }
+
+//  @Override
+//  public void close() {
+//    // final Collection<ValueVector> vectors = getChildren();
+//    /*for (ValueVector v : children) {
+//      v.close();
+//    }*/
+//    // vectors.clear(); this seems unnecessary, is it?
+////    if (!initialized) {
+////      return;
+////    }
+//    super.close();
+//    valueCount = 0;
+//  }
 
   @Override
   public void close() {
-    // final Collection<ValueVector> vectors = getChildren();
     /*for (ValueVector v : children) {
       v.close();
-    }*/
-    // vectors.clear(); this seems unnecessary, is it?
-    super.close();
+    }
+    children.clear();*/
+//    clear();
+//    children.clear();
+    // valueCount = 0;
+//    System.out.println("TrueMapVector removed: " + ++removed);
+    // super.close(); // todo: needed?
+
+    // todo: from MapVector
+    final Collection<ValueVector> vectors = children;
+    for (final ValueVector v : vectors) {
+      v.close();
+    }
+    vectors.clear();
     valueCount = 0;
+
+    for (final ValueVector valueVector : vectors) {
+      valueVector.close();
+    }
+    vectors.clear();
+    for (ValueVector vector : this) {
+      vector.close();
+    }
   }
 
   @Override
@@ -560,7 +751,7 @@ public class TrueMapVector extends AbstractContainerVector {
     // AbstractMapVector otherMap = (AbstractMapVector) other;
     TrueMapVector otherMap = (TrueMapVector) other;
     // if (vectors.size() != otherMap.vectors.size()) {
-    if (valueCount != otherMap.valueCount) { // todo: what this valueCount means?
+    if (children.size() != otherMap.children.size()) { // todo: what this valueCount means?
       throw new IllegalStateException("Maps have different column counts");
     }
     // for (int i = 0; i < vectors.size(); i++) {
@@ -618,19 +809,25 @@ public class TrueMapVector extends AbstractContainerVector {
   }
 
   // todo: from AbstractMapVector
-  public <T extends ValueVector> T addOrGet(String name, TypeProtos.MajorType type, Class<T> clazz) {
+  // todo: re-implement!
+  public <T extends ValueVector> T addOrGet(String name, TypeProtos.MajorType type, Class<T> clazz) { // todo: this should be revised
     // todo:
-    if (!name.equals(FIELD_KEY_NAME) && !name.equals(FIELD_VALUE_NAME) && !name.equals(FIELD_OFFSET_NAME) && !name.equals(FIELD_LENGTH_NAME)) {
+//    if (!name.equals(FIELD_KEY_NAME) && !name.equals(FIELD_VALUE_NAME) && !name.equals(FIELD_OFFSET_NAME) && !name.equals(FIELD_LENGTH_NAME)) {
+//      logger.warn("No field {} in True map!", name);
+//      return null;
+//    }
+    // if (!name.equals(FIELD_KEY_NAME) && !name.equals(FIELD_VALUE_NAME)) {
+    if (!fieldNames.contains(name)) {
       logger.warn("No field {} in True map!", name);
-      return null;
+      throw new DrillRuntimeException(String.format("Not allowed field '%s' in TrueMapVector", name));
     }
-    final ValueVector existing = getChild(name);
-    // boolean create = false;
+    ValueVector existing = getChild(name);
+    boolean create = false;
     if (existing == null) {
-      // create = true;
+      create = true;
     } else if (clazz.isAssignableFrom(existing.getClass())) {
       return (T) existing;
-    } /*else if (nullFilled(existing)) { // todo: not sure whether need this part, Probably, remove
+    } else if (nullFilled(existing)) { // todo: not sure whether need this part, Probably, remove
       existing.clear();
       // Since it's removing old vector and adding new one based on new type, it should do same for Materialized field,
       // Otherwise there will be duplicate of same field with same name but different type.
@@ -643,12 +840,103 @@ public class TrueMapVector extends AbstractContainerVector {
       if (callBack != null) {
         callBack.doWork();
       }
+      if (allChildrenPresent()) {
+        allocateChildren();
+        reader.init();
+      }
       return vector;
-    }*/
+    }
     final String message = "Drill does not support schema change yet. Existing[%s] and desired[%s] vector types mismatch";
     throw new IllegalStateException(String.format(message, existing.getClass().getSimpleName(), clazz.getSimpleName()));
   }
+  // todo: add the method to parent
+  public TrueMapVector addOrGet(String name, MajorType type, MajorType keyType, MajorType valueType) {
+    // todo:
+    /*if (!name.equals(FIELD_KEY_NAME) && !name.equals(FIELD_VALUE_NAME) && !name.equals(FIELD_OFFSET_NAME) && !name.equals(FIELD_LENGTH_NAME)) {
+      logger.warn("No field {} in True map!", name);
+      return null;
+    }*/
+    ValueVector existing = getChild(name);
+    boolean create = false;
+    if (existing == null) {
+      create = true;
+    } /*else if (clazz.isAssignableFrom(existing.getClass())) {
+      return (T) existing;
+    }*/ else if (nullFilled(existing)) { // todo: not sure whether need this part, Probably, remove // todo: is this needed?
+      existing.clear();
+      // Since it's removing old vector and adding new one based on new type, it should do same for Materialized field,
+      // Otherwise there will be duplicate of same field with same name but different type.
+      field.removeChild(existing.getField());
+      create = true;
+    }
+    if (create) {
+//      TrueMapVector vector = BasicTypeHelper.getNewMapVector(name, allocator, callBack, keyType, valueType);
+      TrueMapVector vector = (TrueMapVector) BasicTypeHelper.getNewVector(name, allocator, type, callBack);
+      putChild(name, vector);
+      if (callBack != null) {
+        callBack.doWork();
+      }
+      if (allChildrenPresent()) {
+        allocateChildren();
+        reader.init();
+      }
+      return vector;
+    }
+    final String message = "Drill does not support schema change yet. Existing[%s] and desired[%s] vector types mismatch";
+    throw new IllegalStateException(String.format(message, existing.getClass().getSimpleName(), TrueMapVector.class.getName())); // todo: remove
+  }
 
+  public TrueMapVector addOrGet(String name, MajorType type, MajorType keyType, List<MajorType> valueType) {
+    // todo:
+    /*if (!name.equals(FIELD_KEY_NAME) && !name.equals(FIELD_VALUE_NAME) && !name.equals(FIELD_OFFSET_NAME) && !name.equals(FIELD_LENGTH_NAME)) {
+      logger.warn("No field {} in True map!", name);
+      return null;
+    }*/
+    ValueVector existing = getChild(name);
+    boolean create = false;
+    if (existing == null) {
+      create = true;
+    } /*else if (clazz.isAssignableFrom(existing.getClass())) {
+      return (T) existing;
+    }*/ else if (nullFilled(existing)) { // todo: not sure whether need this part, Probably, remove
+      existing.clear();
+      // Since it's removing old vector and adding new one based on new type, it should do same for Materialized field,
+      // Otherwise there will be duplicate of same field with same name but different type.
+      field.removeChild(existing.getField());
+      create = true;
+    }
+    if (create) {
+//      TrueMapVector vector = BasicTypeHelper.getNewMapVector(name, allocator, callBack, keyType, valueType.get(0));
+      TrueMapVector vector = (TrueMapVector) BasicTypeHelper.getNewVector(name, allocator, type, callBack);
+      putChild(name, vector);
+      if (callBack != null) {
+        callBack.doWork();
+      }
+      if (allChildrenPresent()) {
+        allocateChildren();
+        reader.init();
+      }
+      return vector;
+    }
+    final String message = "Drill does not support schema change yet. Existing[%s] and desired[%s] vector types mismatch";
+    throw new IllegalStateException(String.format(message, existing.getClass().getSimpleName(), TrueMapVector.class.getName())); // todo: remove
+  }
+
+  private boolean allChildrenPresent() {
+    // todo: lengths and offsets are likely to be present all the time. Discard?
+    return !(keys == null || values == null || lengths == null || offsets == null);
+  }
+
+  private void allocateChildren() {
+    // children = Collections.unmodifiableList(Arrays.asList(keys, values, lengths, offsets));
+    children = new ArrayList<>(Arrays.asList(keys, values, lengths, offsets));
+    for (ValueVector child : children) { // todo: ListVector does not add children to field, for example. Maybe discard it here also?
+      // todo: this may be not safe as the same map field can be reused (recursively or...). For ex., this can modify value field if value is a TrueMap
+      field.addChild(child.getField());
+    }
+    writer = new TrueMapWriter(this, null, keyType, valueType); // todo: this is likely to be shit
+  }
+  // todo: is this method needed and what is the  purpose?
   private boolean nullFilled(ValueVector vector) {
     for (int r = 0; r < vector.getAccessor().getValueCount(); r++) {
       if (! vector.getAccessor().isNull(r)) {
@@ -680,7 +968,7 @@ public class TrueMapVector extends AbstractContainerVector {
 
   // from AbstractMapVector
   @Override
-  public boolean allocateNewSafe() {
+  public boolean allocateNewSafe() { // todo: review
     /* boolean to keep track if all the memory allocation were successful
      * Used in the case of composite vectors when we need to allocate multiple
      * buffers for multiple vectors. If one of the allocations failed we need to
@@ -703,7 +991,7 @@ public class TrueMapVector extends AbstractContainerVector {
   }
 
   @Override
-  public void collectLedgers(Set<AllocationManager.BufferLedger> ledgers) {
+  public void collectLedgers(Set<AllocationManager.BufferLedger> ledgers) { // todo: what the heck?
   }
 
   // todo: from AbstractMapVector
@@ -715,7 +1003,7 @@ public class TrueMapVector extends AbstractContainerVector {
 
     int count = 0;
     for (ValueVector v : children) {
-      count += v.getPayloadByteCount(valueCount);
+      count += v.getPayloadByteCount(valueCount); // todo: ensure this is OK for all the children (i.e. all children have the same valueCount)
     }
     return count;
   }
@@ -726,17 +1014,34 @@ public class TrueMapVector extends AbstractContainerVector {
     private final TrueMapVector vector;
     private FieldReader keyReader;
     private FieldReader valueReader;
+    private /*final*/ List<FieldReader> children;
     // todo: add offsetsReader?
     // private final Map<String, FieldReader> fields = Maps.newHashMap();
 
+    private int currentOffset;
+    private int maxOffset;
+
+    public SingleTrueMapReaderImpl(TrueMapVector vector, boolean partial) {
+      this.vector = vector;
+    }
+
     public SingleTrueMapReaderImpl(TrueMapVector vector) {
       this.vector = vector;
-      // keyReader = vector.keys.getReader();
+//      keyReader = vector.getKeys().getReader();
+//      valueReader = vector.getValues().getReader();
+//      children = Collections.unmodifiableList(Arrays.asList(keyReader, valueReader));
+      init();
+    }
+
+    void init() {
+      keyReader = vector.getKeys().getReader();
+      valueReader = vector.getValues().getReader();
+      children = Collections.unmodifiableList(Arrays.asList(keyReader, valueReader, vector.getOffsets().getReader(), vector.getLengths().getReader()));
     }
 
     private void setChildrenPosition(int index){
       // for(FieldReader r : fields.values()){
-      for(FieldReader r : Arrays.asList(keyReader, valueReader)){
+      for(FieldReader r : children){
         r.setPosition(index);
       }
     }
@@ -751,7 +1056,7 @@ public class TrueMapVector extends AbstractContainerVector {
       } else if (name.toLowerCase().equals(FIELD_VALUE_NAME)) {
         reader = valueReader;
       } else { // todo: add offsets reader
-        logger.warn("True map does not support field {}", name);
+        logger.warn("True map does not contain field {}", name);
         return null;
       }
       if (reader == null){
@@ -772,39 +1077,84 @@ public class TrueMapVector extends AbstractContainerVector {
       return reader;
     }
 
+//    @Override // todo: this was before
+//    public void setPosition(int index){
+//      super.setPosition(index);
+//      for(FieldReader r : children) { // todo: add offsetsReader
+//        r.setPosition(index);
+//      }
+//    }
+
     @Override
-    public void setPosition(int index){
+    public void setPosition(int index) {
       super.setPosition(index);
-      // for(FieldReader r : fields.values()){
-      for(FieldReader r : Arrays.asList(keyReader, valueReader)) { // todo: add offsetsReader
-        r.setPosition(index);
-      }
+      currentOffset = (index > 0 ? vector.offsets.getAccessor().get(index - 1) : 0) - 1;
+      maxOffset = index > 0 ? vector.offsets.getAccessor().get(index) : 0;
     }
 
-    public void read(Object key, ValueHolder holder) {
+    // todo: if key-uniqueness is not guaranteed, then return the last one for the key
+    public int find(Object key/*, ValueHolder holder*/) {
     //public void read(Object key, NullableBigIntHolder holder) {
-      MajorType holderType = BasicTypeHelper.getValueHolderType(holder); // todo: probably remove the check because it may be expansive
+      /*MajorType holderType = BasicTypeHelper.getValueHolderType(holder); // todo: probably remove the check because it may be expansive
       MajorType valuesType = vector.values.getField().getType();
       if (!valuesType.equals(holderType)) {
         throw new IllegalArgumentException(String.format("invalid holder type '%s' for values of type '%s'", holderType, valuesType));
-      }
-
+      }*/
+      // todo: use idx() to get current reader position
+      int idx; //= idx();
+      // if (idx > 0) {
+        idx = vector.offsets.getAccessor().get(idx());
+        int offset = idx() > 0 ? vector.offsets.getAccessor().get(idx() - 1) : 0;
+      //}
       int index = -1;
-      // for (int i = 0; i < vector.keys.getAccessor().getValueCount(); i++) {
-      // for (int i = 0; i < vector.offsets[idx()]; i++) {
-      for (int i = 0; i < vector.lengths.getAccessor().get(idx()); i++) {
-        if (vector.keys.getAccessor().getObject(i).toString().equals(key)) {
-          index = i;
+      // for (int i = 0; i < vector.lengths.getAccessor().get(idx()); i++) {
+      // todo: if key-uniqueness is not guaranteed, then return the last one for the key
+      for (int i = 0; i < idx - offset; i++) {
+        if (vector.keys.getAccessor().getObject(offset + i).toString().equals(key)) {
+        // if (vector.keys.getAccessor().getObject(i).equals(((Integer) key).longValue())) {
+          index = offset + i;
           break;
         }
       }
 
       boolean found = index != -1;
-      NullableIntHolder h = (NullableIntHolder) holder;
+      /*NullableIntHolder h = (NullableIntHolder) holder;
       h.isSet = found ? 1 : 0;
       if (found) {
         h.value = (int) vector.values.getAccessor().getObject(index);
+      }*/
+
+      // return index != -1;
+      return index;
+      /*int offset = 0;
+      if (index > 0) {
+        offset = offsets.getAccessor().get(index - 1);
       }
+      int length = lengths.getAccessor().get(index);
+      for (int i = 0; i < length; i++) {
+        int valIndex = offset + i;
+        Object keyVal = keys.getAccessor().getObject(valIndex);
+        result.put(keyVal, values.getAccessor().getObject(valIndex));
+      }*/
+    }
+
+    public void read(Object key, ValueHolder holder) {
+      int index = find(key);
+      // int prevIndex = valueReader.idx();
+      // todo: decide if uncomment!
+      valueReader.setPosition(index);
+      // todo: pass the index into the method instead of setting position to the reader
+      if (index > -1) {
+        valueReader.read(index, holder); // todo: uncomment and add to FieldReader interface. Implement for every reader (cast to that's reader ValueHolder, perhaps)
+      }
+      // valueReader.setPosition(prevIndex);
+    }
+
+    public void read(Object key, ComplexHolder holder) {
+      int index = find(key);
+      valueReader.setPosition(index);
+      holder.isSet = valueReader.isSet() ? 1 : 0;
+      holder.reader = valueReader;
     }
 
     @Override
@@ -828,7 +1178,7 @@ public class TrueMapVector extends AbstractContainerVector {
     }
 
     @Override
-    public void copyAsValue(BaseWriter.MapWriter writer){
+    public void copyAsValue(BaseWriter.MapWriter writer){ // todo: implement this and copyAsValue(...)
       TrueMapWriter impl = (TrueMapWriter) writer;
       // impl.container.copyFromSafe(idx(), impl.idx(), vector);
     }
@@ -838,10 +1188,63 @@ public class TrueMapVector extends AbstractContainerVector {
       SingleMapWriter impl = (SingleMapWriter) writer.map(name);
       // impl.container.copyFromSafe(idx(), impl.idx(), vector);
     }
+
+    @Override // todo: see UnionListReader
+    public boolean next() {
+      if (currentOffset + 1 < maxOffset) { // todo: this can be wrong!
+        vector.getReader().setPosition(++currentOffset);
+        return true;
+      } else {
+        return false;
+      }
+    }
+    // todo: use this?
+    public void copyAsValue(TrueMapWriter writer) {
+      ComplexCopier.copy(this, writer);
+    }
   }
 
   public boolean isEmpty(int index) {
     // todo: check if offsets is not empty
-    return lengths.getAccessor().get(index) == 0;
+    // return lengths.getAccessor().get(index) == 0;
+    return offsets.getAccessor().get(index) == 0; // todo: check if allocated
+  }
+
+  public UInt4Vector getOffsets() {
+    return offsets;
+  }
+
+  @Deprecated
+  public UInt4Vector getLengths() {
+    return lengths;
+  }
+
+  public ValueVector getKeys() {
+    return keys;
+  }
+
+  public ValueVector getValues() {
+    return values;
+  }
+
+  @Deprecated // todo: there is no need of the method, is there?
+  public void setWriter(TrueMapWriter writer) {
+//    if (this.writer != null) {
+//      throw new DrillRuntimeException("Writer is already set to TrueMapVector");
+//    }
+    this.writer = writer;
+  }
+
+  @Deprecated // todo: remove
+  public TrueMapWriter getWriter() {
+    return writer;
+  }
+
+  public MajorType getKeyType() {
+    return keyType;
+  }
+
+  public MajorType getValueType() {
+    return valueType;
   }
 }

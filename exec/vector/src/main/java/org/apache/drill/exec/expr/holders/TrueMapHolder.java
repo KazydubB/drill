@@ -17,10 +17,11 @@
  */
 package org.apache.drill.exec.expr.holders;
 
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.vector.complex.TrueMapVector;
 
 public class TrueMapHolder extends ComplexHolder {
-  // public static final TypeProtos.MajorType TYPE = TrueMapVector.TYPE;
+  public static final TypeProtos.MajorType TYPE = TrueMapVector.TYPE;
 
   public TrueMapVector vector;
   public int start;

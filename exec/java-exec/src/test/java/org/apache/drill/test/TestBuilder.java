@@ -691,6 +691,23 @@ public class TestBuilder {
     return map;
   }
 
+  public static JsonStringHashMap<Object, Object> mapOfObject(Object... keyValueSequence) {
+    Preconditions.checkArgument(keyValueSequence.length%2==0, "Length of key value sequence must be even");
+    final JsonStringHashMap<Object, Object> map = new JsonStringHashMap<>();
+    for (int i=0; i < keyValueSequence.length; i+=2) {
+      Object key = keyValueSequence[i];
+      if (key instanceof CharSequence) {
+        key = new Text(key.toString());
+      }
+      Object value = keyValueSequence[i + 1];
+      if (value instanceof CharSequence) {
+        value = new Text(value.toString());
+      }
+      map.put(key, value);
+    }
+    return map;
+  }
+
   /**
    * Helper method for the timestamp values that depend on the local timezone
    * @param value expected timestamp value in UTC

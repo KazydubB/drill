@@ -17,6 +17,14 @@
  */
 package org.apache.drill.exec.store.hive;
 
+import org.apache.drill.exec.expr.holders.BigIntHolder;
+import org.apache.drill.exec.expr.holders.BitHolder;
+import org.apache.drill.exec.expr.holders.Float4Holder;
+import org.apache.drill.exec.expr.holders.Float8Holder;
+import org.apache.drill.exec.expr.holders.IntHolder;
+import org.apache.drill.exec.expr.holders.ValueHolder;
+import org.apache.drill.exec.expr.holders.VarCharHolder;
+import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.drill.shaded.guava.com.google.common.base.Strings;
 import io.netty.buffer.DrillBuf;
@@ -75,6 +83,12 @@ import org.apache.hadoop.hive.serde2.typeinfo.HiveDecimalUtils;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
+import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.joda.time.DateTime;
@@ -322,6 +336,82 @@ public class HiveUtilities {
         break;
       }
     }
+  }
+
+  public static ValueHolder getValueHolder(Object hiveValue, MajorType type, BufferAllocator allocator) { // todo: BufferAllocator instead?
+    ValueHolder holder;
+    switch(type.getMinorType()) {
+      /*case VARBINARY: {
+        byte[] value = (byte[]) hiveValue; // todo: most likely wrong
+        break;
+      }*/
+      case BIT: {
+        boolean value = ((BooleanWritable) hiveValue).get();
+        BitHolder h = new BitHolder();
+        h.value = value ? 1 : 0;
+        holder = h;
+        break;
+      }
+      case FLOAT8: {
+        double value = ((DoubleWritable) hiveValue).get();
+        Float8Holder h = new Float8Holder();
+        h.value = value;
+        holder = h;
+        break;
+      }
+      case FLOAT4: {
+        float value = ((FloatWritable) hiveValue).get();
+        Float4Holder h = new Float4Holder();
+        h.value = value;
+        holder = h;
+        break;
+      }
+      case TINYINT:
+      case SMALLINT:
+      case INT: {
+        int value = ((IntWritable) hiveValue).get();
+        IntHolder h = new IntHolder();
+        h.value = value;
+        holder = h;
+        break;
+      }
+      case BIGINT: {
+        long value = ((LongWritable) hiveValue).get();
+        BigIntHolder h = new BigIntHolder();
+        h.value = value;
+        holder = h;
+        break;
+      }
+      case VARCHAR: {
+        Text text = (Text) hiveValue;
+        byte[] valueBytes = text.getBytes();
+        int valueLen = text.getLength();
+        DrillBuf buf = allocator.buffer(valueLen);
+        buf.setZero(0, buf.capacity());
+        buf.setBytes(0, valueBytes, 0, valueLen);
+        VarCharHolder h = new VarCharHolder();
+        h.start = 0;
+        h.end = valueLen;
+        h.buffer = buf;
+        holder = h;
+        break;
+      }
+      /*case VARDECIMAL: {
+        final BigDecimal value = ((HiveDecimal) hiveValue).bigDecimalValue()
+            .setScale(type.getScale(), RoundingMode.HALF_UP);
+        final NullableVarDecimalVector v = ((NullableVarDecimalVector) vector);
+        for (int i = start; i < end; i++) {
+          v.getMutator().setSafe(i, value);
+        }
+        VarDecimalHolder h = new VarDecimalHolder();
+
+        break;
+      }*/
+      default:
+        // throw new IllegalArgumentException("Unknown hive value type '" + hiveValue.getClass() + "' with value '" + hiveValue + "'.");
+        throw new IllegalArgumentException("Can't get ValueHolder for type " + type.getMinorType());
+    }
+    return holder;
   }
 
   /**

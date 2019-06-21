@@ -31,6 +31,7 @@ import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.expr.fn.impl.DateUtility;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.proto.UserProtos;
+import org.apache.drill.test.TestBuilder;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hive.common.type.HiveVarchar;
 import org.junit.AfterClass;
@@ -452,4 +453,14 @@ public class TestHiveStorage extends HiveTestBase {
     }
   }
 
+  @Test
+  public void test() throws Exception {
+    testBuilder()
+        .sqlQuery("SELECT * FROM hive.parquet_map_table")
+        .baselineColumns("id", "mapcol")
+        .ordered()
+        .baselineValues(2, TestBuilder.mapOf("Eraser", 8, "Pencils", 35))
+        .baselineValues(1, TestBuilder.mapOf("Eraser", 3))
+        .go();
+  }
 }

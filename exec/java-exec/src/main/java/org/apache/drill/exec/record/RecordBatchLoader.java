@@ -116,7 +116,8 @@ public class RecordBatchLoader implements VectorAccessible, Iterable<VectorWrapp
 
         // If the field is a map, check if the map schema changed.
 
-        } else if (vector.getField().getType().getMinorType() == MinorType.MAP  &&
+        } else if ((vector.getField().getType().getMinorType() == MinorType.MAP || vector.getField().getType().getMinorType() == MinorType.TRUEMAP)  && // todo: should any
+            // changes be made here?
                    ! isSameSchema(vector.getField().getChildren(), field.getChildList())) {
 
           // The map schema changed. Discard the old map and create a new one.
@@ -136,8 +137,8 @@ public class RecordBatchLoader implements VectorAccessible, Iterable<VectorWrapp
           // Schema only
         } else if (field.getValueCount() == 0) {
           AllocationHelper.allocate(vector, 0, 0, 0);
-        } else {
-          vector.load(field, buf.slice(bufOffset, field.getBufferLength()));
+        } else { // todo: load works a little bit off here: keys and values are partially loaded
+          vector.load(field, buf.slice(bufOffset, field.getBufferLength())); // todo: this is all here. load does not load offsets
         }
         bufOffset += field.getBufferLength();
         newVectors.add(vector);

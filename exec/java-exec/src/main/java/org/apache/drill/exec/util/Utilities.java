@@ -121,10 +121,10 @@ public class Utilities {
   public static PathSegment convertLiteral(RexLiteral literal) {
     switch (literal.getType().getSqlTypeName()) {
       case CHAR:
-        return new PathSegment.MapSegment(RexLiteral.stringValue(literal));
+        return new PathSegment.MapSegment(RexLiteral.stringValue(literal)); // todo: return to NameSegment
       case INTEGER:
         return new PathSegment.ArraySegment(RexLiteral.intValue(literal));
-      default:
+      default: // todo: add BIGINT
         return null;
     }
   }

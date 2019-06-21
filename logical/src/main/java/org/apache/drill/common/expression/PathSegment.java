@@ -228,6 +228,7 @@ public abstract class PathSegment {
     throw new UnsupportedOperationException();
   }
 
+  @Deprecated
   public MapSegment getMapSegment() {
     throw new UnsupportedOperationException();
   }
@@ -339,6 +340,7 @@ public abstract class PathSegment {
     }
   }
   // todo: consider MapSegment extends NameSegment?
+  @Deprecated
   public static final class MapSegment extends PathSegment {
     public static final String MAP_PREFIX = "___MAP___";
 

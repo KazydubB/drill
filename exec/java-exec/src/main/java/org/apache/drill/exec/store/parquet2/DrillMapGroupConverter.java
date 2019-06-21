@@ -49,12 +49,23 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
     this.options = options;
     GroupType type = schema.getType(0).asGroupType();
     // Preconditions.checkArgument(type.getOriginalType() == OriginalType.MAP_KEY_VALUE, "MAP_KEY_VALUE is expected");
-    // this.mapWriter = mapWriter.trueMap(name, getMajorType(type.getType(0), options), getMajorType(type.getType(1), options)); // todo: was before
-    // --------------------------- todo: experimental
-    TypeProtos.MajorType keyType = getMajorType(type.getType(0), options);
-    TypeProtos.MajorType valueType = getMajorType(type.getType(1), options);
-    this.baseWriter = mapWriter.trueMap(name, keyType, valueType);
+//     this.mapWriter = mapWriter.trueMap(name, getMajorType(type.getType(0), options), getMajorType(type.getType(1), options)); // todo: was before
+     this.baseWriter = mapWriter.trueMap(name, getMajorType(type.getType(0), options), getMajorType(type.getType(1), options)); // todo: was before
+//    // --------------------------- todo: experimental
+//    TypeProtos.MajorType keyType = getMajorType(type.getType(0), options);
+//    TypeProtos.MajorType valueType = getMajorType(type.getType(1), options);
+//    this.baseWriter = mapWriter.trueMap(name, keyType, valueType);
+//    // --------------------------- todo: experimental end
+//    Converter innerConverter = new KeyValueGroupConverter(mutator, (TrueMapWriter) this.baseWriter, type, columns, options, containsCorruptedDates);
+//    List<TypeProtos.MajorType> keyType = getMajorType(type.getType(0), options);
+//    List<TypeProtos.MajorType> valueType = getMajorType(type.getType(1), options);
+//    this.mapWriter = mapWriter.trueMap(name, keyType.get(0), valueType.get(0));
     // --------------------------- todo: experimental end
+    // todo: maybe pass list of valueTypes to KeyValueGroupConverter?
+//    if (mapWriter.getField().getType().getMinorType() == TypeProtos.MinorType.TRUEMAP
+//        && this.mapWriter.getField().getType().getMinorType() == TypeProtos.MinorType.TRUEMAP) {
+//      ((TrueMapWriter) mapWriter).allocateValueWriter();
+//    }
     Converter innerConverter = new KeyValueGroupConverter(mutator, (TrueMapWriter) this.baseWriter, type, columns, options, containsCorruptedDates);
     converters = Collections.singletonList(innerConverter); // todo: uncomment
   }
@@ -76,9 +87,10 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
       Converter valueConverter;
       if (!valueType.isPrimitive()) { // todo: change complex case
         GroupType groupType = valueType.asGroupType();
-        if (valueType.getOriginalType() == OriginalType.MAP) {
+        if (valueType.getOriginalType() == OriginalType.MAP) { // todo: add additoinal condition to check if valuType.minorType is TRUEMAP
           // todo: wrap valueWriter?
           valueConverter = new DrillMapGroupConverter(valueType.getName(), mutator, mapWriter, groupType, columns, options, containsCorruptedDates);
+          //mapWriter.allocateValueWriter(); // todo: revise this!!!
         // } else if (valueType.getOriginalType() == OriginalType.LIST) { // todo: uncomment when the time has come
           // todo: implement when DRILL-7268 is merged
         } else {
@@ -249,23 +261,35 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
 
   private static TypeProtos.MajorType getComplexMajorType(GroupType groupType, OptionManager options) {
     TypeProtos.MinorType minorType;
-    // TypeProtos.DataMode mode = getMode(groupType);
-    TypeProtos.DataMode mode;
+    TypeProtos.DataMode mode = getMode(groupType);
+//    TypeProtos.DataMode mode;
     switch (groupType.getOriginalType()) {
-      case LIST:
-        //minorType = TypeProtos.MinorType.LIST;
-        Type elementType = groupType.getType(0).asGroupType().getType(0);
-        TypeProtos.MajorType elementType1 = getMajorType(elementType, options);
-        minorType = elementType1.getMinorType();
-        mode = TypeProtos.DataMode.REPEATED;
-        break;
+//      case LIST:
+//        //minorType = TypeProtos.MinorType.LIST;
+//        Type elementType = groupType.getType(0).asGroupType().getType(0);
+//        List<TypeProtos.MajorType> elementType1 = getMajorType(elementType, options);
+//        minorType = elementType1.getMinorType();
+//        mode = TypeProtos.DataMode.REPEATED;
+//        break;
       case MAP:
+        // List<TypeProtos.MajorType> mapType = new ArrayList<>(3);
+        //minorType = TypeProtos.MinorType.TRUEMAP;
+        // mode = getMode(groupType);
+//        TypeProtos.MajorType mt = TypeProtos.MajorType.newBuilder()
         minorType = TypeProtos.MinorType.TRUEMAP;
-        mode = getMode(groupType);
         break;
+      case LIST:
+        minorType = TypeProtos.MinorType.LIST;
+        break;
+//        mapType.add(mt);
+//        Type mapKeyType = groupType.getType(0).asGroupType().getType(0);
+//        Type mapValueType = groupType.getType(0).asGroupType().getType(1);
+//        mapType.addAll(getMajorType(mapKeyType, options));
+//        mapType.addAll(getMajorType(mapValueType, options));
+//        return mapType;
       default:
         minorType = TypeProtos.MinorType.MAP;
-        mode = getMode(groupType);
+        // mode = getMode(groupType);
         break;
     }
     return TypeProtos.MajorType.newBuilder()
@@ -274,7 +298,7 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
         .build();
   }
 
-  private static TypeProtos.DataMode getMode(Type type) {
+  private static TypeProtos.DataMode getMode(Type type) { // todo: move to HiveUtilities
     TypeProtos.DataMode mode;
     switch (type.getRepetition()) { // todo: this should be present somewhere
       case REPEATED:
@@ -291,271 +315,4 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
     }
     return mode;
   }
-
-  /*public static class DrillMapIntConverter extends DrillMapConverter {
-    private IntHolder holder = new IntHolder();
-
-    public DrillMapIntConverter(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addInt(int value) {
-      holder.value = value;
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapBigIntConverter extends DrillMapConverter {
-    private BigIntHolder holder = new BigIntHolder();
-
-    public DrillMapBigIntConverter(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addLong(long value) {
-      holder.value = value;
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapVarCharConverter extends DrillMapConverter {
-    private VarCharHolder holder = new VarCharHolder();
-    private DrillBuf buf;
-
-    public DrillMapVarCharConverter(TrueMapWriter writer,  DrillBuf buf, boolean key) {
-      super(writer, key);
-      this.buf = buf;
-    }
-
-    @Override
-    public void addBinary(Binary value) {
-      holder.buffer = buf = buf.reallocIfNeeded(value.length());
-      buf.setBytes(0, value.toByteBuffer());
-      holder.start = 0;
-      holder.end = value.length();
-      getWriter().write(holder);
-    }
-  }
-
-  public static class MapCorruptionDetectingDateConverter extends DrillMapConverter {
-    private DateHolder holder = new DateHolder();
-
-    public MapCorruptionDetectingDateConverter(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addInt(int value) {
-      if (value > ParquetReaderUtility.DATE_CORRUPTION_THRESHOLD) {
-        holder.value = (value - ParquetReaderUtility.CORRECT_CORRUPT_DATE_SHIFT) * DateTimeConstants.MILLIS_PER_DAY;
-      } else {
-        holder.value = value * (long) DateTimeConstants.MILLIS_PER_DAY;
-      }
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapCorruptedDateConverter extends DrillMapConverter {
-    private DateHolder holder = new DateHolder();
-
-    public DrillMapCorruptedDateConverter(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addInt(int value) {
-      holder.value = (value - ParquetReaderUtility.CORRECT_CORRUPT_DATE_SHIFT) * DateTimeConstants.MILLIS_PER_DAY;
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapDateConverter extends DrillMapConverter {
-    private DateHolder holder = new DateHolder();
-
-    public DrillMapDateConverter(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addInt(int value) {
-      holder.value = value * (long) DateTimeConstants.MILLIS_PER_DAY;
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapTimeConverter extends DrillMapConverter {
-    private TimeHolder holder = new TimeHolder();
-
-    public DrillMapTimeConverter(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addInt(int value) {
-      holder.value = value;
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapTimeStampConverter extends DrillMapConverter {
-    private TimeStampHolder holder = new TimeStampHolder();
-
-    public DrillMapTimeStampConverter(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addLong(long value) {
-      holder.value = value;
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapFloat4Converter extends DrillMapConverter {
-    private Float4Holder holder = new Float4Holder();
-
-    public DrillMapFloat4Converter(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addFloat(float value) {
-      holder.value = value;
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapFloat8Converter extends DrillMapConverter {
-    private Float8Holder holder = new Float8Holder();
-
-    public DrillMapFloat8Converter(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addDouble(double value) {
-      holder.value = value;
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapBoolConverter extends DrillMapConverter {
-    private BitHolder holder = new BitHolder();
-
-    public DrillMapBoolConverter(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addBoolean(boolean value) {
-      holder.value = value ? 1 : 0;
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapVarBinaryConverter extends DrillMapConverter {
-    private DrillBuf buf;
-    private VarBinaryHolder holder = new VarBinaryHolder();
-
-    public DrillMapVarBinaryConverter(TrueMapWriter writer, boolean key, DrillBuf buf) {
-      super(writer, key);
-      this.buf = buf;
-    }
-
-    @Override
-    public void addBinary(Binary value) {
-      holder.buffer = buf = buf.reallocIfNeeded(value.length());
-      buf.setBytes(0, value.toByteBuffer());
-      holder.start = 0;
-      holder.end = value.length();
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapVarDecimalConverter extends DrillMapConverter {
-    private VarDecimalHolder holder = new VarDecimalHolder();
-    private DrillBuf buf;
-
-    public DrillMapVarDecimalConverter(TrueMapWriter writer, boolean key, int precision, int scale, DrillBuf buf) {
-      super(writer, key);
-      holder.scale = scale;
-      holder.precision = precision;
-      this.buf = buf;
-    }
-
-    @Override
-    public void addBinary(Binary value) {
-      holder.buffer = buf.reallocIfNeeded(value.length());
-      holder.buffer.setBytes(0, value.toByteBuffer());
-      holder.start = 0;
-      holder.end = value.length();
-      getWriter().write(holder);
-    }
-
-    @Override
-    public void addInt(int value) {
-      byte[] bytes = Ints.toByteArray(value);
-      holder.buffer = buf.reallocIfNeeded(bytes.length);
-      holder.buffer.setBytes(0, bytes);
-      holder.start = 0;
-      holder.end = bytes.length;
-      getWriter().write(holder);
-    }
-
-    @Override
-    public void addLong(long value) {
-      byte[] bytes = Longs.toByteArray(value);
-      holder.buffer = buf.reallocIfNeeded(bytes.length);
-      holder.buffer.setBytes(0, bytes);
-      holder.start = 0;
-      holder.end = bytes.length;
-      getWriter().write(holder);
-    }
-  }
-
-  public static class DrillMapFixedLengthByteArrayToInterval extends DrillMapConverter {
-    final private IntervalHolder holder = new IntervalHolder();
-
-    public DrillMapFixedLengthByteArrayToInterval(TrueMapWriter writer, boolean key) {
-      super(writer, key);
-    }
-
-    @Override
-    public void addBinary(Binary value) {
-      final byte[] input = value.getBytes();
-      holder.months = ParquetReaderUtility.getIntFromLEBytes(input, 0);
-      holder.days = ParquetReaderUtility.getIntFromLEBytes(input, 4);
-      holder.milliseconds = ParquetReaderUtility.getIntFromLEBytes(input, 8);
-      getWriter().write(holder);
-    }
-  }*/
-
-  // todo: try wrapping 'single' Converters (nested in DrillGroupConverter) inside this and delegate to actual (single) converters to avoid code duplication
-  // todo: remove value increment from here and move to KeyValueGroupConverter
-  /*public static abstract class DrillMapConverter extends PrimitiveConverter {
-    private final TrueMapWriter writer;
-    private final boolean key;
-
-    public DrillMapConverter(TrueMapWriter writer, boolean key) {
-      this.writer = writer;
-      this.key = key;
-    }
-
-    protected FieldWriter getWriter() {
-      FieldWriter fieldWriter;
-      //todo: remove setting position from here and move it to KeyValueGroupConverter
-      if (key) {
-        // writer.incrementIndex(); // todo: remove it from here as it is wrong..
-        fieldWriter = writer.getKeyWriter();
-        // writer.setPosition(fieldWriter);
-      } else {
-        fieldWriter = writer.getValueWriter();
-        // writer.setPosition(fieldWriter);
-        // writer.incrementIndex(); // todo: consider moving this out
-      }
-      return fieldWriter;
-    }
-  }*/
 }

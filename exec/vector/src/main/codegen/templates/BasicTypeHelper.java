@@ -90,12 +90,18 @@ public class BasicTypeHelper {
         // }
   }*/
 
+  // todo: pass actual TrueMap MajorType? To distinguish REPEATED, OPTIONAL and REQUIRED
+  @Deprecated
   public static TrueMapVector getNewMapVector(String name, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
     MaterializedField field = MaterializedField.create(name, TrueMapVector.TYPE);
     return getNewMapVector(field, allocator, callBack, keyType, valueType);
   }
 
+  @Deprecated
   public static TrueMapVector getNewMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
+    if (field.getType().getMinorType() == MinorType.TRUEMAP) { // todo: this one is strange!
+      return new TrueMapVector(field, allocator, callBack);
+    }
     return new TrueMapVector(field, allocator, callBack, keyType, valueType);
   }
 
@@ -332,10 +338,11 @@ public class BasicTypeHelper {
   }
 
   public static ValueVector getNewVector(MaterializedField field, BufferAllocator allocator, CallBack callBack) {
-    if (field.getType().getMinorType() == MinorType.TRUEMAP) {
-      List<MaterializedField> children = (List<MaterializedField>) field.getChildren();
-      return getNewMapVector(field, allocator, callBack, children.get(0).getType(), children.get(1).getType());
-    }
+//    if (field.getType().getMinorType() == MinorType.TRUEMAP) {
+//      List<MaterializedField> children = (List<MaterializedField>) field.getChildren();
+//      // return getNewMapVector(field, allocator, callBack, children.get(0).getType(), children.get(1).getType());
+//      return getNewMapVector(field, allocator, callBack, null, null);
+//    }
     return getNewVector(field, field.getType(), allocator, callBack);
   }
 

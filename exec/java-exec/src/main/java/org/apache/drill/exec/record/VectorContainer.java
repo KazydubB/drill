@@ -163,18 +163,19 @@ public class VectorContainer implements VectorAccessible {
     return (T) vector;
   }
 
-  public TrueMapVector addOrGet(final MaterializedField field, MajorType keyType, MajorType valueType, final SchemaChangeCallBack callBack) {
-    final TypedFieldId id = getValueVectorId(SchemaPath.getSimplePath(field.getName()));
+  // todo: handle TrueMapVector inside instead of outside
+  public TrueMapVector addOrGet(String fieldName, MajorType fieldType, MajorType keyType, MajorType valueType, final SchemaChangeCallBack callBack) {
+    final TypedFieldId id = getValueVectorId(SchemaPath.getSimplePath(fieldName));
     final TrueMapVector vector;
     if (id != null) {
       vector = (TrueMapVector) getValueAccessorById(id.getFieldIds()).getValueVector();
-      if (id.getFieldIds().length == 1 && !vector.getField().getType().equals(field.getType())) {
-        TrueMapVector newVector = TypeHelper.getNewMapVector(field.getName(), this.getAllocator(), callBack, keyType, valueType);
+      if (id.getFieldIds().length == 1 && !vector.getField().getType().equals(fieldType)) {
+        TrueMapVector newVector = TypeHelper.getNewMapVector(fieldName, this.getAllocator(), callBack, keyType, valueType);
         replace(vector, newVector);
         return newVector;
       }
     } else {
-      vector = TypeHelper.getNewMapVector(field.getName(), this.getAllocator(), callBack, keyType, valueType);
+      vector = TypeHelper.getNewMapVector(fieldName, this.getAllocator(), callBack, keyType, valueType);
       add(vector);
     }
     return vector;
