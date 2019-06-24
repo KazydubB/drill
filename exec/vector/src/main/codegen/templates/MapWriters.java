@@ -54,12 +54,9 @@ import org.apache.drill.exec.expr.BasicTypeHelper;
 public class ${mode}MapWriter extends AbstractFieldWriter {
 
   protected final ${containerClass} container;
-  <#if mode != "True">
+  <#--<#if mode != "True">-->
   private final Map<String, FieldWriter> fields = new HashMap<>();
-  <#else>
-  private final UInt4Vector offsets;
-  @Deprecated // todo: remove
-  private final UInt4Vector lengths;
+<#if mode == "True">
   private int currentRow = -1;
   private int length = -1; // (designates length for current row)
   private boolean rowStarted;
@@ -83,46 +80,16 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
     this.container = container;
     this.unionEnabled = unionEnabled;
     <#if mode == "True">
-    offsets = container.getOffsets();
-    lengths = container.getLengths();
 //    this.keyType = container.getKeyType();
 //    this.valueType = container.getValueType();
     this.keyType = keyType;
     this.valueType = valueType;
+    if (keyType != null && valueType != null) {
+      init();
+    }
     // todo: change String literals to defined (in TrueMapVector) constants
-    ValueVector keyVector=container.addOrGet("key",keyType, BasicTypeHelper.getValueVectorClass(keyType.getMinorType(),keyType.getMode()));
-    ValueVector valueVector=container.addOrGet("value",valueType, BasicTypeHelper.getValueVectorClass(valueType.getMinorType(),valueType.getMode()));
-    Class<?> keyWriterClass=BasicTypeHelper.getWriterImpl(keyType.getMinorType(),keyType.getMode());
-    Class<?> valueWriterClass = null;
-    if (valueType.getMinorType() != MinorType.TRUEMAP) {
-      valueWriterClass=BasicTypeHelper.getWriterImpl(valueType.getMinorType(),valueType.getMode()); // todo: that's not correct way to create writer implementation
-    }
-    try {
-      this.keyWriter = (FieldWriter) keyWriterClass.getDeclaredConstructor(keyVector.getClass(), AbstractFieldWriter.class).newInstance(keyVector, this);
-      if (valueWriterClass != null) {
-        this.valueWriter = (FieldWriter) valueWriterClass.getDeclaredConstructor(
-          valueVector.getClass(), valueType.getMinorType() == TypeProtos.MinorType.MAP ? FieldWriter.class : AbstractFieldWriter.class).newInstance(valueVector, this);
-        initialized = true;
-      }
-    } catch (Exception e) {
-      throw new DrillRuntimeException("Unable to create TrueMapWriter", e);
-    }
-    </#if>
-  }
-
-  <#if mode == "True">
-//  public TrueMapWriter(TrueMapVector container, FieldWriter parent,
-//    boolean unionEnabled, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType) {
-//    super(parent);
-//    this.container = container;
-//    this.unionEnabled = unionEnabled;
-//    offsets = container.getOffsets();
-//    lengths = container.getLengths();
-//
-//    this.keyType = keyType;
-//    this.valueType = valueType;
-//    ValueVector keyVector=container.addOrGet(TrueMapVector.FIELD_KEY_NAME, keyType, BasicTypeHelper.getValueVectorClass(keyType.getMinorType(),keyType.getMode()));
-//    ValueVector valueVector=container.addOrGet(TrueMapVector.FIELD_VALUE_NAME, valueType, BasicTypeHelper.getValueVectorClass(valueType.getMinorType(),valueType.getMode()));
+//    ValueVector keyVector=container.getChild(TrueMapVector.FIELD_KEY_NAME);
+//    ValueVector valueVector=container.getChild(TrueMapVector.FIELD_VALUE_NAME);
 //    Class<?> keyWriterClass=BasicTypeHelper.getWriterImpl(keyType.getMinorType(),keyType.getMode());
 //    Class<?> valueWriterClass = null;
 //    if (valueType.getMinorType() != MinorType.TRUEMAP) {
@@ -132,18 +99,19 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
 //      this.keyWriter = (FieldWriter) keyWriterClass.getDeclaredConstructor(keyVector.getClass(), AbstractFieldWriter.class).newInstance(keyVector, this);
 //      if (valueWriterClass != null) {
 //        this.valueWriter = (FieldWriter) valueWriterClass.getDeclaredConstructor(
-//            valueVector.getClass(), valueType.getMinorType() == TypeProtos.MinorType.MAP ? FieldWriter.class : AbstractFieldWriter.class).newInstance(valueVector, this);
+//          valueVector.getClass(), valueType.getMinorType() == TypeProtos.MinorType.MAP ? FieldWriter.class : AbstractFieldWriter.class).newInstance(valueVector, this);
 //        initialized = true;
 //      }
-//
 //    } catch (Exception e) {
 //      throw new DrillRuntimeException("Unable to create TrueMapWriter", e);
 //    }
-//    }
+    </#if>
+  }
 
+  <#if mode == "True">
     public void init() {
-      ValueVector keyVector=container.addOrGet(TrueMapVector.FIELD_KEY_NAME, keyType, BasicTypeHelper.getValueVectorClass(keyType.getMinorType(),keyType.getMode()));
-      ValueVector valueVector=container.addOrGet(TrueMapVector.FIELD_VALUE_NAME, valueType, BasicTypeHelper.getValueVectorClass(valueType.getMinorType(),valueType.getMode()));
+    ValueVector keyVector=container.getChild(TrueMapVector.FIELD_KEY_NAME);
+    ValueVector valueVector=container.getChild(TrueMapVector.FIELD_VALUE_NAME);
       Class<?> keyWriterClass=BasicTypeHelper.getWriterImpl(keyType.getMinorType(),keyType.getMode());
       Class<?> valueWriterClass = null;
       if (valueType.getMinorType() != MinorType.TRUEMAP) {
@@ -156,7 +124,8 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
             valueVector.getClass(), valueType.getMinorType() == TypeProtos.MinorType.MAP ? FieldWriter.class : AbstractFieldWriter.class).newInstance(valueVector, this);
           initialized = true;
 //        }
-
+    fields.put(TrueMapVector.FIELD_KEY_NAME, keyWriter);
+    fields.put(TrueMapVector.FIELD_VALUE_NAME, valueWriter);
       } catch (Exception e) {
         throw new DrillRuntimeException("Unable to create TrueMapWriter", e);
       }
@@ -166,46 +135,16 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
   public ${mode}MapWriter(${containerClass} container, FieldWriter parent<#if mode == "True">, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType</#if>) {
     this(container, parent, false<#if mode == "True">, keyType, valueType</#if>);
   }
-//    public ${mode}MapWriter(${containerClass} container, FieldWriter parent) {
-//      this(container, parent, false);
-//    }
 
-
-  // todo: evolve
   <#if mode == "True">
-// todo: evolve
-  /*public void writeKey(ValueHolder holder) {
-    assert rowStarted : "Must start row (start()) before put";
-
-    int index = getPosition();
-    write(keyWriter, index, holder);
-    // length++;
-  }
-
-  public void writeValue(ValueHolder holder) {
-    assert rowStarted : "Must start row (startRow()) before put";
-
-    int index = getPosition();
-    write(valueWriter, index, holder); // todo: length is incremented in writeKey. Consider if it is needed to handle key and value lengths separately...
-    length++;
-  }*/
-
   public void startKeyValuePair() {
     assert rowStarted : "Must start row (start()) before put";
     setPosition(getPosition());
   }
 
-  // todo: remove this method
-  /*public void setPosition(FieldWriter writer) {
-    assert rowStarted : "Must start row (start()) before put";
-    int position = getPosition();
-    writer.setPosition(position);
-  }*/
-
   private int getPosition() { // todo: rename to index?
-    // int offsetsCapacity = offsets.getValueCapacity(); // todo: extract calculation of index to a method, perhaps?
-    // int offset = offsetsCapacity > currentRow ? offsets.getAccessor().get(currentRow) : 0; // todo: this may be not true in a case when currentRow is
-    int offset = currentRow > 0 ? offsets.getAccessor().get(currentRow - 1) : 0; // todo: this may be not true in a case when currentRow is
+    assert rowStarted : "Must start row (start()) before getPosition()";
+    int offset = container.getInnerOffset(currentRow); // todo: there can be problems connected to this
     return offset + length;
   }
 
@@ -214,53 +153,8 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
     length++;
   }
 
-  // todo: remove
-  public void write(FieldWriter writer, int index, ValueHolder holder) {
-    writer.setPosition(index);
-    //TypeProtos.DataMode mode = keyType.getMode();
-    // MinorType type = keyType.getMinorType();
-    MinorType type = writer.getField().getType().getMinorType();
-    switch (type) {
-      case BIGINT:
-        writer.write((BigIntHolder) holder);
-        break;
-      case INT:
-        /*switch (mode) {
-          case REQUIRED:*/
-        writer.write((IntHolder) holder); // todo: actually better to writeInt(((IntHolder) holder).value)
-            /*break;
-          case OPTIONAL:
-            NullableIntHolder nullableHolder = (NullableIntHolder) holder;
-            if (nullableHolder.isSet == 1) {
-              writer.write(holder);
-            } else {
-              ((AbstractFieldWriter) writer).writeNull();
-            }
-            break;
-        }*/
-        break;
-      case VARCHAR:
-        /*switch (mode) {
-          case REQUIRED:*/
-        writer.write((VarCharHolder) holder); // todo: actually better to writeInt(((IntHolder) holder).value)
-            /*break;
-          case OPTIONAL:
-            NullableVarCharHolder nullableHolder = (NullableIntHolder) holder;
-            if (nullableHolder.isSet == 1) {
-              writer.write(holder);
-            } else {
-              ((AbstractFieldWriter) writer).writeNull();
-            }
-            break;
-        }*/
-        break;
-      default:
-        throw new IllegalArgumentException("Unsupported key type: " + type);
-    }
-  }
-
 public void allocateValueWriter() {
-    ValueVector valueVector=container.addOrGet("value",valueType, BasicTypeHelper.getValueVectorClass(valueType.getMinorType(),valueType.getMode()));
+    ValueVector valueVector=container.getChild(TrueMapVector.FIELD_VALUE_NAME);
     Class<?> valueWriterClass = valueWriterClass=BasicTypeHelper.getWriterImpl(valueType.getMinorType(),valueType.getMode());
     try {
     // this.valueWriter = (FieldWriter) valueWriterClass.getDeclaredConstructor(
@@ -338,10 +232,12 @@ default:
     if (writer == null) {
       int vectorCount=container.size();
 
+      // todo: this one... probably reimplement addOrGet
+    // todo: is keyType/valueType actually required here?
       TrueMapVector vector = container.addOrGet(name, <#if mode == "True">TrueMapVector.TYPE, </#if>keyType, valueType); // todo: in case if this is TrueMap name should be "value"
-//      TrueMapVector vector = container.addOrGet(name, <#if mode == "True">TrueMapVector.TYPE, </#if>keyType, valueType); // todo: in case if this is TrueMap name should be "value"
 
       writer = new TrueMapWriter(vector, this, keyType, valueType);
+      // todo: remove
       vector.setWriter(writer);
 
   <#if mode != "True">
@@ -380,21 +276,25 @@ default:
 
   @Override
   public void allocate() {
-    container.allocateNew();
     <#if mode != "True">
+    container.allocateNew();
     for(final FieldWriter w : fields.values()) {
       w.allocate();
     }
     <#else>
 //    keyWriter.allocate();
 //    valueWriter.allocate();
-    if (keyWriter != null) {
-      keyWriter.allocate();
+//    if (keyWriter != null) {
+//      keyWriter.allocate();
+//    }
+//    if (valueWriter != null) {
+//      valueWriter.allocate();
+//    }
+//    initialized = container.size() == TrueMapVector.NUMBER_OF_CHILDREN;
+    container.getDataVector().allocateNew();
+    for (FieldWriter child : fields.values()) {
+    child.allocate();
     }
-    if (valueWriter != null) {
-      valueWriter.allocate();
-    }
-    initialized = container.size() == TrueMapVector.NUMBER_OF_CHILDREN;
     </#if>
   }
 
@@ -409,10 +309,10 @@ default:
 //    keyWriter.clear();
 //    valueWriter.clear();
     if (keyWriter != null) {
-      keyWriter.allocate();
+      keyWriter.clear();
     }
     if (valueWriter != null) {
-      valueWriter.allocate();
+      valueWriter.clear();
     }
     </#if>
   }
@@ -498,14 +398,14 @@ default:
   @Override
   public void end() {
   <#if mode == "True">
-    // todo: implement if needed
+    assert rowStarted : "Must start row (start()) before end()";
+    int offset = container.getInnerOffset(currentRow); // todo: this may be not true in a case when currentRow is
     rowStarted = false;
     int currentOffset = length;
     if (currentRow > 0) {
-      currentOffset += offsets.getAccessor().get(currentRow - 1);
+    currentOffset += container.getInnerOffset(currentRow);
     } // todo: decide if this should be done for currentRow + 1 or not
-    offsets.getMutator().setSafe(currentRow, currentOffset);
-    lengths.getMutator().setSafe(currentRow, length); // todo:
+    container.setInnerOffset(currentRow + 1, currentOffset);
   </#if>
   }
 
@@ -533,13 +433,8 @@ default:
     assert rowStarted : "Must start row (startRow()) before put";
 
     int index = getPosition();
-    // setValue(container.getKeys(), key, index);
-    // setValue(container.getValues(), value, index);
     keyWriter.setPosition(index);
-    // keyWriter.write(keyHolder);
     valueWriter.setPosition(index);
-    // valueWriter.write(valueHolder);
-    // length++;
   }
 
   public MajorType getKeyType() {

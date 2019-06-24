@@ -19,6 +19,7 @@ package org.apache.drill.exec.physical.impl.project;
 
 import com.carrotsearch.hppc.IntHashSet;
 import org.apache.drill.common.expression.fn.FunctionReplacementUtils;
+import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
@@ -428,7 +429,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
               final ValueVector vvOut;
               if (vvIn.getField().getType().getMinorType() == MinorType.TRUEMAP) {
                 // List<MaterializedField> children = new ArrayList<>(vvIn.getField().getChildren());
-                List<MaterializedField> children = (List<MaterializedField>) vvIn.getField().getChildren();
+                List<MaterializedField> children = (List<MaterializedField>) ((TrueMapVector) vvIn).getDataVector().getField().getChildren();
                 // todo: do not pass a field: use a name instead (as the field will be reconstructed)
                 // todo: make sure proper children are used
                 vvOut = container.addOrGet(ref.getAsNamePart().getName(), vvIn.getField().getType(), // todo: use the same method as below and handle TrueMap inside the method
