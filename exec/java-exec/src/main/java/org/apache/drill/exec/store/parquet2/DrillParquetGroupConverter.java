@@ -96,15 +96,16 @@ public class DrillParquetGroupConverter extends GroupConverter {
   // See DRILL-4203
   ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates;
 
-  DrillParquetGroupConverter() {
-//    converterName = "wfawgawgawgawg";
-  }
-
   /**
    * Debugging information in form of "parent">fieldName[WriterClassName-hashCode()],
    * where "parent" is parent converterName.
    */
   private String converterName;
+
+
+  DrillParquetGroupConverter() {
+//    converterName = "wfawgawgawgawg";
+  }
 
   /**
    * The constructor is responsible for creation of converters tree and may invoke itself for
@@ -122,6 +123,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
    * @param parentName             name of group converter which called the constructor
    */
   public DrillParquetGroupConverter(OutputMutator mutator, BaseWriter baseWriter, GroupType schema,
+
 //  public DrillParquetGroupConverter(OutputMutator mutator, ComplexWriterImpl complexWriter, MessageType schema,
 //                                    Collection<SchemaPath> columns, OptionManager options,
 //                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
@@ -194,9 +196,8 @@ public class DrillParquetGroupConverter extends GroupConverter {
     return converter;
   }
 
-  protected DrillParquetGroupConverter(OutputMutator mutator, MapWriter mapWriter, GroupType schema,
-                                    Collection<SchemaPath> columns, OptionManager options,
-                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates, boolean init) {
+  protected DrillParquetGroupConverter(OutputMutator mutator, BaseWriter baseWriter, OptionManager options,
+                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
 //    this.mapWriter = mapWriter;
     this.baseWriter = baseWriter; // todo:???
     this.mutator = mutator;
