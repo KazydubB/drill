@@ -57,11 +57,11 @@ public class RepeatedMapVector extends AbstractMapVector
 
   public final static MajorType TYPE = MajorType.newBuilder().setMinorType(MinorType.MAP).setMode(DataMode.REPEATED).build();
 
-  private final UInt4Vector offsets;   // offsets to start of each record (considering record indices are 0-indexed)
-  private final RepeatedMapReaderImpl reader = new RepeatedMapReaderImpl(RepeatedMapVector.this);
+  protected final UInt4Vector offsets;   // offsets to start of each record (considering record indices are 0-indexed)
+  private final RepeatedMapReaderImpl reader = new RepeatedMapReaderImpl(RepeatedMapVector.this); // todo: introduce constructor to set these
   private final RepeatedMapAccessor accessor = new RepeatedMapAccessor();
   private final Mutator mutator = new Mutator();
-  private final EmptyValuePopulator emptyPopulator;
+  protected final EmptyValuePopulator emptyPopulator;
 
   public RepeatedMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack) {
     this(field, new UInt4Vector(BaseRepeatedValueVector.OFFSETS_FIELD, allocator), callBack);
@@ -206,7 +206,7 @@ public class RepeatedMapVector extends AbstractMapVector
   }
 
   public TransferPair getTransferPairToSingleMap(String reference, BufferAllocator allocator) {
-    return new SingleMapTransferPair(this, reference, allocator);
+    return new SingleMapTransferPair(this, reference, allocator); // todo: this is needed for flatten (Implement in TrueMapVector)
   }
 
   @Override
@@ -301,11 +301,11 @@ public class RepeatedMapVector extends AbstractMapVector
     }
   }
 
-  private static class RepeatedMapTransferPair implements TransferPair{
+  protected static class RepeatedMapTransferPair implements TransferPair {
 
+    protected final RepeatedMapVector to;
+    protected final RepeatedMapVector from;
     private final TransferPair[] pairs;
-    private final RepeatedMapVector to;
-    private final RepeatedMapVector from;
 
     public RepeatedMapTransferPair(RepeatedMapVector from, String path, BufferAllocator allocator) {
       this(from, new RepeatedMapVector(MaterializedField.create(path, TYPE), allocator, new SchemaChangeCallBack()), false);

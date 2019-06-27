@@ -110,18 +110,33 @@ public class TestParquetComplex extends BaseTestQuery {
 
   @Test
   public void selectTrueMap2() throws Exception {
-    String query = "select * from cp.`store/parquet/complex/map/m_a.parquet`";
+    String query = "select order_id, order_items from cp.`store/parquet/complex/map/m_a.parquet`";
     testBuilder()
         .sqlQuery(query)
         .unOrdered()
         .baselineColumns("order_id", "order_items")
-        .baselineValues(1L, TestBuilder.mapOfObject("Pencils", 1L))
-        .baselineValues(1L, TestBuilder.mapOfObject("Pencils", 1L))
+        .baselineValues(1L,
+              TestBuilder.mapOfObject(
+                  101L,
+                  TestBuilder.mapOfObject("item_amount", 1L, "item_type", "Pencils"),
+                  102L,
+                  TestBuilder.mapOfObject("item_amount", 2L, "item_type", "Eraser")
+              )
+        )
+        .baselineValues(1L,
+              TestBuilder.mapOfObject(
+                  102L,
+                  TestBuilder.mapOfObject("item_amount", 3L, "item_type", "Eraser"),
+                  103L,
+                  TestBuilder.mapOfObject("item_amount", 4L, "item_type", "Coke")
+            )
+        )
         .go();
   }
 
   @Test
   public void selectTrueMap3() throws Exception {
+//    String query = "select * from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by 1 desc";
     String query = "select * from cp.`store/parquet/complex/map/map_int_to_int_array.parquet`";
     testBuilder()
         .sqlQuery(query)
@@ -141,21 +156,60 @@ public class TestParquetComplex extends BaseTestQuery {
         .sqlQuery(query)
         .unOrdered()
         .baselineColumns("id", "mapcol")
-        .baselineValues(2L, TestBuilder.mapOfObject(
+        .baselineValues(2, TestBuilder.mapOfObject(
               3, TestBuilder.mapOfObject("a", 1, "b", 2),
               4, TestBuilder.mapOfObject("c", 3),
               5, TestBuilder.mapOfObject("d", 4, "e", 5)
             )
         )
-        .baselineValues(1L, TestBuilder.mapOfObject(
+        .baselineValues(1, TestBuilder.mapOfObject(
               1, TestBuilder.mapOfObject("a", 1, "b", 2)
             )
         )
-        .baselineValues(2L, TestBuilder.mapOfObject(
+        .baselineValues(2, TestBuilder.mapOfObject(
               2, TestBuilder.mapOfObject("a", 1, "b", 2),
               3, TestBuilder.mapOfObject("c", 3)
             )
         )
+        .go();
+  }
+
+  @Test
+  public void testOrderById() throws Exception {
+    String fileName = "map_where.parquet";
+    // String fileName = "map_duplicate.parquet";
+    // String query = "select order_items from cp.`store/parquet/complex/simple_map.parquet`";
+    // String query = "select * from cp.`store/parquet/complex/map/parquet_map_table_1.parquet`";
+    // String query = "select id, mapcol from cp.`store/parquet/complex/map/parquet_map_table_1.parquet` where mapcol['Eraser'] > 5";
+    // String query = "select order_id, order_items[101] from cp.`store/parquet/complex/map/%s`";
+    String query = "select id, mapcol from cp.`store/parquet/complex/map/%s` order by id desc"; // todo: !!
+    // String query = "select order_id, order_items from cp.`store/parquet/complex/map/%s` where order_items[cast(101 as bigint)] is not null";
+    // String query = "select order_id, order_items from cp.`store/parquet/complex/map/%s`";
+    // String query = "select id, mapcol from cp.`store/parquet/complex/map/%s` where mapcol['b'] > 3";
+    // String query = "select id, mapcol from cp.`store/parquet/complex/map/%s` where mapcol['b'] = 2";
+    // String query = "select a from cp.`store/parquet/complex/map/a.json` where a['b'] > 1";
+    // String query = "select id, mapcol['b'] from cp.`store/parquet/complex/map/%s`";
+    // String query = "select order_items[101] from cp.`store/parquet/complex/map/%s`";
+    // String query = "select flatten(order_items) from cp.`store/parquet/complex/map/%s`";
+    // String query = "select id, mapcol from cp.`store/parquet/complex/map/%s`";
+    //String query = "select mapcol from cp.`store/parquet/complex/map/`";
+    // String query = "SELECT * FROM hive.parquet_map_table";
+    /*testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns(COLUMN_NAME)
+        .baselineValuesForSingleColumn(3, 0, 2)
+        .go();*/
+//    query = "select FLOAT4_col from cp.`parquet/alltypes_repeated.json` order by FLOAT4_col desc";
+    // runAndPrint(String.format(query, fileName));
+    testBuilder()
+        .sqlQuery(query, fileName)
+        .ordered()
+        .baselineColumns("id", "mapcol") // todo: make sure this is actually correct
+        .baselineValues(4, TestBuilder.mapOfObject("b", null, "c", 8, "d", 9, "e", 10))
+        .baselineValues(3, TestBuilder.mapOfObject("b", 6, "c", 7))
+        .baselineValues(2, TestBuilder.mapOfObject("a", 3, "b", 4, "c", 5))
+        .baselineValues(1, TestBuilder.mapOfObject("a", 1, "b", 2, "c", 3))
         .go();
   }
 

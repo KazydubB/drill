@@ -120,6 +120,7 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
       try {
         // TrueMapVector vector = BasicTypeHelper.getNewMapVector(name, allocator, callBack, keyType, valueType);
         TrueMapVector vector = ((ScanBatch.Mutator) mutator).addField(MaterializedField.create(name, TrueMapVector.TYPE), keyType, valueType, TrueMapVector.class);
+        vector.setKeyValueTypes(keyType, valueType); // todo: neeeded?
         putChild(name, vector);
         // return this.typeify(vector, TrueMapVector.class);
         return vector;

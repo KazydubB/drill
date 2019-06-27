@@ -24,11 +24,10 @@ import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.store.parquet.ParquetReaderUtility;
 // todo: uncomment
+import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.impl.TrueMapWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
-import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 import org.apache.parquet.io.api.Converter;
-import org.apache.parquet.io.api.PrimitiveConverter;
 import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
@@ -63,7 +62,7 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
     // --------------------------- todo: experimental end
     // todo: maybe pass list of valueTypes to KeyValueGroupConverter?
 //    if (mapWriter.getField().getType().getMinorType() == TypeProtos.MinorType.TRUEMAP
-//        && this.mapWriter.getField().getType().getMinorType() == TypeProtos.MinorType.TRUEMAP) {
+//        && this.mapWriter.getField().getType().getMinorType() == TypeProtos.MinorType.TRUEMAP) { // todo: this is surely not good
 //      ((TrueMapWriter) mapWriter).allocateValueWriter();
 //    }
     Converter innerConverter = new KeyValueGroupConverter(mutator, (TrueMapWriter) this.baseWriter, type, columns, options, containsCorruptedDates);
@@ -80,7 +79,8 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
       if (!keyType.isPrimitive()) { // todo; change with Precondition
         throw new DrillRuntimeException("Map supports primitive key only. Found: " + keyType);
       } else {
-        Converter keyConverter = getConverterForType(mapWriter.getKeyWriter());
+        // Converter keyConverter = getConverterForType(mapWriter.getKeyWriter());
+        Converter keyConverter = getConverterForType(TrueMapVector.FIELD_KEY_NAME, keyType.asPrimitiveType());
         converters.add(keyConverter);
       }
       Type valueType = schema.getType(1);
@@ -96,44 +96,44 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
         } else {
           // BaseWriter.MapWriter newMapWriter = groupType.getRepetition() == Type.Repetition.REPEATED ?
               // mapWriter.list(valueType.getName()).map() : mapWriter.map(valueType.getName()); // todo: uncomment this if anything
-          BaseWriter.MapWriter newMapWriter = mapWriter.getValueWriter(); // todo: for types other then MAP it may be different
-          valueConverter = new DrillParquetGroupConverter(mutator, newMapWriter, groupType, columns, options, containsCorruptedDates, false, "what the fuck"); // todo: resolve it
-          // for LIST
-          // (and
-          // see if
+//          BaseWriter.MapWriter newMapWriter = mapWriter.getValueWriter(); // todo: for types other then MAP it may be different
+//          valueConverter = new DrillParquetGroupConverter(mutator, newMapWriter, groupType, columns, options, containsCorruptedDates); // todo: resolve it for LIST (and see if
           // it works for TRUEMAP)
+          valueConverter = new DrillParquetGroupConverter(mutator, mapWriter.map(TrueMapVector.FIELD_VALUE_NAME), groupType,
+              columns, options, containsCorruptedDates, false, "gawgawgawg");
         }
       } else {
-        valueConverter = getConverterForType(mapWriter.getValueWriter());
+        // valueConverter = getConverterForType(mapWriter.getValueWriter());
+        valueConverter = getConverterForType(TrueMapVector.FIELD_VALUE_NAME, valueType.asPrimitiveType());
       }
       converters.add(valueConverter);
     }
 
-    @SuppressWarnings("resource")
-    protected PrimitiveConverter getConverterForType(FieldWriter writer) {
-      TypeProtos.MajorType type = writer.getField().getType();
-      switch(type.getMinorType()) {
-        case INT:
-          return new DrillIntConverter(writer);
-        case BIGINT:
-          return new DrillBigIntConverter(writer);
-        case FLOAT4:
-          return new DrillFloat4Converter(writer);
-        case FLOAT8:
-          return new DrillFloat8Converter(writer);
-        case BIT:
-          return new DrillBoolConverter(writer);
-        case VARBINARY:
-          return new DrillVarBinaryConverter(writer, mutator.getManagedBuffer());
-        case VARCHAR:
-          return new DrillVarCharConverter(writer, mutator.getManagedBuffer());
-        case VARDECIMAL:
-          return new DrillVarDecimalConverter(writer, type.getPrecision(), type.getScale(), mutator.getManagedBuffer());
-        // todo: add other types (FIXEDBINARY etc.)
-        default:
-          throw new UnsupportedOperationException("Unsupported type: " + type);
-      }
-    }
+//    @SuppressWarnings("resource")
+//    protected PrimitiveConverter getConverterForType(FieldWriter writer) {
+//      TypeProtos.MajorType type = writer.getField().getType();
+//      switch(type.getMinorType()) {
+//        case INT:
+//          return new DrillIntConverter(writer);
+//        case BIGINT:
+//          return new DrillBigIntConverter(writer);
+//        case FLOAT4:
+//          return new DrillFloat4Converter(writer);
+//        case FLOAT8:
+//          return new DrillFloat8Converter(writer);
+//        case BIT:
+//          return new DrillBoolConverter(writer);
+//        case VARBINARY:
+//          return new DrillVarBinaryConverter(writer, mutator.getManagedBuffer());
+//        case VARCHAR:
+//          return new DrillVarCharConverter(writer, mutator.getManagedBuffer());
+//        case VARDECIMAL:
+//          return new DrillVarDecimalConverter(writer, type.getPrecision(), type.getScale(), mutator.getManagedBuffer());
+//        // todo: add other types (FIXEDBINARY etc.)
+//        default:
+//          throw new UnsupportedOperationException("Unsupported type: " + type);
+//      }
+//    }
 
     @Override
     public void start() {
@@ -145,10 +145,10 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
       ((TrueMapWriter) baseWriter).endKeyValuePair();
     }
   }
-
+// todo: can this be discarded?
   private static TypeProtos.MajorType getMajorType(Type t, OptionManager options) {
     if (!t.isPrimitive()) {
-      return getComplexMajorType(t.asGroupType(), options);
+      return getComplexMajorType(t.asGroupType());
     }
 
     TypeProtos.DataMode mode = getMode(t);
@@ -259,39 +259,27 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
         .build();
   }
 
-  private static TypeProtos.MajorType getComplexMajorType(GroupType groupType, OptionManager options) {
+  private static TypeProtos.MajorType getComplexMajorType(GroupType groupType) {
     TypeProtos.MinorType minorType;
     TypeProtos.DataMode mode = getMode(groupType);
-//    TypeProtos.DataMode mode;
-    switch (groupType.getOriginalType()) {
-//      case LIST:
-//        //minorType = TypeProtos.MinorType.LIST;
-//        Type elementType = groupType.getType(0).asGroupType().getType(0);
-//        List<TypeProtos.MajorType> elementType1 = getMajorType(elementType, options);
-//        minorType = elementType1.getMinorType();
-//        mode = TypeProtos.DataMode.REPEATED;
-//        break;
-      case MAP:
-        // List<TypeProtos.MajorType> mapType = new ArrayList<>(3);
-        //minorType = TypeProtos.MinorType.TRUEMAP;
-        // mode = getMode(groupType);
-//        TypeProtos.MajorType mt = TypeProtos.MajorType.newBuilder()
-        minorType = TypeProtos.MinorType.TRUEMAP;
-        break;
-      case LIST:
-        minorType = TypeProtos.MinorType.LIST;
-        break;
-//        mapType.add(mt);
-//        Type mapKeyType = groupType.getType(0).asGroupType().getType(0);
-//        Type mapValueType = groupType.getType(0).asGroupType().getType(1);
-//        mapType.addAll(getMajorType(mapKeyType, options));
-//        mapType.addAll(getMajorType(mapValueType, options));
-//        return mapType;
-      default:
-        minorType = TypeProtos.MinorType.MAP;
-        // mode = getMode(groupType);
-        break;
+
+    if (groupType.getOriginalType() == null) {
+      minorType = TypeProtos.MinorType.MAP;
+    } else {
+      switch (groupType.getOriginalType()) {
+        case MAP:
+          minorType = TypeProtos.MinorType.TRUEMAP;
+          break;
+        case LIST:
+          // todo: handle list (repeated) types here...
+          minorType = TypeProtos.MinorType.LIST;
+          break;
+        default:
+          minorType = TypeProtos.MinorType.MAP;
+          break;
+      }
     }
+
     return TypeProtos.MajorType.newBuilder()
         .setMinorType(minorType)
         .setMode(mode)

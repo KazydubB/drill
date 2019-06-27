@@ -19,11 +19,14 @@ package org.apache.drill.exec.expr.holders;
 
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.vector.complex.TrueMapVector;
+import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
-public class TrueMapHolder extends ComplexHolder {
+public final class TrueMapHolder extends ComplexHolder {
+  // todo:?
   public static final TypeProtos.MajorType TYPE = TrueMapVector.TYPE;
 
   public TrueMapVector vector;
+  public FieldReader reader;
   public int start;
   public int end;
 }

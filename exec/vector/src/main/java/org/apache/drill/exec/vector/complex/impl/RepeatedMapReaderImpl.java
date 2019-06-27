@@ -32,7 +32,7 @@ import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
 public class RepeatedMapReaderImpl extends AbstractFieldReader{
   private static final int NO_VALUES = Integer.MAX_VALUE - 1;
 
-  private final RepeatedMapVector vector;
+  protected final RepeatedMapVector vector;
   private final Map<String, FieldReader> fields = Maps.newHashMap();
   private int currentOffset;
   private int maxOffset;
@@ -118,7 +118,7 @@ public class RepeatedMapReaderImpl extends AbstractFieldReader{
   }
 
   @Override
-  public boolean next() {
+  public boolean next() { // todo: actually this is of interest
     if (currentOffset < maxOffset) {
       setChildrenPosition(++currentOffset);
       return true;
