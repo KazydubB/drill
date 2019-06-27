@@ -18,9 +18,9 @@
 package org.apache.drill.common.expression;
 
 public abstract class PathSegment {
-
+  // todo: remove and revert any changes to this class
   public enum Type { // todo: add getType() method to PathSegment
-    ARRAY, NAME, MAP
+    ARRAY, NAME
   }
 
   private PathSegment child;
@@ -82,11 +82,6 @@ public abstract class PathSegment {
 
     @Override
     public boolean isNamed() {
-      return false;
-    }
-
-    @Override
-    public boolean isMap() {
       return false;
     }
 
@@ -160,11 +155,6 @@ public abstract class PathSegment {
     public boolean isNamed() { return true; }
 
     @Override
-    public boolean isMap() {
-      return false;
-    }
-
-    @Override
     public NameSegment getNameSegment() { return this; }
 
     @Override
@@ -229,16 +219,9 @@ public abstract class PathSegment {
   }
 
   @Deprecated
-  public MapSegment getMapSegment() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Deprecated
   public abstract boolean isArray();
   @Deprecated
   public abstract boolean isNamed();
-  @Deprecated
-  public abstract boolean isMap();
 
   public Type getType() {
     return type;
@@ -337,105 +320,6 @@ public abstract class PathSegment {
       return true;
     } else {
       return child.contains(otherSeg.child);
-    }
-  }
-  // todo: consider MapSegment extends NameSegment?
-  @Deprecated
-  public static final class MapSegment extends PathSegment {
-    public static final String MAP_PREFIX = "___MAP___";
-
-    // private final String path;
-    private final Object key;
-// todo: child is needed?
-    public MapSegment(Object key, PathSegment child) {
-      super(child, Type.MAP);
-      // this.path = n.toString();
-      this.key = key;
-    }
-
-    public MapSegment(Object key) {
-      super(null, Type.MAP);
-      // this.path = n.toString();
-      this.key = key;
-    }
-
-    // public String getPath() { return MAP_PREFIX + /*path +*/ "[" + key + "]"; }
-    public String getPath() {
-      return key.toString();
-    }
-
-    public Object getKey() {
-      return key;
-    }
-
-    @Override
-    public boolean isArray() { return false; }
-
-    @Override
-    public boolean isNamed() { return false; }
-
-    @Override
-    public boolean isMap() {
-      return true;
-    }
-
-    @Override
-    public MapSegment getMapSegment() {
-      return this;
-    }
-
-    @Override
-    public String toString() {
-      return "MapSegment [key=" + key + ", getChild()=" + getChild() + "]";
-    }
-
-    @Override
-    public int segmentHashCode() {
-      // return ((path == null) ? 0 : path.toLowerCase().hashCode());
-      return 0;
-    }
-
-    @Override
-    public boolean segmentEquals(PathSegment obj) {
-      if (this == obj) {
-        return true;
-      } else if (obj == null) {
-        return false;
-      } else if (getClass() != obj.getClass()) {
-        return false;
-      }
-
-      MapSegment other = (MapSegment) obj;
-      if (key == null) {
-        return other.key == null;
-      }
-      // return key.equalsIgnoreCase(other.key);
-      return key.equals(other.key);
-    }
-
-    public boolean nameEquals(String name) {
-      return key == null && name == null ||
-          key != null && key.equals(name);
-    }
-
-    @Override
-    public MapSegment clone() {
-      MapSegment s = new MapSegment(/*this.path, */key);
-      /*if (getChild() != null) {
-        s.setChild(getChild().clone());
-      }*/
-      return s;
-    }
-
-    @Override
-    public MapSegment cloneWithNewChild(PathSegment newChild) {
-      MapSegment s = new MapSegment(/*this.path, */key);
-      /*if (getChild() != null) {
-        s.setChild(getChild().cloneWithNewChild(newChild));
-      } else {
-        s.setChild(newChild);
-      }*/
-      return s;
     }
   }
 }

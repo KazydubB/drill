@@ -109,7 +109,8 @@ public class FieldIdUtil {
           builder.remainder(seg);
         }
       }
-    } else if (seg.isMap()) {
+//    } else if (seg.isMap()) {
+    } else if (seg.isNamed()) {
       if (seg.isLastPath()) {
         MajorType type;
         if (vector instanceof AbstractContainerVector) {
@@ -146,8 +147,10 @@ public class FieldIdUtil {
     ValueVector v;
     if (vector instanceof AbstractContainerVector) { // todo: next line. Changes for 'true' map should be done here. Pass key value
       String fieldName = null;
-      if (seg.isMap()) {
-        fieldName = (String) seg.getMapSegment().getKey();
+//      if (seg.isMap()) {
+      if (seg.isNamed()) {
+//        fieldName = (String) seg.getMapSegment().getKey();
+        fieldName = seg.getNameSegment().getChild().getNameSegment().getPath();
       } else if (seg.isNamed()) {
         fieldName = seg.getNameSegment().getPath();
       }

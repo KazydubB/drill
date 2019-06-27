@@ -166,7 +166,7 @@ public interface ColumnMetadata extends Propertied {
   boolean isNullable();
   boolean isArray();
   boolean isVariableWidth();
-  boolean isMap();
+  boolean isMap(); // todo: add trueMap?
   boolean isVariant();
 
   /**

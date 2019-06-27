@@ -488,7 +488,9 @@ public class EvaluationVisitor {
       PathSegment segment = e.getReadPath();
       // if (!complex && e.getFieldId().getIntermediateType().getMinorType() == TypeProtos.MinorType.TRUEMAP && segment.isMap()) { // todo: this works
       // todo: remove the last part of if
-      if (/*!complex &&*/ e.getFieldId().getIntermediateType().getMinorType() == TypeProtos.MinorType.TRUEMAP && (segment.isMap() || segment.isArray())) {
+//      if (/*!complex &&*/ e.getFieldId().getIntermediateType().getMinorType() == TypeProtos.MinorType.TRUEMAP && (segment.isMap() || segment.isArray())) {
+      // todo: remove this last check as it is redundant
+      if (/*!complex &&*/ e.getFieldId().getIntermediateType().getMinorType() == TypeProtos.MinorType.TRUEMAP && (segment.isNamed() || segment.isArray())) {
         // todo: get child, perhaps, and perform following checks on it?
         // recordIndex = DirectExpression.direct(e.getReadPath().getMapSegment().getKey());
         // JExpression expr = vv1.invoke("get").arg(e.getReadPath().getMapSegment().getKey().toString()).arg(out.getHolder());
@@ -508,7 +510,8 @@ public class EvaluationVisitor {
             if (!segment.isArray()) {
               // todo: discard the map segment and use named segment instead
               // keyExpr = JExpr.lit(e.getReadPath().getNameSegment().getChild().getNameSegment().getPath());
-              keyExpr = JExpr.lit(e.getReadPath().getMapSegment().getKey().toString());
+//              keyExpr = JExpr.lit(e.getReadPath().getMapSegment().getKey().toString()); // todo: attention to this!
+              keyExpr = JExpr.lit(e.getReadPath().getNameSegment().getChild().getNameSegment().getPath());
             } else {
               JExpression literal = JExpr.lit(e.getReadPath().getArraySegment().getIndex()); // todo: cast to Object
               keyExpr = JExpr.cast(generator.getModel()._ref(Object.class), literal);
@@ -600,7 +603,9 @@ public class EvaluationVisitor {
         // eval.add((vv1.invoke("get").arg(e.getReadPath().getMapSegment().getKey().toString())).arg(out.getHolder()));
         JExpression keyExpr;
         if (!segment.isArray()) {
-          keyExpr = JExpr.lit(e.getReadPath().getMapSegment().getKey().toString());
+//          keyExpr = JExpr.lit(e.getReadPath().getMapSegment().getKey().toString());
+          // todo: attention to this
+          keyExpr = JExpr.lit(e.getReadPath().getNameSegment().getChild().getNameSegment().getPath());
         } else {
           JExpression literal = JExpr.lit(e.getReadPath().getArraySegment().getIndex()); // todo: cast to Object
           keyExpr = JExpr.cast(generator.getModel()._ref(Object.class), literal);
@@ -681,7 +686,8 @@ public class EvaluationVisitor {
           // } else if (seg.isMap()) { // todo: add Map case
               // todo: reader.read(seg.getMapSegment().getPath())
           } else {
-            JExpression fieldName = JExpr.lit(seg.isNamed() ? seg.getNameSegment().getPath() : seg.getMapSegment().getKey().toString()); // todo: <--- this :)
+//            JExpression fieldName = JExpr.lit(seg.isNamed() ? seg.getNameSegment().getPath() : seg.getMapSegment().getKey().toString()); // todo: <--- this :)
+            JExpression fieldName = JExpr.lit(seg.getNameSegment().getPath()); // todo: <--- this :)
             expr = expr.invoke("reader").arg(fieldName);
           }
           seg = seg.getChild();
