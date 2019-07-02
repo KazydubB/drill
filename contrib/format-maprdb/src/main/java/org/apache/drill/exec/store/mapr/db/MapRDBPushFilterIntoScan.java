@@ -226,9 +226,10 @@ public abstract class MapRDBPushFilterIntoScan extends StoragePluginOptimizerRul
     }
 
     // Pass tableStats from old groupScan so we do not go and fetch stats (an expensive operation) again from MapR DB client.
-    final BinaryTableGroupScan newGroupsScan = new BinaryTableGroupScan(groupScan.getUserName(), groupScan.getStoragePlugin(),
-                                                                        groupScan.getFormatPlugin(), newScanSpec, groupScan.getColumns(),
-                                                                        groupScan.getTableStats());
+    final BinaryTableGroupScan newGroupsScan =
+        new BinaryTableGroupScan(groupScan.getUserName(), groupScan.getStoragePlugin(),
+            groupScan.getFormatPlugin(), newScanSpec, groupScan.getColumns(),
+            groupScan.getTableStats(), groupScan.getMetadataProvider());
     newGroupsScan.setFilterPushedDown(true);
 
     final ScanPrel newScanPrel = new ScanPrel(scan.getCluster(), filter.getTraitSet(), newGroupsScan, scan.getRowType(), scan.getTable());
