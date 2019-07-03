@@ -146,12 +146,12 @@ public abstract class JoinPrel extends DrillJoinRelBase implements Prel {
 
     for (Pair<Integer, Integer> pair : Pair.zip(leftKeys, rightKeys)) {
       final RexNode conditionExpr = conjuncts.get(i++);
-      boolean b = false;
+      boolean isExpandedINDF = false;
       if (conditionExpr instanceof RexCall) {
         RexCall call = (RexCall) conditionExpr;
-        b = collapseExpandedIsNotDistinctFromExpr(call);
+        isExpandedINDF = collapseExpandedIsNotDistinctFromExpr(call);
       }
-      SqlKind kind  = b ? SqlKind.IS_NOT_DISTINCT_FROM : conditionExpr.getKind();
+      SqlKind kind  = isExpandedINDF ? SqlKind.IS_NOT_DISTINCT_FROM : conditionExpr.getKind();
       if (kind != SqlKind.EQUALS && kind != SqlKind.IS_NOT_DISTINCT_FROM) {
         throw UserException.unsupportedError()
             .message("Unsupported comparator in join condition %s", conditionExpr)

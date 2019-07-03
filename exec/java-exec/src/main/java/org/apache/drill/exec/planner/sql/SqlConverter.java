@@ -37,7 +37,6 @@ import org.apache.drill.metastore.MetadataProviderManager;
 import org.apache.drill.metastore.metadata.TableMetadataProvider;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalProject;
-import org.apache.calcite.util.Pair;
 import org.apache.drill.exec.util.Utilities;
 import org.apache.drill.shaded.guava.com.google.common.cache.CacheBuilder;
 import org.apache.drill.shaded.guava.com.google.common.cache.CacheLoader;
@@ -418,9 +417,9 @@ public class SqlConverter {
     if ((!isInnerQuery || isExpandedView) && rel.rel.getRowType().getFieldCount() - rel.fields.size() > 0) {
       List<RexNode> exprs = new ArrayList<>();
       RexBuilder builder = rel.rel.getCluster().getRexBuilder();
-      for (Pair<Integer, String> field : rel.fields) {
-        exprs.add(builder.makeInputRef(rel.rel, field.left));
-      }
+
+      RelNode relNode = rel.rel;
+      rel.fields.forEach(f -> exprs.add(builder.makeInputRef(relNode, f.left)));
 
       RelNode project = LogicalProject.create(rel.rel, exprs, rel.validatedRowType);
       rel = RelRoot.of(project, rel.validatedRowType, rel.kind);

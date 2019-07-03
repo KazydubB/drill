@@ -246,7 +246,7 @@ public class FilterBuilder extends AbstractExprVisitor<LogicalExpression, Set<Lo
       return handleCompareFunction(funcHolderExpr, value);
     }
 
-    if (isIsFunction(funcName) || isIsFalse(funcHolderExpr, funcName)) {
+    if (isIsFunction(funcName) || isNot(funcHolderExpr, funcName)) {
       return handleIsFunction(funcHolderExpr, value);
     }
 
@@ -263,7 +263,7 @@ public class FilterBuilder extends AbstractExprVisitor<LogicalExpression, Set<Lo
   }
 
   // shows whether function is simplified IS FALSE
-  private boolean isIsFalse(FunctionHolderExpression holderExpression, String funcName) {
+  private boolean isNot(FunctionHolderExpression holderExpression, String funcName) {
     return !holderExpression.args.isEmpty()
         && !(holderExpression.args.get(0) instanceof DrillFuncHolderExpr)
         && FunctionGenerationHelper.NOT.equals(funcName);

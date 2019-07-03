@@ -44,12 +44,6 @@ public abstract class DrillAggregateRelBase extends Aggregate implements DrillRe
     super(cluster, traits, child, groupSet, groupSets, aggCalls);
   }
 
-  @Deprecated // Will be removed before Calcite 2.0
-  public DrillAggregateRelBase(RelOptCluster cluster, RelTraitSet traits, RelNode child, boolean indicator,
-      ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
-    super(cluster, traits, child, indicator, groupSet, groupSets, aggCalls);
-  }
-
   /**
    * Estimate cost of hash agg. Called by DrillAggregateRel.computeSelfCost() and HashAggPrel.computeSelfCost()
   */

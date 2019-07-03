@@ -48,28 +48,6 @@ public class HashAggPrel extends AggPrelBase implements Prel{
     super(cluster, traits, child, groupSet, groupSets, aggCalls, phase);
   }
 
-  @Deprecated // Will be removed before Calcite 2.0
-  public HashAggPrel(RelOptCluster cluster,
-                     RelTraitSet traits,
-                     RelNode child,
-                     boolean indicator,
-                     ImmutableBitSet groupSet,
-                     List<ImmutableBitSet> groupSets,
-                     List<AggregateCall> aggCalls,
-                     OperatorPhase phase) throws InvalidRelException {
-    super(cluster, traits, child, indicator, groupSet, groupSets, aggCalls, phase);
-  }
-
-  @Override
-  public Aggregate copy(RelTraitSet traitSet, RelNode input, boolean indicator, ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
-    try {
-      return new HashAggPrel(getCluster(), traitSet, input, indicator, groupSet, groupSets, aggCalls,
-          this.getOperatorPhase());
-    } catch (InvalidRelException e) {
-      throw new AssertionError(e);
-    }
-  }
-
   @Override
   public Aggregate copy(RelTraitSet traitSet, RelNode input, ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
     try {

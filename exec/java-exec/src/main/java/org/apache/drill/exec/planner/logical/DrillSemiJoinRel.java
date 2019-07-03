@@ -102,9 +102,9 @@ public class DrillSemiJoinRel extends DrillJoinRelBase implements DrillJoin, Dri
     return new LogicalSemiJoin(leftOp, rightOp, conditions, joinType);
   }
 
-  @Override public RelOptCost computeSelfCost(RelOptPlanner planner,
-                                              RelMetadataQuery mq) {
-    // REVIEW jvs 9-Apr-2006:  Just for now...
+  // This method is the same as in Calcite and is here to ensure SemiJoin's behavior
+  @Override
+  public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
     return planner.getCostFactory().makeTinyCost();
   }
 }
