@@ -107,6 +107,10 @@ public abstract class AbstractFieldReader extends AbstractBaseReader implements 
   }
   </#list></#list>
 
+  public void copyAsValue(TrueMapWriter writer) {
+    fail("CopyAsValue TrueMapWriter");
+  }
+
   public void read(int arrayIndex, UntypedNullHolder holder) {
       fail("UntypedNullHolder");
   }

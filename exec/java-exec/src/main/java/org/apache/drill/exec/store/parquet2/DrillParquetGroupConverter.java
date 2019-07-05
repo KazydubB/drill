@@ -48,6 +48,7 @@ import org.apache.drill.exec.store.parquet.ParquetReaderUtility;
 import org.apache.drill.exec.store.parquet.columnreaders.ParquetColumnMetadata;
 import org.apache.drill.exec.vector.complex.impl.RepeatedMapWriter;
 import org.apache.drill.exec.vector.complex.impl.SingleMapWriter;
+import org.apache.drill.exec.vector.complex.impl.TrueMapWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter;
 import org.apache.drill.exec.vector.complex.writer.BigIntWriter;
@@ -80,18 +81,10 @@ import static org.apache.drill.exec.store.parquet.ParquetReaderUtility.NanoTimeU
 
 public class DrillParquetGroupConverter extends GroupConverter {
 
-  //  private final List<Converter> converters;
-  protected BaseWriter baseWriter;
-
-  //  private final OutputMutator mutator;
-//  private final OptionManager options;
+  BaseWriter baseWriter;
   List<Converter> converters;
-
-  //  MapWriter mapWriter;
   OutputMutator mutator;
-
   OptionManager options;
-//  protected MapWriter mapWriter;
 
   // See DRILL-4203
   ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates;
@@ -105,6 +98,15 @@ public class DrillParquetGroupConverter extends GroupConverter {
 
   DrillParquetGroupConverter() {
 //    converterName = "wfawgawgawgawg";
+  }
+
+  protected DrillParquetGroupConverter(OutputMutator mutator, BaseWriter baseWriter, OptionManager options,
+                                       ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
+    this.baseWriter = baseWriter;
+    this.mutator = mutator;
+    this.containsCorruptedDates = containsCorruptedDates;
+    converters = new ArrayList<>();
+    this.options = options;
   }
 
   /**
@@ -123,17 +125,9 @@ public class DrillParquetGroupConverter extends GroupConverter {
    * @param parentName             name of group converter which called the constructor
    */
   public DrillParquetGroupConverter(OutputMutator mutator, BaseWriter baseWriter, GroupType schema,
-
-//  public DrillParquetGroupConverter(OutputMutator mutator, ComplexWriterImpl complexWriter, MessageType schema,
-//                                    Collection<SchemaPath> columns, OptionManager options,
-//                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
-//    this(mutator, complexWriter.rootAsMap(), schema, columns, options, containsCorruptedDates);
-//  }
-// todo: this is of interest!
-  // This function assumes that the fields in the schema parameter are in the same order as the fields in the columns parameter. The
-  // columns parameter may have fields that are not present in the schema, though.
-//  public DrillParquetGroupConverter(OutputMutator mutator, MapWriter mapWriter, GroupType schema,
-                                    Collection<SchemaPath> columns, OptionManager options, ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates, boolean skipRepeated, String parentName) {
+                                    Collection<SchemaPath> columns, OptionManager options,
+                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates,
+                                    boolean skipRepeated, String parentName) {
     this.converterName = String.format("%s>%s[%s-%d]", parentName, schema.getName(), baseWriter.getClass().getSimpleName(), baseWriter.hashCode());
     this.baseWriter = baseWriter;
     this.mutator = mutator;
@@ -179,6 +173,9 @@ public class DrillParquetGroupConverter extends GroupConverter {
       if (isLogicalListType(fieldGroupType)) {
         writer = getWriter(name, (m, s) -> m.list(s), l -> l.list());
         converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options, containsCorruptedDates, true, converterName);
+      } else if (isLogicalMapType(fieldGroupType)) {
+        converter = new DrillMapGroupConverter(name, mutator, (BaseWriter.MapWriter) baseWriter,
+            fieldGroupType, columns, options, containsCorruptedDates);
       } else if (fieldType.isRepetition(Repetition.REPEATED)) {
         if (skipRepeated) {
           converter = new DrillIntermediateParquetGroupConverter(mutator, baseWriter, fieldGroupType, columns, options, containsCorruptedDates, false, converterName);
@@ -196,16 +193,6 @@ public class DrillParquetGroupConverter extends GroupConverter {
     return converter;
   }
 
-  protected DrillParquetGroupConverter(OutputMutator mutator, BaseWriter baseWriter, OptionManager options,
-                                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
-//    this.mapWriter = mapWriter;
-    this.baseWriter = baseWriter; // todo:???
-    this.mutator = mutator;
-    this.containsCorruptedDates = containsCorruptedDates;
-    converters = new ArrayList<>();
-    this.options = options;
-  }
-
   /**
    * Checks whether group field approximately matches pattern for Logical Lists:
    * <list-repetition> group <name> (LIST) {
@@ -221,7 +208,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
    * @param groupType type which may have LIST original type
    * @return whether the type is LIST and nested field is repeated group
    */
-  private boolean isLogicalListType(GroupType groupType) {
+  boolean isLogicalListType(GroupType groupType) {
     if (groupType.getOriginalType() == OriginalType.LIST && groupType.getFieldCount() == 1) {
       Type nestedField = groupType.getFields().get(0);
       return nestedField.isRepetition(Repetition.REPEATED)
@@ -230,6 +217,13 @@ public class DrillParquetGroupConverter extends GroupConverter {
           && nestedField.asGroupType().getFieldCount() == 1;
     }
     return false;
+  }
+
+  boolean isLogicalMapType(GroupType groupType) {
+    OriginalType type = groupType.getOriginalType();
+    // MAP_KEY_VALUE is here for backward-compatibility reasons
+    // todo: add other checks
+    return type == OriginalType.MAP || type == OriginalType.MAP_KEY_VALUE;
   }
 
   protected PrimitiveConverter getConverterForType(String name, PrimitiveType type) {
@@ -347,6 +341,8 @@ public class DrillParquetGroupConverter extends GroupConverter {
         }
         switch(type.getOriginalType()) {
           case UTF8: {
+//            VarCharWriter writer = type.getRepetition() == Repetition.REPEATED ? mapWriter.list(name).varChar() : mapWriter.varChar(name);
+//            return new DrillVarCharConverter(writer, mutator.getManagedBuffer());
             return getVarCharConverter(name, type);
           }
           case ENUM: {
@@ -429,16 +425,22 @@ public class DrillParquetGroupConverter extends GroupConverter {
 
   @Override
   public void start() {
-    if (baseWriter instanceof SingleMapWriter || baseWriter instanceof RepeatedMapWriter) {
+    if (isMapWriter()) {
       ((MapWriter) baseWriter).start();
     } else {
       ((BaseWriter.ListWriter) baseWriter).startList();
     }
   }
 
+  private boolean isMapWriter() {
+    return baseWriter instanceof SingleMapWriter
+        || baseWriter instanceof RepeatedMapWriter
+        || baseWriter instanceof TrueMapWriter; // todo: can be removed as this one extends RepeatedMapWriter
+  }
+
   @Override
   public void end() {
-    if (baseWriter instanceof SingleMapWriter || baseWriter instanceof RepeatedMapWriter) {
+    if (isMapWriter()) {
       ((MapWriter) baseWriter).end();
     } else {
       ((BaseWriter.ListWriter) baseWriter).endList();
@@ -451,7 +453,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
   }
 
   private <T> T getWriter(String name, BiFunction<MapWriter, String, T> fromMap, Function<BaseWriter.ListWriter, T> fromList) {
-    if (baseWriter instanceof SingleMapWriter || baseWriter instanceof RepeatedMapWriter) {
+    if (isMapWriter()) {
       return fromMap.apply((MapWriter) baseWriter, name);
     } else if (baseWriter instanceof BaseWriter.ListWriter) {
       return fromList.apply((BaseWriter.ListWriter) baseWriter);
@@ -471,6 +473,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
 
     @Override
     public void addInt(int value) {
+      System.out.println("writing int value: " + value);
       holder.value = value;
       writer.write(holder);
     }

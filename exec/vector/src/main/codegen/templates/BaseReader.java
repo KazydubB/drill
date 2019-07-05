@@ -46,23 +46,17 @@ public interface BaseReader extends Positionable{
 
   public interface MapReader extends BaseReader, Iterable<String>{
     FieldReader reader(String name);
-    <#list vv.types as type>
-      <#list type.minor as minor>
-        <#assign name = minor.class?cap_first />
-    /*default void read(Object key, ${name}Holder h) {
-      throw new UnsupportedOperationException("Can't read value by key for " + h.getClass().getName());
-    }
-    default void read(Object key, Nullable${name}Holder h) {
-      throw new UnsupportedOperationException("Can't read value by key for " + h.getClass().getName());
-    }*/
-      </#list>
-    </#list>
   }
   
   public interface RepeatedMapReader extends MapReader{
     boolean next();
     int size();
     void copyAsValue(MapWriter writer);
+  }
+
+  // todo: remove, and use the one for RepeatedMapReader?
+  public interface TrueMapReader extends RepeatedMapReader {
+    void copyAsValue(TrueMapWriter writer);
   }
   
   public interface ListReader extends BaseReader{

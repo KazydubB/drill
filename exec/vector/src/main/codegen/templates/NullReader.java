@@ -141,7 +141,9 @@ public class NullReader extends AbstractBaseReader implements FieldReader {
     return null;
   }
   </#list>
-  
+
+  @Override
+  public void copyAsValue(TrueMapWriter writer) {}
 }
 
 

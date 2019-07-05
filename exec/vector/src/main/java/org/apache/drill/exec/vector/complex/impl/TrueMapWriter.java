@@ -31,6 +31,7 @@ public class TrueMapWriter extends RepeatedMapWriter {
 
   // todo: change to int lastSet
   private int currentRow = -1;
+  // todo: use currentChildIndex from RepeatedMapWriter
   private int length = -1; // (designates length for current row)
   private boolean rowStarted;
 
@@ -48,7 +49,7 @@ public class TrueMapWriter extends RepeatedMapWriter {
     int idx = idx();
 //    super.setPosition(currentRow);
     int index = getPosition();
-    assert rowStarted : "Must start row (start()) before put";
+    checkStarted();
     for (FieldWriter writer : fields.values()) {
       writer.setPosition(index); // todo: variable
     }
@@ -58,20 +59,21 @@ public class TrueMapWriter extends RepeatedMapWriter {
   // todo: discard
   @Deprecated
   private int getPosition() { // todo: rename to index?
-    assert rowStarted : "Must start row (start()) before getPosition()";
+    checkStarted();
     // todo: change currentRow with idx()?
     int offset = container.getInnerOffset(currentRow); // todo: there can be problems connected to this
     return offset + length;
   }
 
   public void endKeyValuePair() {
-    assert rowStarted : "Must start row (start()) before incrementing current length";
+    checkStarted();
+
     length++;
   }
 
-  // todo: change this!?
-  @Override // todo: TrueMapWriter should support his operation. As well as others map(), list() and list(String name)
+  @Override
   public TrueMapWriter trueMap(String name, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType) {
+    // todo: consider the same assertion for list(String), list()??, map(String) methods
     assert TrueMapVector.FIELD_VALUE_NAME.equals(name) : "Only value field is allowed in TrueMap";
 // todo: change to FieldWriter?
     return super.trueMap(name, keyType, valueType);
@@ -92,14 +94,6 @@ public class TrueMapWriter extends RepeatedMapWriter {
   }
 
   @Override
-  public void setPosition(int index) {
-    super.setPosition(index);
-    for (final FieldWriter w : fields.values()) {
-      w.setPosition(index);
-    }
-  }
-
-  @Override
   public void start() {
     currentRow++; // todo: currentRow = idx();
     length = 0;
@@ -108,8 +102,8 @@ public class TrueMapWriter extends RepeatedMapWriter {
 
   @Override
   public void end() {
-//<#if mode == "True">
-    assert rowStarted : "Must start row (start()) before end()";
+    checkStarted();
+
     int offset = container.getInnerOffset(currentRow); // todo: this may be not true in a case when currentRow is
     rowStarted = false;
     int currentOffset = length;
@@ -119,7 +113,7 @@ public class TrueMapWriter extends RepeatedMapWriter {
   }
 
   public void put(int outputIndex, Object key, Object value) { // todo: outputIndex?
-    assert rowStarted : "Must start row (startRow()) before put";
+    checkStarted();
 
     int index = getPosition();
     // todo: change this?
@@ -138,7 +132,7 @@ public class TrueMapWriter extends RepeatedMapWriter {
   }
 
   public void put(int outputIndex, ValueHolder keyHolder, ValueHolder valueHolder) { // todo: outputIndex?
-    assert rowStarted : "Must start row (startRow()) before put";
+    checkStarted();
 
     int index = getPosition();
     getKeyWriter().setPosition(index);
@@ -151,5 +145,9 @@ public class TrueMapWriter extends RepeatedMapWriter {
 
   public TypeProtos.MajorType getValueType() {
     return container.getValueType();
+  }
+
+  private void checkStarted() {
+    assert rowStarted : "Must start row (startRow()) before";
   }
 }

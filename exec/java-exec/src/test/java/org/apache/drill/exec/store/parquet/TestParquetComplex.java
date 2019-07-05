@@ -137,14 +137,20 @@ public class TestParquetComplex extends BaseTestQuery {
   @Test
   public void selectTrueMap3() throws Exception {
 //    String query = "select * from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by 1 desc";
-    String query = "select * from cp.`store/parquet/complex/map/map_int_to_int_array.parquet`";
+    String query = "select id, mapcol from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by id";
     testBuilder()
         .sqlQuery(query)
         .unOrdered()
         .baselineColumns("id", "mapcol")
-        .baselineValues(1L, TestBuilder.mapOfObject("Pencils", 1L))
-        .baselineValues(1L, TestBuilder.mapOfObject("Pencils", 1L))
-        .baselineValues(1L, TestBuilder.mapOfObject("Pencils", 1L))
+        .baselineValues(1,
+            TestBuilder.mapOfObject(1, TestBuilder.listOf(1, 2, 3, 4, 5))
+        )
+        .baselineValues(2,
+            TestBuilder.mapOfObject(1, TestBuilder.listOf(1, 2, 3, 4, 5), 2, TestBuilder.listOf(2, 3))
+        )
+        .baselineValues(3,
+            TestBuilder.mapOfObject(3, TestBuilder.listOf(3, 4, 5), 5, TestBuilder.listOf(5, 3))
+        )
         .go();
   }
 
@@ -169,6 +175,32 @@ public class TestParquetComplex extends BaseTestQuery {
         .baselineValues(2, TestBuilder.mapOfObject(
               2, TestBuilder.mapOfObject("a", 1, "b", 2),
               3, TestBuilder.mapOfObject("c", 3)
+            )
+        )
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapByKey() throws Exception {
+//    String query = "select id, mapcol[2] as mapcol from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet`"; // todo: add order by `id`
+    String query = "select id, mapcol from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet`"; // todo: add order by `id`
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "mapcol")
+        .baselineValues(2, TestBuilder.mapOfObject(
+            3, TestBuilder.mapOfObject("a", 1, "b", 2),
+            4, TestBuilder.mapOfObject("c", 3),
+            5, TestBuilder.mapOfObject("d", 4, "e", 5)
+            )
+        )
+        .baselineValues(1, TestBuilder.mapOfObject(
+            1, TestBuilder.mapOfObject("a", 1, "b", 2)
+            )
+        )
+        .baselineValues(2, TestBuilder.mapOfObject(
+            2, TestBuilder.mapOfObject("a", 1, "b", 2),
+            3, TestBuilder.mapOfObject("c", 3)
             )
         )
         .go();

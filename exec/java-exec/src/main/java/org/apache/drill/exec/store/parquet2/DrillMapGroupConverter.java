@@ -28,7 +28,6 @@ import org.apache.drill.exec.vector.complex.impl.TrueMapWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.parquet.io.api.Converter;
 import org.apache.parquet.schema.GroupType;
-import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
 
@@ -68,19 +67,15 @@ public class DrillMapGroupConverter extends DrillParquetGroupConverter {
       Converter valueConverter;
       if (!valueType.isPrimitive()) { // todo: change complex case
         GroupType groupType = valueType.asGroupType();
-        if (valueType.getOriginalType() == OriginalType.MAP) { // todo: add additoinal condition to check if valuType.minorType is TRUEMAP
+        if (isLogicalMapType(groupType)) { // todo: add additoinal condition to check if valuType.minorType is TRUEMAP
           // todo: wrap valueWriter?
           valueConverter = new DrillMapGroupConverter(valueType.getName(), mutator, mapWriter, groupType, columns, options, containsCorruptedDates);
-        // } else if (valueType.getOriginalType() == OriginalType.LIST) { // todo: uncomment when the time has come
-          // todo: implement when DRILL-7268 is merged
+        } else if (isLogicalListType(groupType)) {
+          valueConverter = new DrillParquetGroupConverter(mutator, mapWriter.list(TrueMapVector.FIELD_VALUE_NAME), groupType,
+              columns, options, containsCorruptedDates, true, "wagawgawgawg");
         } else {
-          // BaseWriter.MapWriter newMapWriter = groupType.getRepetition() == Type.Repetition.REPEATED ?
-              // mapWriter.list(valueType.getName()).map() : mapWriter.map(valueType.getName()); // todo: uncomment this if anything
-//          BaseWriter.MapWriter newMapWriter = mapWriter.getValueWriter(); // todo: for types other then MAP it may be different
-//          valueConverter = new DrillParquetGroupConverter(mutator, newMapWriter, groupType, columns, options, containsCorruptedDates); // todo: resolve it for LIST (and see if
-          // it works for TRUEMAP)
           valueConverter = new DrillParquetGroupConverter(mutator, mapWriter.map(TrueMapVector.FIELD_VALUE_NAME), groupType,
-              columns, options, containsCorruptedDates, false, "gawgawgawg");
+              columns, options, containsCorruptedDates, true, "gawgawgawg");
         }
       } else {
         valueConverter = getConverterForType(TrueMapVector.FIELD_VALUE_NAME, valueType.asPrimitiveType());
