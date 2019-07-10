@@ -19,6 +19,7 @@ package org.apache.drill.exec.expr.holders;
 
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
+// todo: make other children for map and list types?
 public class ComplexHolder implements ValueHolder {
   public FieldReader reader;
   public int isSet;

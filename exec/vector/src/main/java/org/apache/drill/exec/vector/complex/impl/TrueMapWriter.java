@@ -18,21 +18,14 @@
 package org.apache.drill.exec.vector.complex.impl;
 
 import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.exec.expr.holders.TrueMapHolder;
 import org.apache.drill.exec.expr.holders.ValueHolder;
-import org.apache.drill.exec.vector.NullableIntVector;
-import org.apache.drill.exec.vector.NullableVarCharVector;
-import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 
 public class TrueMapWriter extends RepeatedMapWriter {
 
-  private final TrueMapVector container;
-
-  // todo: change to int lastSet
-  private int currentRow = -1;
-  // todo: use currentChildIndex from RepeatedMapWriter
-  private int length = -1; // (designates length for current row)
+  final TrueMapVector container;
   private boolean rowStarted;
 
   public TrueMapWriter(TrueMapVector container, FieldWriter parent, boolean unionEnabled) {
@@ -45,30 +38,15 @@ public class TrueMapWriter extends RepeatedMapWriter {
   }
 
   public void startKeyValuePair() {
-    // todo: should entry be marked as not-set (null) explicitly?
-    int idx = idx();
-//    super.setPosition(currentRow);
-    int index = getPosition();
-    checkStarted();
-    for (FieldWriter writer : fields.values()) {
-      writer.setPosition(index); // todo: variable
+    currentChildIndex = container.getMutator().add(idx());
+    for (FieldWriter w : fields.values()) {
+      w.setPosition(currentChildIndex);
     }
-    // setPosition(getPosition()); // todo: remove?
-  }
-
-  // todo: discard
-  @Deprecated
-  private int getPosition() { // todo: rename to index?
-    checkStarted();
-    // todo: change currentRow with idx()?
-    int offset = container.getInnerOffset(currentRow); // todo: there can be problems connected to this
-    return offset + length;
   }
 
   public void endKeyValuePair() {
     checkStarted();
-
-    length++;
+    // noop
   }
 
   @Override
@@ -95,49 +73,93 @@ public class TrueMapWriter extends RepeatedMapWriter {
 
   @Override
   public void start() {
-    currentRow++; // todo: currentRow = idx();
-    length = 0;
+    assert !rowStarted : "Row should not be started";
+//    currentRow++; // todo: currentRow = idx();
+//    length = 0;
+//    rowStarted = true;
+//    container.getMutator().startNewValue(idx());
+
     rowStarted = true;
+
+//    final TrueMapHolder h = new TrueMapHolder();
+//    final TrueMapVector map = container;
+//    final TrueMapVector.Mutator mutator = container.getMutator();
+
+    // Make sure that the current vector can support the end position of this list.
+    if (container.getValueCapacity() <= idx()) {
+      container.getMutator().setValueCount(idx() + 1);
+    }
+
+    TrueMapHolder h = new TrueMapHolder();
+    container.getAccessor().get(idx(), h);
+    if (h.start >= h.end) {
+      container.getMutator().startNewValue(idx());
+    }
+//    currentChildIndex = container.getMutator().add(idx());
+//    for (final FieldWriter w : fields.values()) {
+//      w.setPosition(currentChildIndex);
+//    }
+
+//    setPosition(idx() + 1); // todo: mine!
   }
 
   @Override
   public void end() {
     checkStarted();
 
-    int offset = container.getInnerOffset(currentRow); // todo: this may be not true in a case when currentRow is
+//    int offset = container.getInnerOffset(currentRow); // todo: this may be not true in a case when currentRow is
+//    rowStarted = false;
+//    int currentOffset = length;
+//    currentOffset += offset;
+////    } // todo: decide if this should be done for currentRow + 1 or not
+//    container.setInnerOffset(currentRow + 1, currentOffset);
+
+//    setPosition(idx() + 1);
     rowStarted = false;
-    int currentOffset = length;
-    currentOffset += offset;
-//    } // todo: decide if this should be done for currentRow + 1 or not
-    container.setInnerOffset(currentRow + 1, currentOffset);
   }
 
+  @Deprecated
   public void put(int outputIndex, Object key, Object value) { // todo: outputIndex?
     checkStarted();
 
-    int index = getPosition();
+//    int index = getPosition();
     // todo: change this?
-    setValue(container.getKeys(), key, index);
-    setValue(container.getValues(), value, index);
-    length++;
+    // todo: this is wrong
+//    setValue(container.getKeys(), key, index);
+//    setValue(container.getValues(), value, index);
+//    length++;
+
+//    getKeyWriter().write(key);
   }
 
-  private void setValue(ValueVector vector, Object value, int index) {
-    if (vector instanceof NullableIntVector) { // todo: not instanceof but type?
-      ((NullableIntVector) vector).getMutator().setSafe(index, (int) value);
-    } else if (vector instanceof NullableVarCharVector) {
-      byte[] bytes = (byte[]) value;
-      ((NullableVarCharVector) vector).getMutator().setSafe(index, bytes, 0, bytes.length);
-    }
-  }
+//  @Deprecated
+//  private void setValue(ValueVector vector, Object value, int index) {
+//    if (vector instanceof NullableIntVector) { // todo: not instanceof but type?
+//      ((NullableIntVector) vector).getMutator().setSafe(index, (int) value);
+//    } else if (vector instanceof NullableVarCharVector) {
+//      byte[] bytes = (byte[]) value;
+//      ((NullableVarCharVector) vector).getMutator().setSafe(index, bytes, 0, bytes.length);
+//    }
+//  }
 
+  // todo: probably better way is to 'put' values externally (given there is access to getKeyWriter() and getValueWriter())
+  @Deprecated
   public void put(int outputIndex, ValueHolder keyHolder, ValueHolder valueHolder) { // todo: outputIndex?
     checkStarted();
 
-    int index = getPosition();
-    getKeyWriter().setPosition(index);
-    getValueWriter().setPosition(index);
+//    int index = getPosition();
+//    getKeyWriter().setPosition(index);
+//    getValueWriter().setPosition(index);
+
+//    getKeyWriter().write(keyHolder);
+//    getValueWriter().write(valueHolder);
   }
+
+  // todo: remove
+//  @Override
+//  public void setPosition(int index) {
+//    super.setPosition(index);
+//  }
 
   public TypeProtos.MajorType getKeyType() {
     return container.getKeyType();

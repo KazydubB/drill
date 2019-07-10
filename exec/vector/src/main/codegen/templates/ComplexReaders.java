@@ -48,6 +48,7 @@ package org.apache.drill.exec.vector.complex.impl;
 /*
  * This class is generated using freemarker and the ${.template_name} template.
  */
+// todo: strange name for a file containing PRIMITIVE readers too
 @SuppressWarnings("unused")
 public class ${nullMode}${name}ReaderImpl extends AbstractFieldReader {
   
@@ -134,6 +135,18 @@ public class ${nullMode}${name}ReaderImpl extends AbstractFieldReader {
   <#if nullMode != "Nullable">
   public void read(${minor.class?cap_first}Holder h) {
     vector.getAccessor().get(idx(), h);
+  }
+
+  public void read(ValueHolder h) {
+    if (h instanceof ${minor.class?cap_first}Holder) {
+      read((${minor.class?cap_first}Holder) h);
+    } else {
+      read((Nullable${minor.class?cap_first}Holder) h);
+    }
+  }
+  <#else>
+  public void read(ValueHolder h) {
+    read((Nullable${minor.class?cap_first}Holder) h);
   }
   </#if>
 

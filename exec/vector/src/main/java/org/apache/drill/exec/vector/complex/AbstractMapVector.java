@@ -155,32 +155,34 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
     return true;
   }
 
-  public TrueMapVector addOrGet(String name, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType) {
-
-    ValueVector existing = getChild(name);
-    boolean create = false;
-    if (existing == null) {
-      create = true;
-    } else {
-      return (TrueMapVector) existing;
-    } /*else if (nullFilled(existing)) {
-      existing.clear();
-      // Since it's removing old vector and adding new one based on new type, it should do same for Materialized field,
-      // Otherwise there will be duplicate of same field with same name but different type.
-      field.removeChild(existing.getField());
-      create = true;
-    }*/
-    //if (create) {
-      TrueMapVector vector = BasicTypeHelper.getNewMapVector(name, allocator, callBack, keyType, valueType);
-      putChild(name, vector);
-      if (callBack != null) {
-        callBack.doWork();
-      }
-      return vector;
-    //}
-    // final String message = "Drill does not support schema change yet. Existing[%s] and desired[%s] vector types mismatch";
-    // throw new IllegalStateException(String.format(message, existing.getClass().getSimpleName(), clazz.getSimpleName()));
-  }
+  // todo: remove?
+//  @Deprecated
+//  public TrueMapVector addOrGet(String name, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType) {
+//
+//    ValueVector existing = getChild(name);
+//    boolean create = false;
+//    if (existing == null) {
+//      create = true;
+//    } else {
+//      return (TrueMapVector) existing;
+//    } /*else if (nullFilled(existing)) {
+//      existing.clear();
+//      // Since it's removing old vector and adding new one based on new type, it should do same for Materialized field,
+//      // Otherwise there will be duplicate of same field with same name but different type.
+//      field.removeChild(existing.getField());
+//      create = true;
+//    }*/
+//    //if (create) {
+//      TrueMapVector vector = BasicTypeHelper.getNewMapVector(name, allocator, callBack, keyType, valueType);
+//      putChild(name, vector);
+//      if (callBack != null) {
+//        callBack.doWork();
+//      }
+//      return vector;
+//    //}
+//    // final String message = "Drill does not support schema change yet. Existing[%s] and desired[%s] vector types mismatch";
+//    // throw new IllegalStateException(String.format(message, existing.getClass().getSimpleName(), clazz.getSimpleName()));
+//  }
 
   /**
    * Returns a {@link org.apache.drill.exec.vector.ValueVector} corresponding to the given ordinal identifier.

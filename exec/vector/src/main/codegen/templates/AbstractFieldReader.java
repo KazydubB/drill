@@ -42,8 +42,8 @@ public abstract class AbstractFieldReader extends AbstractBaseReader implements 
     return true;
   }
 
-  public void read(int index, ValueHolder holder) {
-    fail("read(int index, ValueHolder holder)");
+  public void read(ValueHolder holder) {
+    fail("read(ValueHolder holder)");
   }
 
   <#list ["Object", "BigDecimal", "Integer", "Long", "Boolean",
@@ -67,6 +67,11 @@ public abstract class AbstractFieldReader extends AbstractBaseReader implements 
   public void copyAsValue(MapWriter writer) {
     fail("CopyAsValue MapWriter");
   }
+
+  public void copySingleValue(FieldWriter writer) {
+    fail("copySingleValue");
+  }
+
   public void copyAsField(String name, MapWriter writer) {
     fail("CopyAsField MapWriter");
   }

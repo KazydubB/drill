@@ -137,7 +137,7 @@ public class TestParquetComplex extends BaseTestQuery {
   @Test
   public void selectTrueMap3() throws Exception {
 //    String query = "select * from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by 1 desc";
-    String query = "select id, mapcol from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by id";
+    String query = "select id, mapcol from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by id asc"; // todo: order by is not working
     testBuilder()
         .sqlQuery(query)
         .unOrdered()
@@ -181,7 +181,33 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapByKey() throws Exception {
+  public void selectTrueMap5() throws Exception {
+//    String query = "select * from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by 1 desc";
+    String query = "select id, flatten(mapcol) as flat from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by id";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "flat")
+        .baselineValues(1,
+            TestBuilder.mapOfObject(1, TestBuilder.listOf(1, 2, 3, 4, 5))
+        )
+        .baselineValues(2,
+            TestBuilder.mapOfObject(1, TestBuilder.listOf(1, 2, 3, 4, 5), 2, TestBuilder.listOf(2, 3))
+        )
+        .baselineValues(3,
+            TestBuilder.mapOfObject(3, TestBuilder.listOf(3, 4, 5), 5, TestBuilder.listOf(5, 3))
+        )
+        .baselineValues(3,
+            TestBuilder.mapOfObject(3, TestBuilder.listOf(3, 4, 5), 5, TestBuilder.listOf(5, 3))
+        )
+        .baselineValues(3,
+            TestBuilder.mapOfObject(3, TestBuilder.listOf(3, 4, 5), 5, TestBuilder.listOf(5, 3))
+        )
+        .go();
+  }
+
+  @Test
+  public void selectTrueMap6() throws Exception {
 //    String query = "select id, mapcol[2] as mapcol from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet`"; // todo: add order by `id`
     String query = "select id, mapcol from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet`"; // todo: add order by `id`
     testBuilder()
@@ -202,6 +228,81 @@ public class TestParquetComplex extends BaseTestQuery {
             2, TestBuilder.mapOfObject("a", 1, "b", 2),
             3, TestBuilder.mapOfObject("c", 3)
             )
+        )
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapByKeyPrimitiveValue() throws Exception {
+//        4, {"b": null, "c": 8, "d": 9, "e": 10}
+//        3, {"b": 6, "c": 7}
+//        2, {"a": 3, "b": 4, "c": 5}
+//        1, {"a": 1, "b": 2, "c": 3}
+    String fileName = "map_where.parquet";
+    String query = "select mapcol['a'] val from cp.`store/parquet/complex/map/%s` order by id desc";
+    testBuilder()
+        .sqlQuery(query, fileName)
+        .ordered()
+        .baselineColumns("val") // todo: make sure this is actually correct
+        .baselineValuesForSingleColumn(null, null, 3, 1)
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapByKeyPrimitiveValue2() throws Exception {
+//        4, {"b": null, "c": 8, "d": 9, "e": 10}
+//        3, {"b": 6, "c": 7}
+//        2, {"a": 3, "b": 4, "c": 5}
+//        1, {"a": 1, "b": 2, "c": 3}
+    String fileName = "map_where.parquet";
+    String query = "select id, mapcol['b'] val from cp.`store/parquet/complex/map/%s` order by id desc"; // todo: add id to select
+    testBuilder()
+        .sqlQuery(query, fileName)
+        .ordered()
+        .baselineColumns("id", "val") // todo: make sure this is actually correct
+        .baselineValues(4, null)
+        .baselineValues(3, 6)
+        .baselineValues(2, 4)
+        .baselineValues(1, 2)
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapByKeyComplexValue() throws Exception {
+//        2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
+//        1, {1: {"a", 1, "b", 2}}
+//        2, {2: {"a", 1, "b", 2}, 3: {"c", 3}}
+    String query = "select mapcol[2] val from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet` order by id"; // todo: order by id doesn't work
+//    String query = "select mapcol[2] val from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet`"; // todo: add order by `id`
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("val")
+        .baselineValues(TestBuilder.mapOfObject())
+        .baselineValues(TestBuilder.mapOfObject())
+        .baselineValues(TestBuilder.mapOfObject("a", 1, "b", 2))
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapByKeyComplexValue2() throws Exception {
+    // todo: this seem to work correctly just need to look at Hive's order for rows with id = 2 for asc and desc
+    //        2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
+    //        1, {1: {"a", 1, "b", 2}}
+    //        2, {2: {"a", 1, "b", 2}, 3: {"c", 3}}
+    String query = "select id, mapcol[3] from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet` order by id asc"; // todo: order by `id` desc doesn't work
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "EXPR$1")
+        .baselineValues(
+            2, TestBuilder.mapOfObject("a", 1, "b", 2)
+        )
+        .baselineValues(
+            1, TestBuilder.mapOfObject()
+        )
+        .baselineValues(
+            2, TestBuilder.mapOfObject("c", 3)
         )
         .go();
   }
@@ -240,6 +341,21 @@ public class TestParquetComplex extends BaseTestQuery {
         .baselineColumns("id", "mapcol") // todo: make sure this is actually correct
         .baselineValues(4, TestBuilder.mapOfObject("b", null, "c", 8, "d", 9, "e", 10))
         .baselineValues(3, TestBuilder.mapOfObject("b", 6, "c", 7))
+        .baselineValues(2, TestBuilder.mapOfObject("a", 3, "b", 4, "c", 5))
+        .baselineValues(1, TestBuilder.mapOfObject("a", 1, "b", 2, "c", 3))
+        .go();
+  }
+
+  @Test
+  public void testOrderByIdLimit() throws Exception {
+    String fileName = "map_where.parquet";
+    String query = "select id, mapcol from cp.`store/parquet/complex/map/%s` order by id desc limit 2 offset 2"; // todo: !!
+    testBuilder()
+        .sqlQuery(query, fileName)
+        .ordered()
+        .baselineColumns("id", "mapcol") // todo: make sure this is actually correct
+//        .baselineValues(4, TestBuilder.mapOfObject("b", null, "c", 8, "d", 9, "e", 10))
+//        .baselineValues(3, TestBuilder.mapOfObject("b", 6, "c", 7))
         .baselineValues(2, TestBuilder.mapOfObject("a", 3, "b", 4, "c", 5))
         .baselineValues(1, TestBuilder.mapOfObject("a", 1, "b", 2, "c", 3))
         .go();
@@ -329,6 +445,7 @@ public class TestParquetComplex extends BaseTestQuery {
             .run();
   }
 
+  // todo: check generated ProjectorGen for now and before
   @Test //DRILL-3533
   public void notxistsField() throws Exception {
     String query = String.format("select t.`marketing_info`.notexists as notexists1,\n" +

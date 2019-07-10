@@ -36,6 +36,8 @@ public class NullReader extends AbstractBaseReader implements FieldReader {
   public static final NullReader INSTANCE = new NullReader();
   public static final NullReader EMPTY_LIST_INSTANCE = new NullReader(Types.repeated(TypeProtos.MinorType.NULL));
   public static final NullReader EMPTY_MAP_INSTANCE = new NullReader(Types.required(TypeProtos.MinorType.MAP));
+  // todo: see if there is a need to have it
+  // public static final NullReader EMPTY_TRUE_MAP_INSTANCE = new NullReader(Types.required(TypeProtos.MinorType.TRUEMAP));
   private MajorType type;
   
   private NullReader() {
@@ -52,7 +54,7 @@ public class NullReader extends AbstractBaseReader implements FieldReader {
   }
 
   // todo: git gud
-  public void read(int index, ValueHolder holder) {
+  public void read(ValueHolder holder) {
     throw new UnsupportedOperationException("NullReader cannot write into non-nullable holder");
   }
   
@@ -144,6 +146,10 @@ public class NullReader extends AbstractBaseReader implements FieldReader {
 
   @Override
   public void copyAsValue(TrueMapWriter writer) {}
+
+  @Override
+  public void copySingleValue(FieldWriter writer) {
+  }
 }
 
 

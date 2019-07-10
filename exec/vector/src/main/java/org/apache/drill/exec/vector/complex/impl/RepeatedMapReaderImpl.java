@@ -30,12 +30,12 @@ import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
 
 @SuppressWarnings("unused")
 public class RepeatedMapReaderImpl extends AbstractFieldReader{
-  private static final int NO_VALUES = Integer.MAX_VALUE - 1;
+  static final int NO_VALUES = Integer.MAX_VALUE - 1;
 
   protected final RepeatedMapVector vector;
-  private final Map<String, FieldReader> fields = Maps.newHashMap();
-  private int currentOffset;
-  private int maxOffset;
+  protected final Map<String, FieldReader> fields = Maps.newHashMap();
+  protected int currentOffset;
+  protected int maxOffset;
 
   public RepeatedMapReaderImpl(RepeatedMapVector vector) {
     this.vector = vector;
@@ -178,7 +178,7 @@ public class RepeatedMapReaderImpl extends AbstractFieldReader{
     impl.container.copyFromSafe(idx(), impl.idx(), vector);
   }
 
-  private void setChildrenPosition(int index) {
+  protected void setChildrenPosition(int index) {
     for (FieldReader r : fields.values()) {
       r.setPosition(index);
     }

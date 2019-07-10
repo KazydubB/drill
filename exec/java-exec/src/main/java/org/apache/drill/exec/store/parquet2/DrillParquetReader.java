@@ -59,6 +59,7 @@ import org.apache.parquet.io.ColumnIOFactory;
 import org.apache.parquet.io.MessageColumnIO;
 import org.apache.parquet.io.RecordReader;
 import org.apache.parquet.schema.MessageType;
+import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.Type;
 
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
@@ -125,8 +126,16 @@ public class DrillParquetReader extends CommonParquetRecordReader {
       List<String> segments = Lists.newArrayList();
 //      Type rootType = schema.getFields().get(0);
 //      boolean isMap = rootType.getOriginalType() == OriginalType.MAP;
+      String parentPath = null;
       for (PathSegment seg = path.getRootSegment(); seg != null; seg = seg.getChild()) {
-        if (seg.isNamed()) {
+        // schema.getType(path.getRootSegment().getNameSegment().getPath()); // todo: it is possible to check type here
+        boolean isParentMap = false;
+        if (parentPath != null) {
+          // todo: this toLowerCase() is a workaround... A bad one.
+          isParentMap = schema.getType(parentPath.toLowerCase()).getOriginalType() == OriginalType.MAP;
+        }
+        parentPath = path.getRootSegment().getNameSegment().getPath();
+        if (seg.isNamed() && !isParentMap) {
           segments.add(seg.getNameSegment().getPath());
         }
       }

@@ -65,6 +65,7 @@ package org.apache.drill.exec.vector.complex.writer;
     void start();
     void end();
     TrueMapWriter trueMap(String name, MajorType keyType, MajorType valueType);
+    // todo: move this out to TrueMapWriter interface
     FieldWriter getKeyWriter();
     FieldWriter getValueWriter();
   }

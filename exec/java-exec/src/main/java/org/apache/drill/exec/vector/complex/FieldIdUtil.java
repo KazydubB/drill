@@ -148,10 +148,10 @@ public class FieldIdUtil {
     if (vector instanceof AbstractContainerVector) { // todo: next line. Changes for 'true' map should be done here. Pass key value
       String fieldName = null;
 //      if (seg.isMap()) {
-      if (seg.isNamed()) {
+      /*if (seg.isNamed()) {
 //        fieldName = (String) seg.getMapSegment().getKey();
         fieldName = seg.getNameSegment().getChild().getNameSegment().getPath();
-      } else if (seg.isNamed()) {
+      } else*/ if (seg.isNamed()) {
         fieldName = seg.getNameSegment().getPath();
       }
       VectorWithOrdinal vord = ((AbstractContainerVector) vector).getChildVectorWithOrdinal(seg.isArray() ? null : fieldName); // todo: should not be here!
@@ -237,8 +237,22 @@ public class FieldIdUtil {
       builder.intermediateType(vector.getField().getType());
       builder.addId(id);
       return getFieldIdIfMatches(list, builder, true, expectedPath.getRootSegment().getChild());
-    } else
-    if (vector instanceof AbstractContainerVector) { // todo: probably handle MapSegment?
+    } else if (vector instanceof TrueMapVector) {
+      TrueMapVector mapVector = (TrueMapVector) vector;
+      MajorType vectorType = mapVector.getField().getType();
+      builder.intermediateType(vectorType);
+      builder.finalType(vectorType);
+      builder.addId(id);
+      if (seg.isLastPath()) {
+        return builder.build();
+      } else {
+        PathSegment child = seg.getChild(); // todo: this is likely to be as is done for 'else' case
+        // todo: use remainder if needed?
+        builder.remainder(child);
+        builder.finalType(mapVector.getValueType());
+        return builder.build();
+      }
+    } else if (vector instanceof AbstractContainerVector) { // todo: probably handle MapSegment?
       // we're looking for a multi path.
       AbstractContainerVector c = (AbstractContainerVector) vector;
       builder.intermediateType(vector.getField().getType());

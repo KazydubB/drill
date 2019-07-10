@@ -76,10 +76,10 @@ public class ComplexCopier {
           if (reader.isSet()) { // todo: add else?
             while (reader.next()) {
               wr.startKeyValuePair();
-              // writeValue(reader, getTrueMapWriterForReader(reader, wr));
-              // wr.write((SingleTrueMapReaderImpl) reader);
-              writeValue(reader.reader(TrueMapVector.FIELD_KEY_NAME), wr.getKeyWriter());
-              writeValue(reader.reader(TrueMapVector.FIELD_VALUE_NAME), wr.getValueWriter());
+              FieldReader keyReader = reader.reader(TrueMapVector.FIELD_KEY_NAME);
+              FieldReader valueReader = reader.reader(TrueMapVector.FIELD_VALUE_NAME);
+              writeValue(keyReader, getMapWriterForReader(keyReader, writer, TrueMapVector.FIELD_KEY_NAME));
+              writeValue(valueReader, getMapWriterForReader(valueReader, writer, TrueMapVector.FIELD_VALUE_NAME));
               wr.endKeyValuePair();
             }
           }
@@ -122,6 +122,10 @@ public class ComplexCopier {
     </#list></#list>
     case MAP:
       return (FieldWriter) writer.map(name);
+    case TRUEMAP:
+      MajorType keyType = reader.reader(TrueMapVector.FIELD_KEY_NAME).getType();
+      MajorType valueType = reader.reader(TrueMapVector.FIELD_VALUE_NAME).getType();
+      return writer.trueMap(name, keyType, valueType);
     case LIST:
       return (FieldWriter) writer.list(name);
     default:

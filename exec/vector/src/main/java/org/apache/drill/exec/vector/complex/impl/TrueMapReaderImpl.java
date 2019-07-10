@@ -20,17 +20,19 @@ package org.apache.drill.exec.vector.complex.impl;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.expr.holders.ComplexHolder;
 import org.apache.drill.exec.expr.holders.ValueHolder;
+import org.apache.drill.exec.util.Text;
 import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
+import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 
 public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
 
   private static final int NOT_FOUND = -1;
   // private final TrueMapVector vector;
-  @Deprecated
-  private int currentOffset;
-  @Deprecated
-  private int maxOffset;
+//  @Deprecated
+//  private int currentOffset;
+//  @Deprecated
+//  private int maxOffset;
 
   public TrueMapReaderImpl(TrueMapVector vector) {
     super(vector);
@@ -40,9 +42,16 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
   public FieldReader reader(String name){
     // todo: NOTICE: before there was position set to child Readers!
     assert TrueMapVector.fieldNames.contains(name);
-    return super.reader(name); // todo: reimplement?
+    FieldReader reader = super.reader(name); // todo: reimplement?
+//    reader.setPosition(currentOffset < 0 ? 0 : currentOffset);
+    return reader;
   }
 
+  public int find(String key) {
+    return find(new Text(key));
+  }
+
+  // todo: actually, key can be of any concrete type, since only literals are passed here?
   // todo: if key-uniqueness is not guaranteed, then return the last one for the key
   public int find(Object key/*, ValueHolder holder*/) {
     //public void read(Object key, NullableBigIntHolder holder) {
@@ -62,7 +71,10 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
     // for (int i = 0; i < vector.lengths.getAccessor().get(idx()); i++) {
     // todo: if key-uniqueness is not guaranteed, then return the last one for the key
     for (int i = 0; i < idx - offset; i++) {
-      if (vector.getChild(TrueMapVector.FIELD_KEY_NAME).getAccessor().getObject(offset + i).toString().equals(key)) {
+//      if (vector.getChild(TrueMapVector.FIELD_KEY_NAME).getAccessor().getObject(offset + i).toString().equals(key)) {
+//      if (vector.getChild(TrueMapVector.FIELD_KEY_NAME).getAccessor().getObject(offset + i).equals(key)) {
+      Object keyValue = vector.getChild(TrueMapVector.FIELD_KEY_NAME).getAccessor().getObject(offset + i);
+      if (keyValue.equals(key)) { // todo: get toString of both keyValue and key?
         index = offset + i;
         break;
       }
@@ -71,6 +83,7 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
     return index;
   }
 
+  // todo: use this method in case of primitive VALUE in EvaluationVisition
   public void read(Object key, ValueHolder holder) {
     int index = find(key);
     // int prevIndex = valueReader.idx();
@@ -79,11 +92,12 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
     valueReader.setPosition(index);
     // todo: pass the index into the method instead of setting position to the reader
     if (index > NOT_FOUND) { // todo: actually check for inequality
-      valueReader.read(index, holder); // todo: uncomment and add to FieldReader interface. Implement for every reader (cast to that's reader ValueHolder, perhaps)
+      valueReader.read(holder); // todo: uncomment and add to FieldReader interface. Implement for every reader (cast to that's reader ValueHolder, perhaps)
     }
     // valueReader.setPosition(prevIndex);
   }
 
+  // todo: probably make it similarly to primitive types above
   public void read(Object key, ComplexHolder holder) {
     int index = find(key);
     if (index == NOT_FOUND) {
@@ -99,6 +113,17 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
     holder.reader = valueReader;
   }
 
+  // todo: remove this if needed and add another method for EvaluationVisitor
+  @Override
+  public void setPosition(int index) {
+    if (index == NOT_FOUND) {
+      for (FieldReader reader : fields.values()) {
+        reader.setPosition(index);
+      }
+    }
+    super.setPosition(index);
+  }
+
   @Override
   public Object readObject() {
     return vector.getAccessor().getObject(idx());
@@ -106,8 +131,26 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
 
   @Override
   public boolean isSet() {
-    return true;
+    return currentOffset != NO_VALUES;
   }
+
+  @Override
+  public boolean next() {
+    if (currentOffset < maxOffset) { // todo: also add a field which will show if SPECIFIC value (i.e. found by key) is needed only
+      // todo: revisit logic, ideally it'd be great to just set index field
+      setChildrenPosition(++currentOffset);
+      return true;
+    } else {
+      currentOffset = NO_VALUES;
+      return false;
+    }
+  }
+
+//  protected void setChildrenPosition1(int index) {
+//    for (FieldReader child : fields.values()) {
+//      child.index = index;
+//    }
+//  }
 
   @Override
   public TypeProtos.MajorType getType(){
@@ -133,18 +176,47 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
 //      // impl.container.copyFromSafe(idx(), impl.idx(), vector);
 //    }
 
-  @Override // todo: see UnionListReader
-  public boolean next() {
-    if (currentOffset + 1 < maxOffset) { // todo: this can be wrong!
-      vector.getReader().setPosition(++currentOffset);
-      return true;
-    } else {
-      return false;
-    }
-    // return vector.innerVector.next(); // todO: why no such method?
-  }
+//  @Override // todo: see UnionListReader
+//  public boolean next() {
+//    if (currentOffset + 1 < maxOffset) { // todo: this can be wrong!
+//      vector.getReader().setPosition(++currentOffset);
+//      return true;
+//    } else {
+//      return false;
+//    }
+//    // return vector.innerVector.next(); // todO: why no such method?
+//  }
   // todo: use this?
+//  @Override
+//  public void copyAsValue(TrueMapWriter writer) {
+//    ComplexCopier.copy(this, writer);
+//  }
+
+  @Override
   public void copyAsValue(TrueMapWriter writer) {
+    if (isNull()) {
+      return;
+    }
+    // todo: overload method?
+//    writer.container.getChild(TrueMapVector.FIELD_VALUE_NAME).copyEntry(writer.idx(), (TrueMapVector) vector.getChild(TrueMapVector.FIELD_VALUE_NAME), idx());
+    ComplexCopier.copy(reader(TrueMapVector.FIELD_VALUE_NAME), writer);
+  }
+
+//  @Override
+//  public void copyAsValue(IntWriter writer) {
+//    copyAsValue(writer);
+//  }
+
+  public void copyAsValueSingle(TrueMapWriter writer) {
+    if (isNull()) {
+      return;
+    }
+//    writer.container.copyFromSafe(currentOffset, writer.idx(), vector);
     ComplexCopier.copy(this, writer);
+  }
+
+  @Override
+  public void copySingleValue(FieldWriter writer) {
+    ComplexCopier.copy(reader(TrueMapVector.FIELD_VALUE_NAME), writer);
   }
 }

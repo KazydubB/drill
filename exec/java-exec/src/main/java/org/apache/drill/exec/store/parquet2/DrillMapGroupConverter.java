@@ -34,9 +34,9 @@ import org.apache.parquet.schema.Type;
 import java.util.Collection;
 import java.util.Collections;
 
-public class DrillMapGroupConverter extends DrillParquetGroupConverter {
+class DrillMapGroupConverter extends DrillParquetGroupConverter {
 
-  public DrillMapGroupConverter(String name, OutputMutator mutator, BaseWriter.MapWriter mapWriter, GroupType schema,
+  DrillMapGroupConverter(String name, OutputMutator mutator, BaseWriter.MapWriter mapWriter, GroupType schema,
                     Collection<SchemaPath> columns, OptionManager options,
                     ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
     this.mutator = mutator;

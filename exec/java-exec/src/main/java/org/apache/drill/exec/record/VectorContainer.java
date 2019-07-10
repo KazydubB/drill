@@ -164,6 +164,8 @@ public class VectorContainer implements VectorAccessible {
   }
 
   // todo: handle TrueMapVector inside instead of outside
+  // todo: remove
+  @Deprecated
   public TrueMapVector addOrGet(String fieldName, MajorType fieldType, MajorType keyType, MajorType valueType, final SchemaChangeCallBack callBack) {
     final TypedFieldId id = getValueVectorId(SchemaPath.getSimplePath(fieldName));
     final TrueMapVector vector;

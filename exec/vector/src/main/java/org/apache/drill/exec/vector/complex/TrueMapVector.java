@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.drill.common.exceptions.DrillRuntimeException;
-import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
@@ -42,9 +40,9 @@ import org.apache.drill.exec.vector.SchemaChangeCallBack;
 import org.apache.drill.exec.vector.UInt4Vector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.impl.TrueMapReaderImpl;
-
+// todo: remove the import?
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
-// todo: make final?
+// todo: extend ListVector?
 public final class TrueMapVector extends RepeatedMapVector {
 
   @Deprecated // todo: remove it
@@ -103,8 +101,10 @@ public final class TrueMapVector extends RepeatedMapVector {
     return size() == NUMBER_OF_CHILDREN;
   }
 
+  // todo: remove
+  @Deprecated
   private void checkInitialized() {
-    assert initialized() : "TrueMapVector is not initialized";
+//    assert initialized() : "TrueMapVector is not initialized";
   }
 
   @Override
@@ -151,15 +151,15 @@ public final class TrueMapVector extends RepeatedMapVector {
     private final TrueMapVector from;
     private final TrueMapVector to;
 // todo: getField()?
-    public MapTransferPair(TrueMapVector from, String path, BufferAllocator allocator) {
+    MapTransferPair(TrueMapVector from, String path, BufferAllocator allocator) {
       this(from, new TrueMapVector(MaterializedField.create(path, from.getField().getType()), allocator, new SchemaChangeCallBack(), from.getKeyType(), from.getValueType()), false);
     }
 
-    public MapTransferPair(TrueMapVector from, TrueMapVector to) {
+    MapTransferPair(TrueMapVector from, TrueMapVector to) {
       this(from, to, true);
     }
 
-    protected MapTransferPair(TrueMapVector from, TrueMapVector to, boolean allocate) {
+    MapTransferPair(TrueMapVector from, TrueMapVector to, boolean allocate) {
       super(from, to, allocate);
       this.from = from;
       this.to = to;
@@ -175,6 +175,7 @@ public final class TrueMapVector extends RepeatedMapVector {
         if (vector == null) {
           continue;
         }
+        // todo: remove?
         //DRILL-1872: we add the child fields for the vector, looking up the field by name. For a map vector,
         // the child fields may be nested fields of the top level child. For example if the structure
         // of a child field is oa.oab.oabc then we add oa, then add oab to oa then oabc to oab.
@@ -217,7 +218,7 @@ public final class TrueMapVector extends RepeatedMapVector {
     public void copyValueSafe(int srcIndex, int destIndex) {
       TrueMapHolder holder = new TrueMapHolder();
       from.getAccessor().get(srcIndex, holder);
-      to.emptyPopulator.populate(destIndex + 1);
+      to.emptyPopulator.populate(destIndex + 1); // todo: uncomment?!
       int newIndex = to.offsets.getAccessor().get(destIndex);
       //todo: make these bulk copies
       for (int i = holder.start; i < holder.end; i++, newIndex++) {
@@ -267,10 +268,24 @@ public final class TrueMapVector extends RepeatedMapVector {
   }
 
   @Override
-  public ValueVector getChild(String name) {
-    if (!fieldNames.contains(name)) { // todo: change to assert?
-      throw new DrillRuntimeException("TrueMapVector has 'key' and 'value' ValueVectors only");
+  public void putChild(String name, ValueVector vector) {
+    super.putChild(name, vector);
+    // todo: decide what to do with previously set key/value types if any (make check for consistency between old and new or discard old etc.)
+    switch (name) {
+      case FIELD_KEY_NAME:
+        keyType = vector.getField().getType();
+        break;
+      case FIELD_VALUE_NAME:
+        valueType = vector.getField().getType();
+        break;
+      default:
+        logger.warn("Unknown field {} was added to TRUEMAP vector", name);
     }
+  }
+
+  @Override
+  public ValueVector getChild(String name) {
+    assert fieldNames.contains(name) : "TrueMapVector has 'key' and 'value' ValueVectors only";
     return super.getChild(name);
   }
 
@@ -315,36 +330,40 @@ public final class TrueMapVector extends RepeatedMapVector {
     }
   }
 
-  // todo: move this logic to TrueMapWriter?
   public class Mutator extends RepeatedMapVector.Mutator {
 
-    @Override
-    public void startNewValue(int index) {
-      super.startNewValue(index); // todo: implement and use this method!
-    }
+    // todo: see if this can be removed?
+//    @Override
+//    public void setValueCount(int valueCount) {
+////      checkInitialized();
+//      // todo: was working well
+////      offsets.getMutator().setValueCount(valueCount == 0 ? 0 : valueCount + 1);
+////      int childValueCount = offsets.getAccessor().get(valueCount);
+////      for (final ValueVector v : getChildren()) {
+////        v.getMutator().setValueCount(childValueCount);
+////      }
+//      super.setValueCount(valueCount);
+//    }
 
-    @Override
-    public void setValueCount(int valueCount) {
-      checkInitialized();
 
-      offsets.getMutator().setValueCount(valueCount == 0 ? 0 : valueCount + 1);
-      int childValueCount = offsets.getAccessor().get(valueCount);
-      for (final ValueVector v : getChildren()) {
-        v.getMutator().setValueCount(childValueCount);
-      }
-    }
-
-    @Override // todo: remove if the as in parent
-    public int add(int index) {
-      final int prevEnd = offsets.getAccessor().get(index + 1);
-      offsets.getMutator().setSafe(index + 1, prevEnd + 1);
-      return prevEnd;
-    }
+    // todo; needs implementation?
+//    @Override
+//    public void exchange(ValueVector.Mutator other) {
+//    }
   }
 
   @Override
   public void toNullable(ValueVector nullableVector) {
     throw new UnsupportedOperationException();
+  }
+
+  // todo: probably remove
+  @Override
+  public void exchange(ValueVector other) {
+    TrueMapVector map = (TrueMapVector) other;
+    assert this.keyType == map.keyType : "Cannot exchange TrueMapVector with different key types";
+    assert this.valueType == map.valueType : "Cannot exchange TrueMapVector with different value types";
+    super.exchange(other);
   }
 
   @Override
@@ -365,9 +384,11 @@ public final class TrueMapVector extends RepeatedMapVector {
   @Override
   MajorType getLastPathType() { // todo: probably introduce another method
     // return super.getLastPathType(); // todo: return key type? // todo: even value type?
-    return getChild(FIELD_VALUE_NAME).getField().getType();
+    return getChild(FIELD_VALUE_NAME).getField().getType(); // todo: must handle complex values... One solution may be to add a method, which gets type of value
   }
 
+  // todo: remove this method
+  @Deprecated
   public TrueMapVector addOrGet(String name, MajorType type, MajorType keyType, MajorType valueType) {
     TrueMapVector vector = super.addOrGet(name, type, TrueMapVector.class);
     vector.setKeyValueTypes(keyType, valueType);
@@ -382,18 +403,6 @@ public final class TrueMapVector extends RepeatedMapVector {
 
   @Override
   public void collectLedgers(Set<AllocationManager.BufferLedger> ledgers) { // todo: what the heck?
-  }
-
-  // todo: add javadoc
-  @Deprecated
-  public int getInnerOffset(int index) {
-    return offsets.getAccessor().get(index);
-  }
-
-  // todo: add javadoc
-  @Deprecated
-  public void setInnerOffset(int index, int offset) {
-    offsets.getMutator().setSafe(index, offset);
   }
 
   public ValueVector getKeys() {
@@ -414,9 +423,9 @@ public final class TrueMapVector extends RepeatedMapVector {
 
   public void setKeyValueTypes(MajorType keyType, MajorType valueType) {
     boolean keyTypeSupported =
-        keyType.getMode() == TypeProtos.DataMode.REQUIRED && supportedKeyTypes.contains(keyType.getMinorType());
+        /*keyType.getMode() == TypeProtos.DataMode.REQUIRED &&*/ supportedKeyTypes.contains(keyType.getMinorType());
     Preconditions.checkArgument(keyTypeSupported,
-        "Unsupported key type in TRUEMAP: " + keyType + ". Key should be REQUIRED primitive type");
+        "Unsupported key type in TRUEMAP: " + keyType + ". Key should be (REQUIRED?) primitive type");
     this.keyType = keyType;
     this.valueType = valueType;
   }

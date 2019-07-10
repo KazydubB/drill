@@ -17,6 +17,7 @@
  */
 
 import org.apache.drill.exec.expr.holders.ValueHolder;
+import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 
 <@pp.dropOutputFile />
 <@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/reader/BaseReader.java" />
@@ -42,7 +43,8 @@ public interface BaseReader extends Positionable{
   // todo: add method read(Object key, holder)
   void copyAsValue(UnionWriter writer);
   boolean isSet();
-  void read(int index, ValueHolder holder);
+  // todo: probably remove this method and cast holder to appropriate type
+  void read(ValueHolder holder);
 
   public interface MapReader extends BaseReader, Iterable<String>{
     FieldReader reader(String name);
@@ -56,7 +58,10 @@ public interface BaseReader extends Positionable{
 
   // todo: remove, and use the one for RepeatedMapReader?
   public interface TrueMapReader extends RepeatedMapReader {
+    @Deprecated
     void copyAsValue(TrueMapWriter writer);
+    // todo: actually introduce another method which will copy TrueMapVector.VALUE only
+    void copySingleValue(FieldWriter writer);
   }
   
   public interface ListReader extends BaseReader{

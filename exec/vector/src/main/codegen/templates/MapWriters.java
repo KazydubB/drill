@@ -52,6 +52,7 @@ import org.apache.drill.exec.expr.BasicTypeHelper;
  */
 @SuppressWarnings("unused")
 // todo: move TrueMapWriter to a separate FreeMarker class; extend RepeatedMapWriter?
+// todo: SingleMapWriter for TrueMapWriter
 public class ${mode}MapWriter extends AbstractFieldWriter {
 
   protected final ${containerClass} container;
@@ -62,7 +63,7 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
   private int length = -1; // (designates length for current row)
   private boolean rowStarted;
   </#if>
-  <#if mode == "Repeated">protected<#else>private</#if> int currentChildIndex = 0;</#if>
+  <#if mode == "Repeated">protected int currentChildIndex = 0;</#if>
 
   private final boolean unionEnabled; // todo: discard for True? Probably yes
 

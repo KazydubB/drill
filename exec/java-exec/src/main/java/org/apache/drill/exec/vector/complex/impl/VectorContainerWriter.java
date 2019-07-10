@@ -20,12 +20,10 @@ package org.apache.drill.exec.vector.complex.impl;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.physical.impl.OutputMutator;
-import org.apache.drill.exec.physical.impl.ScanBatch;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.MapVector;
-import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
 // todo: take a look
 public class VectorContainerWriter extends AbstractFieldWriter implements ComplexWriter {
@@ -114,20 +112,22 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
       }
     }
 
-    @Override // todo: remove
-    @Deprecated
-    public TrueMapVector addOrGet(String name, MajorType keyType, MajorType valueType) {
-      try {
-        // TrueMapVector vector = BasicTypeHelper.getNewMapVector(name, allocator, callBack, keyType, valueType);
-        TrueMapVector vector = ((ScanBatch.Mutator) mutator).addField(MaterializedField.create(name, TrueMapVector.TYPE), keyType, valueType, TrueMapVector.class);
-        vector.setKeyValueTypes(keyType, valueType); // todo: neeeded?
-        putChild(name, vector);
-        // return this.typeify(vector, TrueMapVector.class);
-        return vector;
-      } catch (SchemaChangeException e) {
-        throw new IllegalStateException(e);
-      }
-    }
+//    @Override // todo: remove
+//    @Deprecated
+//    public TrueMapVector addOrGet(String name, MajorType keyType, MajorType valueType) {
+//      try {
+//        // TrueMapVector vector = BasicTypeHelper.getNewMapVector(name, allocator, callBack, keyType, valueType);
+//        // todo: this was changed!
+//        // TrueMapVector vector = ((ScanBatch.Mutator) mutator).addField(MaterializedField.create(name, TrueMapVector.TYPE), keyType, valueType, TrueMapVector.class);
+//        TrueMapVector vector = mutator.addField(MaterializedField.create(name, TrueMapVector.TYPE), TrueMapVector.class);
+//        vector.setKeyValueTypes(keyType, valueType); // todo: neeeded?
+//        putChild(name, vector);
+//        // return this.typeify(vector, TrueMapVector.class);
+//        return vector;
+//      } catch (SchemaChangeException e) {
+//        throw new IllegalStateException(e);
+//      }
+//    }
   }
 
   @Override

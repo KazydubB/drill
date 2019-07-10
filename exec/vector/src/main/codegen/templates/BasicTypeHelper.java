@@ -214,6 +214,7 @@ public class BasicTypeHelper {
     switch (type) {
     case UNION: return UnionWriter.class;
     case MAP: return MapWriter.class;
+    // todo: change to interface when one is available
     case TRUEMAP: return TrueMapWriter.class; // todo: change!
     case LIST: return ListWriter.class;
 <#list vv.types as type>
