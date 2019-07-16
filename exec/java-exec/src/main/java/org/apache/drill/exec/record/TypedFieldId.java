@@ -18,6 +18,8 @@
 package org.apache.drill.exec.record;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.drill.common.expression.PathSegment;
@@ -42,6 +44,7 @@ public class TypedFieldId {
   final boolean isHyperReader;
   final boolean isListVector;
   final PathSegment remainder; // todo: use this one for maps!
+  private final Map<Integer, MajorType> types;
 
   public TypedFieldId(MajorType type, int... fieldIds) {
     this(type, type, type, false, null, fieldIds);
@@ -56,10 +59,11 @@ public class TypedFieldId {
   }
 
   public TypedFieldId(MajorType intermediateType, MajorType secondaryFinal, MajorType finalType, boolean isHyper, PathSegment remainder, int... fieldIds) {
-    this(intermediateType, secondaryFinal, finalType, isHyper, false, remainder, fieldIds);
+    this(intermediateType, secondaryFinal, finalType, isHyper, false, remainder, new HashMap<>(), fieldIds);
   }
 
-  public TypedFieldId(MajorType intermediateType, MajorType secondaryFinal, MajorType finalType, boolean isHyper, boolean isListVector, PathSegment remainder, int... fieldIds) {
+  public TypedFieldId(MajorType intermediateType, MajorType secondaryFinal, MajorType finalType, boolean isHyper, boolean isListVector,
+                      PathSegment remainder, Map<Integer, MajorType> types, int... fieldIds) {
     super();
     this.intermediateType = intermediateType;
     this.finalType = finalType;
@@ -68,6 +72,7 @@ public class TypedFieldId {
     this.isHyperReader = isHyper;
     this.isListVector = isListVector;
     this.remainder = remainder;
+    this.types = types;
   }
 
   public TypedFieldId cloneWithChild(int id) {
@@ -110,6 +115,11 @@ public class TypedFieldId {
     return intermediateType;
   }
 
+  public MajorType getType(int fieldId, int level) {
+//    assert types.size() - 1 > currentIndex : "Aaaarrghh!..";
+    return types.get(level);
+  }
+
   /**
    * Return the class for the value vector (type, mode).
    *
@@ -148,6 +158,7 @@ public class TypedFieldId {
     boolean withIndex = false;
     boolean isListVector = false;
     boolean withKey;
+    Map<Integer, MajorType> types = new HashMap<>();
 
     public Builder addId(int id) {
       ids.add(id);
@@ -194,6 +205,11 @@ public class TypedFieldId {
       return this;
     }
 
+    public Builder addMajorType(int index, MajorType type) {
+      this.types.put(index, type);
+      return this;
+    }
+
     public TypedFieldId build() {
       Preconditions.checkNotNull(intermediateType);
       Preconditions.checkNotNull(finalType);
@@ -215,7 +231,7 @@ public class TypedFieldId {
       // TODO: there is a bug here with some things.
       //if(intermediateType != finalType) actualFinalType = finalType.toBuilder().setMode(DataMode.OPTIONAL).build();
 
-      return new TypedFieldId(intermediateType, secondaryFinal, actualFinalType, hyperReader, isListVector, remainder, ids.toArray());
+      return new TypedFieldId(intermediateType, secondaryFinal, actualFinalType, hyperReader, isListVector, remainder, types, ids.toArray());
     }
   }
 

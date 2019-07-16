@@ -73,6 +73,7 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
     for (int i = 0; i < idx - offset; i++) {
 //      if (vector.getChild(TrueMapVector.FIELD_KEY_NAME).getAccessor().getObject(offset + i).toString().equals(key)) {
 //      if (vector.getChild(TrueMapVector.FIELD_KEY_NAME).getAccessor().getObject(offset + i).equals(key)) {
+      // todo: probably get key value of byte[] type and compare with actual values?
       Object keyValue = vector.getChild(TrueMapVector.FIELD_KEY_NAME).getAccessor().getObject(offset + i);
       if (keyValue.equals(key)) { // todo: get toString of both keyValue and key?
         index = offset + i;
@@ -83,8 +84,20 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
     return index;
   }
 
-  // todo: use this method in case of primitive VALUE in EvaluationVisition
+  public void read(String key, ValueHolder holder) {
+    read(new Text(key), holder);
+  }
+
+  public void read(int key, ValueHolder holder) {
+    read((Object) key, holder);
+  }
+
+  // todo: use this method in case of primitive VALUE in EvaluationVisitor
   public void read(Object key, ValueHolder holder) {
+    if (isNull()) {
+      return; // todo: maybe check if holder is nullable and set null explicitly
+    }
+
     int index = find(key);
     // int prevIndex = valueReader.idx();
     // todo: decide if uncomment!
@@ -134,6 +147,7 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
     return currentOffset != NO_VALUES;
   }
 
+  // todo: remove as this duplicates the method in parent
   @Override
   public boolean next() {
     if (currentOffset < maxOffset) { // todo: also add a field which will show if SPECIFIC value (i.e. found by key) is needed only
@@ -199,7 +213,8 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
     }
     // todo: overload method?
 //    writer.container.getChild(TrueMapVector.FIELD_VALUE_NAME).copyEntry(writer.idx(), (TrueMapVector) vector.getChild(TrueMapVector.FIELD_VALUE_NAME), idx());
-    ComplexCopier.copy(reader(TrueMapVector.FIELD_VALUE_NAME), writer);
+//    ComplexCopier.copy(reader(TrueMapVector.FIELD_VALUE_NAME), writer);
+    ComplexCopier.copy(this, writer);
   }
 
 //  @Override
@@ -215,6 +230,11 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl {
     ComplexCopier.copy(this, writer);
   }
 
+  /**
+   * @deprecated use #copyAsValue instead
+   * @param writer
+   */
+  @Deprecated
   @Override
   public void copySingleValue(FieldWriter writer) {
     ComplexCopier.copy(reader(TrueMapVector.FIELD_VALUE_NAME), writer);

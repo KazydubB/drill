@@ -118,17 +118,17 @@ public class TestParquetComplex extends BaseTestQuery {
         .baselineValues(1L,
               TestBuilder.mapOfObject(
                   101L,
-                  TestBuilder.mapOfObject("item_amount", 1L, "item_type", "Pencils"),
+                  TestBuilder.mapOfObject(false, "item_amount", 1L, "item_type", "Pencils"),
                   102L,
-                  TestBuilder.mapOfObject("item_amount", 2L, "item_type", "Eraser")
+                  TestBuilder.mapOfObject(false, "item_amount", 2L, "item_type", "Eraser")
               )
         )
         .baselineValues(1L,
               TestBuilder.mapOfObject(
                   102L,
-                  TestBuilder.mapOfObject("item_amount", 3L, "item_type", "Eraser"),
+                  TestBuilder.mapOfObject(false, "item_amount", 3L, "item_type", "Eraser"),
                   103L,
-                  TestBuilder.mapOfObject("item_amount", 4L, "item_type", "Coke")
+                  TestBuilder.mapOfObject(false, "item_amount", 4L, "item_type", "Coke")
             )
         )
         .go();
@@ -182,27 +182,56 @@ public class TestParquetComplex extends BaseTestQuery {
 
   @Test
   public void selectTrueMap5() throws Exception {
+    // 1, {1 : [1, 2, 3, 4, 5]}
+    // 2, {1 : [1, 2, 3, 4, 5], 2 : [2, 3]}
+    // 3, {3 : [3, 4, 5], 5 : [5, 3]}
 //    String query = "select * from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by 1 desc";
+    // todo: make sure the result is OK!
     String query = "select id, flatten(mapcol) as flat from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by id";
     testBuilder()
         .sqlQuery(query)
         .unOrdered()
         .baselineColumns("id", "flat")
         .baselineValues(1,
-            TestBuilder.mapOfObject(1, TestBuilder.listOf(1, 2, 3, 4, 5))
+            TestBuilder.mapOfObject(false, "key", 1, "value", TestBuilder.listOf(1, 2, 3, 4, 5))
         )
         .baselineValues(2,
-            TestBuilder.mapOfObject(1, TestBuilder.listOf(1, 2, 3, 4, 5), 2, TestBuilder.listOf(2, 3))
+            TestBuilder.mapOfObject(false, "key", 1, "value", TestBuilder.listOf(1, 2, 3, 4, 5))
+        )
+        .baselineValues(2,
+            TestBuilder.mapOfObject(false, "key", 2, "value", TestBuilder.listOf(2, 3))
         )
         .baselineValues(3,
-            TestBuilder.mapOfObject(3, TestBuilder.listOf(3, 4, 5), 5, TestBuilder.listOf(5, 3))
+            TestBuilder.mapOfObject(false, "key", 3, "value", TestBuilder.listOf(3, 4, 5))
         )
         .baselineValues(3,
-            TestBuilder.mapOfObject(3, TestBuilder.listOf(3, 4, 5), 5, TestBuilder.listOf(5, 3))
+            TestBuilder.mapOfObject(false, "key", 5, "value", TestBuilder.listOf(5, 3))
         )
-        .baselineValues(3,
-            TestBuilder.mapOfObject(3, TestBuilder.listOf(3, 4, 5), 5, TestBuilder.listOf(5, 3))
-        )
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapFlattenListValue() throws Exception {
+    // 1, {1 : [1, 2, 3, 4, 5]}
+    // 2, {1 : [1, 2, 3, 4, 5], 2 : [2, 3]}
+    // 3, {3 : [3, 4, 5], 5 : [5, 3]}
+//    String query = "select * from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by 1 desc";
+    // todo: As empty lists are not accounted for, make sure the result is OK!
+    String query = "select id, flatten(mapcol[1]) as flat from cp.`store/parquet/complex/map/map_int_to_int_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "flat")
+        .baselineValues(1, 1)
+        .baselineValues(1, 2)
+        .baselineValues(1, 3)
+        .baselineValues(1, 4)
+        .baselineValues(1, 5)
+        .baselineValues(2, 1)
+        .baselineValues(2, 2)
+        .baselineValues(2, 3)
+        .baselineValues(2, 4)
+        .baselineValues(2, 5)
         .go();
   }
 
@@ -287,23 +316,42 @@ public class TestParquetComplex extends BaseTestQuery {
   @Test
   public void selectTrueMapByKeyComplexValue2() throws Exception {
     // todo: this seem to work correctly just need to look at Hive's order for rows with id = 2 for asc and desc
-    //        2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
     //        1, {1: {"a", 1, "b", 2}}
+    //        2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
     //        2, {2: {"a", 1, "b", 2}, 3: {"c", 3}}
-    String query = "select id, mapcol[3] from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet` order by id asc"; // todo: order by `id` desc doesn't work
+    // todo: uncommnet!
+//    String query = "select id, mapcol[3] from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet` order by id asc"; // todo: order by `id` desc doesn't work
+    String query = "select id, mapcol[3], mapcol[4]['c'] from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet` order by id asc";
     testBuilder()
         .sqlQuery(query)
         .ordered()
-        .baselineColumns("id", "EXPR$1")
+        .baselineColumns("id", "EXPR$1", "EXPR$2")
         .baselineValues(
-            2, TestBuilder.mapOfObject("a", 1, "b", 2)
+            1, TestBuilder.mapOfObject(), null
         )
         .baselineValues(
-            1, TestBuilder.mapOfObject()
+            2, TestBuilder.mapOfObject("a", 1, "b", 2), 3
         )
         .baselineValues(
-            2, TestBuilder.mapOfObject("c", 3)
+            2, TestBuilder.mapOfObject("c", 3), null
         )
+        .go();
+  }
+
+  @Test
+  public void selectTrueMapByKeyComplexValue3() throws Exception {
+    // todo: this seem to work correctly just need to look at Hive's order for rows with id = 2 for asc and desc
+    //        1, {1: {"a", 1, "b", 2}}
+    //        2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
+    //        2, {2: {"a", 1, "b", 2}, 3: {"c", 3}}
+    String query = "select id, mapcol[3]['b'] val from cp.`store/parquet/complex/map/map_int_to_map_string_to_int.parquet` order by id asc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "val")
+        .baselineValues(1, null)
+        .baselineValues(2, 2)
+        .baselineValues(2, null)
         .go();
   }
 

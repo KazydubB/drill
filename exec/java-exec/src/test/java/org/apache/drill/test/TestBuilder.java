@@ -691,12 +691,24 @@ public class TestBuilder {
     return map;
   }
 
+//  public static JsonStringHashMap<Object, Object> mapOfObject(Object... keyValueSequence) {
+//    return mapOfObject(true, keyValueSequence);
+//  }
+
   public static JsonStringHashMap<Object, Object> mapOfObject(Object... keyValueSequence) {
-    Preconditions.checkArgument(keyValueSequence.length%2==0, "Length of key value sequence must be even");
+    boolean convertStringToText = true;
+    final int startIndex;
+    if (keyValueSequence.length % 2 == 1) {
+      convertStringToText = (boolean) keyValueSequence[0];
+      startIndex = 1;
+    } else {
+      startIndex = 0;
+    }
+//    Preconditions.checkArgument(keyValueSequence.length % 2 == 0, "Length of key value sequence must be even");
     final JsonStringHashMap<Object, Object> map = new JsonStringHashMap<>();
-    for (int i=0; i < keyValueSequence.length; i+=2) {
+    for (int i = startIndex; i < keyValueSequence.length; i += 2) {
       Object key = keyValueSequence[i];
-      if (key instanceof CharSequence) {
+      if (convertStringToText && key instanceof CharSequence) {
         key = new Text(key.toString());
       }
       Object value = keyValueSequence[i + 1];

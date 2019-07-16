@@ -384,7 +384,12 @@ public final class TrueMapVector extends RepeatedMapVector {
   @Override
   MajorType getLastPathType() { // todo: probably introduce another method
     // return super.getLastPathType(); // todo: return key type? // todo: even value type?
-    return getChild(FIELD_VALUE_NAME).getField().getType(); // todo: must handle complex values... One solution may be to add a method, which gets type of value
+//    ValueVector values = getChild(FIELD_VALUE_NAME);
+//    if (values instanceof TrueMapVector) {
+//      return ((TrueMapVector) values).getLastPathType();
+//    }
+    // todo: See if this is correct!!!!
+    return getValues().getField().getType(); // todo: must handle complex values... One solution may be to add a method, which gets type of value
   }
 
   // todo: remove this method
@@ -422,8 +427,8 @@ public final class TrueMapVector extends RepeatedMapVector {
   }
 
   public void setKeyValueTypes(MajorType keyType, MajorType valueType) {
-    boolean keyTypeSupported =
-        /*keyType.getMode() == TypeProtos.DataMode.REQUIRED &&*/ supportedKeyTypes.contains(keyType.getMinorType());
+    boolean keyTypeSupported = true; // todo: uncomment
+//        /*keyType.getMode() == TypeProtos.DataMode.REQUIRED &&*/ supportedKeyTypes.contains(keyType.getMinorType());
     Preconditions.checkArgument(keyTypeSupported,
         "Unsupported key type in TRUEMAP: " + keyType + ". Key should be (REQUIRED?) primitive type");
     this.keyType = keyType;

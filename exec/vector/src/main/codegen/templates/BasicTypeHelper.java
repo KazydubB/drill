@@ -91,19 +91,19 @@ public class BasicTypeHelper {
   }*/
 
   // todo: pass actual TrueMap MajorType? To distinguish REPEATED, OPTIONAL and REQUIRED
-  @Deprecated
-  public static TrueMapVector getNewMapVector(String name, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
-    MaterializedField field = MaterializedField.create(name, TrueMapVector.TYPE);
-    return getNewMapVector(field, allocator, callBack, keyType, valueType);
-  }
-
-  @Deprecated
-  public static TrueMapVector getNewMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
-    if (field.getType().getMinorType() == MinorType.TRUEMAP) { // todo: this one is strange!
-      return new TrueMapVector(field, allocator, callBack);
-    }
-    return new TrueMapVector(field, allocator, callBack, keyType, valueType);
-  }
+//  @Deprecated
+//  public static TrueMapVector getNewMapVector(String name, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
+//    MaterializedField field = MaterializedField.create(name, TrueMapVector.TYPE);
+//    return getNewMapVector(field, allocator, callBack, keyType, valueType);
+//  }
+//
+//  @Deprecated
+//  public static TrueMapVector getNewMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
+//    if (field.getType().getMinorType() == MinorType.TRUEMAP) { // todo: this one is strange!
+//      return new TrueMapVector(field, allocator, callBack);
+//    }
+//    return new TrueMapVector(field, allocator, callBack, keyType, valueType);
+//  }
 
   public static Class<? extends ValueVector> getValueVectorClass(MinorType type, DataMode mode){
     switch (type) {

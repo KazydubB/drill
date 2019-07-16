@@ -425,19 +425,20 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
               }
 
               final FieldReference ref = new FieldReference(name);
-              final ValueVector vvOut;
-              if (vvIn.getField().getType().getMinorType() == MinorType.TRUEMAP) {
-                // List<MaterializedField> children = new ArrayList<>(vvIn.getField().getChildren());
-                List<MaterializedField> children = (List<MaterializedField>) vvIn.getField().getChildren();
-                // todo: do not pass a field: use a name instead (as the field will be reconstructed)
-                // todo: make sure proper children are used
-                // todo: pass TrueMapVector instead?
-                vvOut = container.addOrGet(ref.getAsNamePart().getName(), vvIn.getField().getType(), // todo: use the same method as below and handle TrueMap inside the method
-                    children.get(0).getType(), children.get(1).getType(), callBack);
-              } else {
-                vvOut = container.addOrGet(MaterializedField.create(
-                    ref.getAsNamePart().getName(), vvIn.getField().getType()), callBack);
-              }
+              final ValueVector vvOut = container.addOrGet(MaterializedField.create(
+                  ref.getAsNamePart().getName(), vvIn.getField().getType()), callBack);
+//              if (vvIn.getField().getType().getMinorType() == MinorType.TRUEMAP) {
+//                // List<MaterializedField> children = new ArrayList<>(vvIn.getField().getChildren());
+//                List<MaterializedField> children = (List<MaterializedField>) vvIn.getField().getChildren();
+//                // todo: do not pass a field: use a name instead (as the field will be reconstructed)
+//                // todo: make sure proper children are used
+//                // todo: pass TrueMapVector instead?
+//                vvOut = container.addOrGet(ref.getAsNamePart().getName(), vvIn.getField().getType(), // todo: use the same method as below and handle TrueMap inside the method
+//                    children.get(0).getType(), children.get(1).getType(), callBack);
+//              } else {
+//                vvOut = container.addOrGet(MaterializedField.create(
+//                    ref.getAsNamePart().getName(), vvIn.getField().getType()), callBack);
+//              }
               final TransferPair tp = vvIn.makeTransferPair(vvOut);
               memoryManager.addTransferField(vvIn, vvIn.getField().getName(), vvOut.getField().getName());
               transfers.add(tp);
@@ -517,16 +518,18 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
         Preconditions.checkNotNull(incomingBatch); // todo: vvIn still not empty
 
         final FieldReference ref = getRef(namedExpression);
-        final ValueVector vvOut; // todo: git gud
-        if (vvIn.getField().getType().getMinorType() == MinorType.TRUEMAP) { // todo: there
-          List<MaterializedField> children = (List<MaterializedField>) vvIn.getField().getChildren(); // todo: use the method below and handle TrueMap inside the method
-          vvOut = container.addOrGet(ref.getLastSegment().getNameSegment().getPath(), vectorRead.getMajorType(),
-              children.get(0).getType(), children.get(1).getType(), callBack);
-        } else {
-          vvOut = container.addOrGet(MaterializedField.create(
-              ref.getLastSegment().getNameSegment().getPath(), vectorRead.getMajorType()), callBack);
-        }
-        final TransferPair tp = vvIn.makeTransferPair(vvOut); // todo: probably the crap is here
+        final ValueVector vvOut = container.addOrGet(MaterializedField.create(
+            ref.getLastSegment().getNameSegment().getPath(), vectorRead.getMajorType()), callBack);
+//        final ValueVector vvOut; // todo: git gud
+//        if (vvIn.getField().getType().getMinorType() == MinorType.TRUEMAP) { // todo: there
+//          List<MaterializedField> children = (List<MaterializedField>) vvIn.getField().getChildren(); // todo: use the method below and handle TrueMap inside the method
+//          vvOut = container.addOrGet(ref.getLastSegment().getNameSegment().getPath(), vectorRead.getMajorType(),
+//              children.get(0).getType(), children.get(1).getType(), callBack);
+//        } else {
+//          vvOut = container.addOrGet(MaterializedField.create(
+//              ref.getLastSegment().getNameSegment().getPath(), vectorRead.getMajorType()), callBack);
+//        }
+        final TransferPair tp = vvIn.makeTransferPair(vvOut);
         memoryManager.addTransferField(vvIn, TypedFieldId.getPath(id, incomingBatch), vvOut.getField().getName());
         transfers.add(tp);
         transferFieldIds.add(vectorRead.getFieldId().getFieldIds()[0]);

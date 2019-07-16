@@ -33,7 +33,6 @@ import org.apache.drill.exec.record.selection.SelectionVector4;
 import org.apache.drill.exec.vector.SchemaChangeCallBack;
 import org.apache.drill.exec.vector.ValueVector;
 
-import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 import org.apache.drill.shaded.guava.com.google.common.collect.Sets;
@@ -165,23 +164,23 @@ public class VectorContainer implements VectorAccessible {
 
   // todo: handle TrueMapVector inside instead of outside
   // todo: remove
-  @Deprecated
-  public TrueMapVector addOrGet(String fieldName, MajorType fieldType, MajorType keyType, MajorType valueType, final SchemaChangeCallBack callBack) {
-    final TypedFieldId id = getValueVectorId(SchemaPath.getSimplePath(fieldName));
-    final TrueMapVector vector;
-    if (id != null) {
-      vector = (TrueMapVector) getValueAccessorById(id.getFieldIds()).getValueVector();
-      if (id.getFieldIds().length == 1 && !vector.getField().getType().equals(fieldType)) {
-        TrueMapVector newVector = TypeHelper.getNewMapVector(fieldName, this.getAllocator(), callBack, keyType, valueType);
-        replace(vector, newVector);
-        return newVector;
-      }
-    } else {
-      vector = TypeHelper.getNewMapVector(fieldName, this.getAllocator(), callBack, keyType, valueType);
-      add(vector);
-    }
-    return vector;
-  }
+//  @Deprecated
+//  public TrueMapVector addOrGet(String fieldName, MajorType fieldType, MajorType keyType, MajorType valueType, final SchemaChangeCallBack callBack) {
+//    final TypedFieldId id = getValueVectorId(SchemaPath.getSimplePath(fieldName));
+//    final TrueMapVector vector;
+//    if (id != null) {
+//      vector = (TrueMapVector) getValueAccessorById(id.getFieldIds()).getValueVector();
+//      if (id.getFieldIds().length == 1 && !vector.getField().getType().equals(fieldType)) {
+//        TrueMapVector newVector = TypeHelper.getNewMapVector(fieldName, this.getAllocator(), callBack, keyType, valueType);
+//        replace(vector, newVector);
+//        return newVector;
+//      }
+//    } else {
+//      vector = TypeHelper.getNewMapVector(fieldName, this.getAllocator(), callBack, keyType, valueType);
+//      add(vector);
+//    }
+//    return vector;
+//  }
 
   public <T extends ValueVector> T addOrGet(String name, MajorType type, Class<T> clazz) {
     MaterializedField field = MaterializedField.create(name, type);
