@@ -503,7 +503,7 @@ public class ScanBatch implements CloseableRecordBatch {
     private <T extends ValueVector> T addField(MaterializedField field,
         Class<T> clazz, boolean isImplicitField) throws SchemaChangeException {
       Map<String, ValueVector> fieldVectorMap;
-// todo: revise the same method for map!
+
       if (isImplicitField) {
         fieldVectorMap = implicitFieldVectorMap;
       } else {
@@ -549,57 +549,6 @@ public class ScanBatch implements CloseableRecordBatch {
 
       return clazz.cast(v);
     }
-    // todo: remove
-//    @Deprecated
-//    public <T extends ValueVector> T addField(MaterializedField field, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType, // todo: change return type
-//                                               Class<T> clazz/*, boolean isImplicitField*/) throws SchemaChangeException { // todo: remove clazz
-//      Map<String, ValueVector> fieldVectorMap;
-//      boolean isImplicitField = false;
-//      if (isImplicitField) {
-//        fieldVectorMap = implicitFieldVectorMap;
-//      } else {
-//        fieldVectorMap = regularFieldVectorMap;
-//      }
-//
-//      if (!isImplicitField && implicitFieldVectorMap.containsKey(field.getName()) ||
-//          isImplicitField && regularFieldVectorMap.containsKey(field.getName())) {
-//        throw new SchemaChangeException(
-//            String.format(
-//                "It's not allowed to have regular field and implicit field share common name %s. "
-//                    + "Either change regular field name in datasource, or change the default implicit field names.",
-//                field.getName()));
-//      }
-//
-//      // Check if the field exists.
-//      ValueVector v = fieldVectorMap.get(field.getName());
-//      // for the cases when fields have a different scale or precision,
-//      // the new vector should be used to handle the value correctly
-//      if (v == null || !v.getField().getType().equals(field.getType())) {
-//        // Field does not exist--add it to the map and the output container.
-//        v = BasicTypeHelper.getNewMapVector(field.getName(), allocator, callBack, keyType, valueType); // TypeHelper.getNewVector(field, allocator, callBack);
-//        if (!clazz.isAssignableFrom(v.getClass())) {
-//          throw new SchemaChangeException(
-//              String.format(
-//                  "The class that was provided, %s, does not correspond to the "
-//                      + "expected vector type of %s.",
-//                  clazz.getSimpleName(), v.getClass().getSimpleName()));
-//        }
-//
-//        final ValueVector old = fieldVectorMap.put(field.getName(), v);
-//        if (old != null) {
-//          old.clear();
-//          container.remove(old);
-//        }
-//
-//        container.add(v);
-//        // Only mark schema change for regular vectors added to the container; implicit schema is constant.
-//        if (!isImplicitField) {
-//          schemaChanged = true;
-//        }
-//      }
-//
-//      return clazz.cast(v);
-//    }
 
     private void populateImplicitVectors(Map<String, String> implicitValues, int recordCount) {
       if (implicitValues != null) {

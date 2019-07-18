@@ -48,7 +48,6 @@ import org.apache.drill.exec.store.parquet.ParquetReaderUtility;
 import org.apache.drill.exec.store.parquet.columnreaders.ParquetColumnMetadata;
 import org.apache.drill.exec.vector.complex.impl.RepeatedMapWriter;
 import org.apache.drill.exec.vector.complex.impl.SingleMapWriter;
-import org.apache.drill.exec.vector.complex.impl.TrueMapWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter;
 import org.apache.drill.exec.vector.complex.writer.BigIntWriter;
@@ -432,10 +431,9 @@ public class DrillParquetGroupConverter extends GroupConverter {
     }
   }
 
-  private boolean isMapWriter() {
+  boolean isMapWriter() {
     return baseWriter instanceof SingleMapWriter
-        || baseWriter instanceof RepeatedMapWriter
-        || baseWriter instanceof TrueMapWriter; // todo: can be removed as this one extends RepeatedMapWriter
+        || baseWriter instanceof RepeatedMapWriter;
   }
 
   @Override
@@ -473,7 +471,6 @@ public class DrillParquetGroupConverter extends GroupConverter {
 
     @Override
     public void addInt(int value) {
-      System.out.println("writing int value: " + value);
       holder.value = value;
       writer.write(holder);
     }

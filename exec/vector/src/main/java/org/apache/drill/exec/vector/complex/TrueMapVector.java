@@ -51,6 +51,7 @@ public final class TrueMapVector extends RepeatedMapVector {
   public static final String FIELD_KEY_NAME = "key";
   public static final String FIELD_VALUE_NAME = "value";
   public static final List<String> fieldNames = Collections.unmodifiableList(Arrays.asList(FIELD_KEY_NAME, FIELD_VALUE_NAME)); // todo: rename to childNames
+  @Deprecated
   public static final int NUMBER_OF_CHILDREN = 2;
 
   private static final List<MinorType> supportedKeyTypes = Collections.unmodifiableList(Arrays.asList(MinorType.INT, MinorType.VARCHAR, MinorType.BIGINT));
@@ -59,6 +60,7 @@ public final class TrueMapVector extends RepeatedMapVector {
 
   private MajorType keyType;
   private MajorType valueType;
+  private boolean keysSorted; // todo: make use of this
 
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
@@ -186,6 +188,7 @@ public final class TrueMapVector extends RepeatedMapVector {
         // read). To take care of this, we ensure that the hashCode of the MaterializedField does not
         // include the hashCode of the children but is based only on MaterializedField$key.
         final ValueVector newVector;
+        // todo: remove!
         if (vector.getField().getType().getMinorType() == MinorType.TRUEMAP) {
           TrueMapVector mapVector = (TrueMapVector) vector;
           newVector = to.addOrGet(child, mapVector.getField().getType(), mapVector.getKeyType(), mapVector.getValueType());
@@ -331,25 +334,6 @@ public final class TrueMapVector extends RepeatedMapVector {
   }
 
   public class Mutator extends RepeatedMapVector.Mutator {
-
-    // todo: see if this can be removed?
-//    @Override
-//    public void setValueCount(int valueCount) {
-////      checkInitialized();
-//      // todo: was working well
-////      offsets.getMutator().setValueCount(valueCount == 0 ? 0 : valueCount + 1);
-////      int childValueCount = offsets.getAccessor().get(valueCount);
-////      for (final ValueVector v : getChildren()) {
-////        v.getMutator().setValueCount(childValueCount);
-////      }
-//      super.setValueCount(valueCount);
-//    }
-
-
-    // todo; needs implementation?
-//    @Override
-//    public void exchange(ValueVector.Mutator other) {
-//    }
   }
 
   @Override
@@ -382,12 +366,7 @@ public final class TrueMapVector extends RepeatedMapVector {
   }
 
   @Override
-  MajorType getLastPathType() { // todo: probably introduce another method
-    // return super.getLastPathType(); // todo: return key type? // todo: even value type?
-//    ValueVector values = getChild(FIELD_VALUE_NAME);
-//    if (values instanceof TrueMapVector) {
-//      return ((TrueMapVector) values).getLastPathType();
-//    }
+  MajorType getLastPathType() {
     // todo: See if this is correct!!!!
     return getValues().getField().getType(); // todo: must handle complex values... One solution may be to add a method, which gets type of value
   }

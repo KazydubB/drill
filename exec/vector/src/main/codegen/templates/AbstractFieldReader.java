@@ -65,11 +65,7 @@ public abstract class AbstractFieldReader extends AbstractBaseReader implements 
   </#list>
 
   public void copyAsValue(MapWriter writer) {
-    fail("CopyAsValue MapWriter");
-  }
-
-  public void copySingleValue(FieldWriter writer) {
-    fail("copySingleValue");
+    fail("copyAsValue(MapWriter writer)");
   }
 
   public void copyAsField(String name, MapWriter writer) {
@@ -113,11 +109,11 @@ public abstract class AbstractFieldReader extends AbstractBaseReader implements 
   </#list></#list>
 
   public void copyAsValue(TrueMapWriter writer) {
-    fail("CopyAsValue TrueMapWriter");
+    fail("CopyAsValue(TrueMapWriter writer)");
   }
 
   public void read(int arrayIndex, UntypedNullHolder holder) {
-      fail("UntypedNullHolder");
+    fail("UntypedNullHolder");
   }
 
   public FieldReader reader(String name) {
@@ -133,6 +129,24 @@ public abstract class AbstractFieldReader extends AbstractBaseReader implements 
   public int size() {
     fail("size()");
     return -1;
+  }
+
+  public int find(String key) {
+    fail("find(String key)");
+    return -1;
+  }
+
+  public int find(int key) {
+    fail("find(int key)");
+    return -1;
+  }
+
+  public void read(String key, ValueHolder holder) {
+    fail("read(String key, ValueHolder holder)");
+  }
+
+  public void read(int key, ValueHolder holder) {
+    fail("read(int key, ValueHolder holder)");
   }
 
   private void fail(String name) {

@@ -43,7 +43,7 @@ public class ${mode}ListWriter extends AbstractFieldWriter {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(${mode}ListWriter.class);
 
   enum Mode {
-    INIT, IN_MAP, IN_LIST
+    INIT, IN_MAP, IN_LIST, IN_TRUEMAP
     <#list vv.types as type><#list type.minor as minor>,
     IN_${minor.class?upper_case}</#list></#list> }
 
@@ -125,6 +125,31 @@ public class ${mode}ListWriter extends AbstractFieldWriter {
       throw UserException
         .unsupportedError()
         .message(getUnsupportedErrorMsg("MAP", mode.name()))
+        .build(logger);
+    }
+  }
+
+  @Override
+  public TrueMapWriter trueMap() {
+    switch (mode) {
+    case INIT:
+      final ValueVector oldVector = container.getChild(name);
+      final TrueMapVector vector = container.addOrGet(name, TrueMapVector.TYPE, TrueMapVector.class);
+      innerVector = vector;
+      writer = new TrueMapWriterImpl(vector, this);
+      // oldVector will be null if it's first batch being created and it might not be same as newly added vector
+      // if new batch has schema change
+      if (oldVector == null || oldVector != vector) {
+        writer.allocate();
+      }
+      writer.setPosition(${index});
+      mode = Mode.IN_TRUEMAP;
+      return writer;
+    case IN_TRUEMAP:
+      return writer;
+    default:
+      throw UserException.unsupportedError()
+        .message(getUnsupportedErrorMsg("TRUEMAP", mode.name()))
         .build(logger);
     }
   }

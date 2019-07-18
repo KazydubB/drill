@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 <@pp.dropOutputFile />
-<#list ["Single", "Repeated"] as mode> <#-- remove 'True' -->
+<#list ["Single", "Repeated"] as mode>
 <@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/impl/${mode}MapWriter.java" />
 <#if mode == "Single">
 <#assign containerClass = "MapVector" />
@@ -24,9 +24,6 @@
 <#elseif mode == "Repeated">
 <#assign containerClass = "RepeatedMapVector" />
 <#assign index = "currentChildIndex">
-<#elseif mode == "True"> // todo: remove it from here and extend RepeatedMapWriter instead
-<#assign containerClass = "TrueMapVector" />
-<#assign index = "idx()"> // todo: change to currentRow, and set it to 0 default
 </#if>
 
 <#include "/@includes/license.ftl" />
@@ -42,30 +39,18 @@ import org.apache.drill.exec.expr.holders.RepeatedMapHolder;
 import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.FieldWriter;
-<#if mode == "True">
-import org.apache.drill.common.types.TypeProtos;
-import org.apache.drill.exec.expr.BasicTypeHelper;
-</#if>
 
 /*
  * This class is generated using FreeMarker and the ${.template_name} template.
  */
 @SuppressWarnings("unused")
-// todo: move TrueMapWriter to a separate FreeMarker class; extend RepeatedMapWriter?
-// todo: SingleMapWriter for TrueMapWriter
 public class ${mode}MapWriter extends AbstractFieldWriter {
 
   protected final ${containerClass} container;
   <#if mode == "Repeated">protected<#else>private</#if> final Map<String, FieldWriter> fields = new HashMap<>();
-// todo: change to int lastSet
-  <#if mode == "True">
-  private int currentRow = -1;
-  private int length = -1; // (designates length for current row)
-  private boolean rowStarted;
-  </#if>
   <#if mode == "Repeated">protected int currentChildIndex = 0;</#if>
 
-  private final boolean unionEnabled; // todo: discard for True? Probably yes
+  private final boolean unionEnabled;
 
   public ${mode}MapWriter(${containerClass} container, FieldWriter parent, boolean unionEnabled) {
     super(parent);
@@ -76,34 +61,6 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
   public ${mode}MapWriter(${containerClass} container, FieldWriter parent) {
     this(container, parent, false);
   }
-
-  <#if mode == "True">
-  public void startKeyValuePair() {
-    // todo: should entry be marked as not-set (null) explicitly?
-    int idx = idx();
-//    super.setPosition(currentRow);
-    int index = getPosition();
-    assert rowStarted : "Must start row (start()) before put";
-    for (FieldWriter writer : fields.values()) {
-    writer.setPosition(index); // todo: variable
-    }
-    // setPosition(getPosition()); // todo: remove?
-  }
-
-// todo: discard
-  @Deprecated
-  private int getPosition() { // todo: rename to index?
-    assert rowStarted : "Must start row (start()) before getPosition()";
-    // todo: change currentRow with idx()?
-    int offset = container.getInnerOffset(currentRow); // todo: there can be problems connected to this
-    return offset + length;
-  }
-
-  public void endKeyValuePair() {
-    assert rowStarted : "Must start row (start()) before incrementing current length";
-    length++;
-  }
-  </#if>
 
   @Override
   public int getValueCapacity() {
@@ -140,22 +97,14 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
     return writer;
   }
 
-  // todo: change this!?
-  @Override // todo: TrueMapWriter should support his operation. As well as others map(), list() and list(String name)
-  public TrueMapWriter trueMap(String name, MajorType keyType, MajorType valueType) {
-    <#if mode == "True">
-    assert TrueMapVector.FIELD_VALUE_NAME.equals(name) : "Only value field is allowed in TrueMap";
-    // todo: change to FieldWriter?
-    </#if>
-    TrueMapWriter writer = (TrueMapWriter) fields.get(name.toLowerCase());
+  @Override
+  public TrueMapWriter trueMap(String name) {
+    FieldWriter writer = fields.get(name.toLowerCase());
     if (writer == null) {
-      int vectorCount=container.size();
+      int vectorCount = container.size();
 
-      // todo: this one... probably reimplement addOrGet
       TrueMapVector vector = container.addOrGet(name, TrueMapVector.TYPE, TrueMapVector.class);
-      vector.setKeyValueTypes(keyType, valueType);
-
-      writer = new TrueMapWriter(vector, this);
+      writer = new SingleTrueMapWriter(vector, this);
 
       fields.put(name.toLowerCase(), writer);
       if(vectorCount != container.size()) {
@@ -163,20 +112,8 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
       }
       writer.setPosition(${index});
     }
-    return writer; // todo: implement properly!
+    return writer;
   }
-
-  <#if mode == "True">
-  @Override
-  public FieldWriter getKeyWriter() {
-    return fields.get(TrueMapVector.FIELD_KEY_NAME);
-  }
-
-  @Override
-  public FieldWriter getValueWriter() {
-    return fields.get(TrueMapVector.FIELD_VALUE_NAME);
-  }
-  </#if>
 
   @Override
   public void close() throws Exception {
@@ -222,9 +159,9 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
 
   public void start() {
       // update the repeated vector to state that there is current+1 objects.
-    final ${mode}MapHolder h = new ${mode}MapHolder();
-    final ${mode}MapVector map = container;
-    final ${mode}MapVector.Mutator mutator = map.getMutator();
+    final RepeatedMapHolder h = new RepeatedMapHolder();
+    final RepeatedMapVector map = container;
+    final RepeatedMapVector.Mutator mutator = map.getMutator();
 
     // Make sure that the current vector can support the end position of this list.
     if(container.getValueCapacity() <= idx()) {
@@ -254,80 +191,19 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
   @Override
   public void setPosition(int index) {
     super.setPosition(index);
-<#if mode != "True">
     for(final FieldWriter w: fields.values()) {
       w.setPosition(index);
     }
-    <#else>
-    // todo: remove?
-//    if (fields.size() == TrueMapVector.NUMBER_OF_CHILDREN) {
-//      getKeyWriter().setPosition(index);
-//      getValueWriter().setPosition(index);
-//    }
-    </#if>
   }
 
   @Override
   public void start() {
-  <#if mode == "True"> // todo: remove
-    currentRow++; // todo: currentRow = idx();
-    length = 0;
-    rowStarted = true;
-  </#if>
   }
 
   @Override
   public void end() {
-  <#if mode == "True">
-    assert rowStarted : "Must start row (start()) before end()";
-    int offset = container.getInnerOffset(currentRow); // todo: this may be not true in a case when currentRow is
-    rowStarted = false;
-    int currentOffset = length;
-//    if (currentRow > 0) {
-    currentOffset += offset;//container.getInnerOffset(currentRow);
-//    } // todo: decide if this should be done for currentRow + 1 or not
-    container.setInnerOffset(currentRow + 1, currentOffset);
-  </#if>
   }
-
   </#if>
-
-<#if mode == "True">
-public void put(int outputIndex, Object key, Object value) { // todo: outputIndex?
-    assert rowStarted : "Must start row (startRow()) before put";
-
-    int index = getPosition();
-    // todo: change this?
-    setValue(container.getKeys(), key, index);
-    setValue(container.getValues(), value, index);
-    length++;
-    }
-
-private void setValue(ValueVector vector, Object value, int index) {
-    if (vector instanceof NullableIntVector) { // todo: not instanceof but type?
-    ((NullableIntVector) vector).getMutator().setSafe(index, (int) value);
-    } else if (vector instanceof NullableVarCharVector) {
-    byte[] bytes = (byte[]) value;
-    ((NullableVarCharVector) vector).getMutator().setSafe(index, bytes, 0, bytes.length);
-    }
-    }
-
-public void put(int outputIndex, ValueHolder keyHolder, ValueHolder valueHolder) { // todo: outputIndex?
-    assert rowStarted : "Must start row (startRow()) before put";
-
-    int index = getPosition();
-    getKeyWriter().setPosition(index);
-    getValueWriter().setPosition(index);
-    }
-
-public MajorType getKeyType() {
-    return container.getKeyType();
-    }
-
-public MajorType getValueType() {
-    return container.getValueType();
-    }
-</#if>
 
   <#list vv.types as type><#list type.minor as minor>
   <#assign lowerName = minor.class?uncap_first />
@@ -350,7 +226,6 @@ public MajorType getValueType() {
   public ${minor.class}Writer ${lowerName}(String name, int scale, int precision) {
     final MajorType ${upperName}_TYPE = Types.withScaleAndPrecision(MinorType.${upperName}, DataMode.OPTIONAL, scale, precision);
   <#else>
-  // todo: make optional/required variants?
   private static final MajorType ${upperName}_TYPE = Types.optional(MinorType.${upperName});
   @Override
   public ${minor.class}Writer ${lowerName}(String name) {

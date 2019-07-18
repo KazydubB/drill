@@ -691,10 +691,16 @@ public class TestBuilder {
     return map;
   }
 
-//  public static JsonStringHashMap<Object, Object> mapOfObject(Object... keyValueSequence) {
-//    return mapOfObject(true, keyValueSequence);
-//  }
-
+  /**
+   * Convenience method to create an instance of {@link JsonStringHashMap}{@code <Object, Object>} with the given key-value sequence.
+   *
+   * By default, any {@link String} instance will be wrapped by {@link Text} instance. To disable wrapping pass
+   * {@code false} as the first object to key-value sequence.
+   *
+   * @param keyValueSequence sequence of key-value pairs with optional boolean
+   *                         flag which disables wrapping String instances by {@link Text}.
+   * @return map consisting of entries given in the key-value sequence.
+   */
   public static JsonStringHashMap<Object, Object> mapOfObject(Object... keyValueSequence) {
     boolean convertStringToText = true;
     final int startIndex;
@@ -704,7 +710,7 @@ public class TestBuilder {
     } else {
       startIndex = 0;
     }
-//    Preconditions.checkArgument(keyValueSequence.length % 2 == 0, "Length of key value sequence must be even");
+
     final JsonStringHashMap<Object, Object> map = new JsonStringHashMap<>();
     for (int i = startIndex; i < keyValueSequence.length; i += 2) {
       Object key = keyValueSequence[i];

@@ -56,12 +56,12 @@ public interface BaseReader extends Positionable{
     void copyAsValue(MapWriter writer);
   }
 
-  // todo: remove, and use the one for RepeatedMapReader?
   public interface TrueMapReader extends RepeatedMapReader {
-    @Deprecated
     void copyAsValue(TrueMapWriter writer);
-    // todo: actually introduce another method which will copy TrueMapVector.VALUE only
-    void copySingleValue(FieldWriter writer);
+    int find(String key);
+    int find(int key);
+    void read(String key, ValueHolder holder);
+    void read(int key, ValueHolder holder);
   }
   
   public interface ListReader extends BaseReader{

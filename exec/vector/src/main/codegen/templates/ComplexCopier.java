@@ -123,9 +123,7 @@ public class ComplexCopier {
     case MAP:
       return (FieldWriter) writer.map(name);
     case TRUEMAP:
-      MajorType keyType = reader.reader(TrueMapVector.FIELD_KEY_NAME).getType();
-      MajorType valueType = reader.reader(TrueMapVector.FIELD_VALUE_NAME).getType();
-      return writer.trueMap(name, keyType, valueType);
+      return (FieldWriter) writer.trueMap(name);
     case LIST:
       return (FieldWriter) writer.list(name);
     default:

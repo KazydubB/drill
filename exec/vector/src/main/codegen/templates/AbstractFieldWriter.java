@@ -15,9 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import org.apache.drill.common.types.TypeProtos;
-
 <@pp.dropOutputFile />
 <@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/impl/AbstractFieldWriter.java" />
 
@@ -98,6 +95,12 @@ abstract class AbstractFieldWriter extends AbstractBaseWriter implements FieldWr
   }
 
   @Override
+  public TrueMapWriter trueMap() {
+    fail("TrueMap");
+    return null;
+  }
+
+  @Override
   public ListWriter list() {
     fail("List");
     return null;
@@ -110,7 +113,7 @@ abstract class AbstractFieldWriter extends AbstractBaseWriter implements FieldWr
   }
 
   @Override
-  public TrueMapWriter trueMap(String name, MajorType keyType, MajorType valueType) {
+  public TrueMapWriter trueMap(String name) {
     fail("TrueMap");
     return null;
   }
@@ -125,6 +128,16 @@ abstract class AbstractFieldWriter extends AbstractBaseWriter implements FieldWr
   public FieldWriter getValueWriter() {
     fail("ValueWriter");
     return null;
+  }
+
+  @Override
+  public void startKeyValuePair() {
+    fail("startKeyValuePair()");
+  }
+
+  @Override
+  public void endKeyValuePair() {
+    fail("endKeyValuePair()");
   }
 
   @Override

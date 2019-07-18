@@ -148,7 +148,21 @@ public class NullReader extends AbstractBaseReader implements FieldReader {
   public void copyAsValue(TrueMapWriter writer) {}
 
   @Override
-  public void copySingleValue(FieldWriter writer) {
+  public int find(String key) {
+    return -1;
+  }
+
+  @Override
+  public int find(int key) {
+    return -1;
+  }
+
+  @Override
+  public void read(String key, ValueHolder holder) {
+  }
+
+  @Override
+  public void read(int key, ValueHolder holder) {
   }
 }
 
