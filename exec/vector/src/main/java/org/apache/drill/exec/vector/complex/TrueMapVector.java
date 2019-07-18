@@ -17,8 +17,6 @@
  */
 package org.apache.drill.exec.vector.complex;
 
-import io.netty.buffer.DrillBuf;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
@@ -37,22 +36,18 @@ import org.apache.drill.exec.record.TransferPair;
 import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.util.JsonStringHashMap;
 import org.apache.drill.exec.vector.SchemaChangeCallBack;
-import org.apache.drill.exec.vector.UInt4Vector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.impl.TrueMapReaderImpl;
 // todo: remove the import?
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
-// todo: extend ListVector?
+
 public final class TrueMapVector extends RepeatedMapVector {
 
-  @Deprecated // todo: remove it
-  public final static MajorType TYPE = Types.optional(MinorType.TRUEMAP); // todo: change!
+  public final static MajorType TYPE = Types.optional(MinorType.TRUEMAP);
 
   public static final String FIELD_KEY_NAME = "key";
   public static final String FIELD_VALUE_NAME = "value";
-  public static final List<String> fieldNames = Collections.unmodifiableList(Arrays.asList(FIELD_KEY_NAME, FIELD_VALUE_NAME)); // todo: rename to childNames
-  @Deprecated
-  public static final int NUMBER_OF_CHILDREN = 2;
+  public static final List<String> fieldNames = Collections.unmodifiableList(Arrays.asList(FIELD_KEY_NAME, FIELD_VALUE_NAME));
 
   private static final List<MinorType> supportedKeyTypes = Collections.unmodifiableList(Arrays.asList(MinorType.INT, MinorType.VARCHAR, MinorType.BIGINT));
   private static final List<MinorType> complexTypes = Collections.unmodifiableList(Arrays.asList(MinorType.MAP, MinorType.TRUEMAP, MinorType.LIST, MinorType.UNION));
@@ -82,52 +77,11 @@ public final class TrueMapVector extends RepeatedMapVector {
   }
 
   @Override
-  public void setInitialCapacity(int numRecords) {
-    checkInitialized();
-    super.setInitialCapacity(numRecords);
-  }
-
-  @Override
-  public int getBufferSize() {
-    checkInitialized();
-    return super.getBufferSize();
-  }
-
-  @Override
-  public int getAllocatedSize() {
-    checkInitialized();
-    return super.getAllocatedSize();
-  }
-
-  public boolean initialized() {
-    return size() == NUMBER_OF_CHILDREN;
-  }
-
-  // todo: remove
-  @Deprecated
-  private void checkInitialized() {
-//    assert initialized() : "TrueMapVector is not initialized";
-  }
-
-  @Override
-  public int getBufferSizeFor(final int valueCount) {
-    checkInitialized();
-    return super.getBufferSizeFor(valueCount);
-  }
-
-  @Override
-  public DrillBuf[] getBuffers(boolean clear) {
-    checkInitialized();
-    return super.getBuffers(clear);
-  }
-
-  @Override
   protected Collection<String> getChildFieldNames() {
     return fieldNames;
   }
 
   public void transferTo(TrueMapVector target) {
-    checkInitialized();
     super.makeTransferPair(target);
     target.setKeyValueTypes(keyType, valueType);
   }
@@ -139,7 +93,7 @@ public final class TrueMapVector extends RepeatedMapVector {
 
   @Override
   public TransferPair makeTransferPair(ValueVector to) {
-    return new MapTransferPair(this, (TrueMapVector) to); // todo: here?
+    return new MapTransferPair(this, (TrueMapVector) to);
   }
 
   @Override
@@ -147,12 +101,11 @@ public final class TrueMapVector extends RepeatedMapVector {
     return new MapTransferPair(this, ref, allocator);
   }
 
-//  private static class MapTransferPair implements TransferPair { // todo: extend one for repeated map?
-  private static class MapTransferPair extends RepeatedMapVector.RepeatedMapTransferPair { // todo: extend one for repeated map?
+  private static class MapTransferPair extends RepeatedMapVector.RepeatedMapTransferPair {
     private final TransferPair[] pairs;
     private final TrueMapVector from;
     private final TrueMapVector to;
-// todo: getField()?
+
     MapTransferPair(TrueMapVector from, String path, BufferAllocator allocator) {
       this(from, new TrueMapVector(MaterializedField.create(path, from.getField().getType()), allocator, new SchemaChangeCallBack(), from.getKeyType(), from.getValueType()), false);
     }
@@ -172,7 +125,7 @@ public final class TrueMapVector extends RepeatedMapVector {
       int i = 0;
       ValueVector vector;
       for (String child : from.getChildFieldNames()) {
-        int preSize = to.size(); // todo: this may be incorrect // todo: get back to this
+        int preSize = to.size();
         vector = from.getChild(child);
         if (vector == null) {
           continue;
@@ -187,15 +140,15 @@ public final class TrueMapVector extends RepeatedMapVector {
         // (This is similar to what happens in ScanBatch where the children cannot be added till they are
         // read). To take care of this, we ensure that the hashCode of the MaterializedField does not
         // include the hashCode of the children but is based only on MaterializedField$key.
-        final ValueVector newVector;
+        final ValueVector newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
         // todo: remove!
-        if (vector.getField().getType().getMinorType() == MinorType.TRUEMAP) {
-          TrueMapVector mapVector = (TrueMapVector) vector;
-          newVector = to.addOrGet(child, mapVector.getField().getType(), mapVector.getKeyType(), mapVector.getValueType());
-          // todo: handle children here?
-        } else {
-          newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
-        }
+//        if (vector.getField().getType().getMinorType() == MinorType.TRUEMAP) {
+//          TrueMapVector mapVector = (TrueMapVector) vector;
+//          newVector = to.addOrGet(child, mapVector.getField().getType(), mapVector.getKeyType(), mapVector.getValueType());
+//          // todo: handle children here?
+//        } else {
+//          newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
+//        }
         if (allocate && to.size() != preSize) { // todo: uncomment? Revise!
           newVector.allocateNew(); // todo: do not allocate everytime!
         }
@@ -217,6 +170,7 @@ public final class TrueMapVector extends RepeatedMapVector {
       from.clear();
     }
 
+    // todo: remove if safe
     @Override
     public void copyValueSafe(int srcIndex, int destIndex) {
       TrueMapHolder holder = new TrueMapHolder();
@@ -232,37 +186,32 @@ public final class TrueMapVector extends RepeatedMapVector {
       to.offsets.getMutator().setSafe(destIndex + 1, newIndex);
     }
 
-    @Override
-    public void splitAndTransfer(final int groupStart, final int groups) {
-      final UInt4Vector.Accessor a = from.offsets.getAccessor();
-      final UInt4Vector.Mutator m = to.offsets.getMutator();
-
-      final int startPos = a.get(groupStart);
-      final int endPos = a.get(groupStart + groups);
-      final int valuesToCopy = endPos - startPos;
-
-      to.offsets.clear();
-      to.offsets.allocateNew(groups + 1);
-
-      int normalizedPos;
-      for (int i = 0; i < groups + 1; i++) {
-        normalizedPos = a.get(groupStart + i) - startPos;
-        m.set(i, normalizedPos);
-      }
-
-      m.setValueCount(groups + 1);
-      to.emptyPopulator.populate(groups);
-
-      for (final TransferPair p : pairs) {
-        p.splitAndTransfer(startPos, valuesToCopy);
-      }
-    }
-  }
-
-  @Override
-  public int getValueCapacity() {
-    checkInitialized();
-    return super.getValueCapacity();
+    // todo: remove if safe
+//    @Override
+//    public void splitAndTransfer(final int groupStart, final int groups) {
+//      final UInt4Vector.Accessor a = from.offsets.getAccessor();
+//      final UInt4Vector.Mutator m = to.offsets.getMutator();
+//
+//      final int startPos = a.get(groupStart);
+//      final int endPos = a.get(groupStart + groups);
+//      final int valuesToCopy = endPos - startPos;
+//
+//      to.offsets.clear();
+//      to.offsets.allocateNew(groups + 1);
+//
+//      int normalizedPos;
+//      for (int i = 0; i < groups + 1; i++) {
+//        normalizedPos = a.get(groupStart + i) - startPos;
+//        m.set(i, normalizedPos);
+//      }
+//
+//      m.setValueCount(groups + 1);
+//      to.emptyPopulator.populate(groups);
+//
+//      for (final TransferPair p : pairs) {
+//        p.splitAndTransfer(startPos, valuesToCopy);
+//      }
+//    }
   }
 
   @Override
@@ -273,7 +222,6 @@ public final class TrueMapVector extends RepeatedMapVector {
   @Override
   public void putChild(String name, ValueVector vector) {
     super.putChild(name, vector);
-    // todo: decide what to do with previously set key/value types if any (make check for consistency between old and new or discard old etc.)
     switch (name) {
       case FIELD_KEY_NAME:
         keyType = vector.getField().getType();
@@ -282,7 +230,7 @@ public final class TrueMapVector extends RepeatedMapVector {
         valueType = vector.getField().getType();
         break;
       default:
-        logger.warn("Unknown field {} was added to TRUEMAP vector", name);
+        throw new DrillRuntimeException(String.format("Unknown field %s is added to TRUEMAP vector", name));
     }
   }
 
@@ -316,11 +264,6 @@ public final class TrueMapVector extends RepeatedMapVector {
       return result;
     }
 
-    @Override
-    public boolean isNull(int index) {
-      return false; // todo: redefine if Nullable
-    }
-
     public void get(int index, TrueMapHolder holder) {
       int valueCapacity = getValueCapacity();
       assert index < valueCapacity :
@@ -337,12 +280,6 @@ public final class TrueMapVector extends RepeatedMapVector {
   }
 
   @Override
-  public void toNullable(ValueVector nullableVector) {
-    throw new UnsupportedOperationException();
-  }
-
-  // todo: probably remove
-  @Override
   public void exchange(ValueVector other) {
     TrueMapVector map = (TrueMapVector) other;
     assert this.keyType == map.keyType : "Cannot exchange TrueMapVector with different key types";
@@ -351,42 +288,33 @@ public final class TrueMapVector extends RepeatedMapVector {
   }
 
   @Override
-  public VectorWithOrdinal getChildVectorWithOrdinal(String name) { // todo: discard?
+  public VectorWithOrdinal getChildVectorWithOrdinal(String name) {
     assert fieldNames.contains(name) : "Message goes here";
     ValueVector vector = getChild(name);
     switch (name) {
-      case FIELD_KEY_NAME:  // todo: create
+      case FIELD_KEY_NAME:
         return new VectorWithOrdinal(vector, 0);
       case FIELD_VALUE_NAME:
         return new VectorWithOrdinal(vector, 1);
       default:
-        logger.warn("Field with name '{}' is not present in map vector.");
+        logger.warn("Field with name '{}' is not present in map vector.", name);
         return null;
     }
   }
 
   @Override
   MajorType getLastPathType() {
-    // todo: See if this is correct!!!!
-    return getValues().getField().getType(); // todo: must handle complex values... One solution may be to add a method, which gets type of value
-  }
-
-  // todo: remove this method
-  @Deprecated
-  public TrueMapVector addOrGet(String name, MajorType type, MajorType keyType, MajorType valueType) {
-    TrueMapVector vector = super.addOrGet(name, type, TrueMapVector.class);
-    vector.setKeyValueTypes(keyType, valueType);
-    return vector;
+    return getValues().getField().getType();
   }
 
   @Override
   public <T extends ValueVector> T getChild(String name, Class<T> clazz) {
-    assert fieldNames.contains(name) : "No such field in TrueMapVector";
+    assert fieldNames.contains(name) : "No such field in TrueMapVector: " + name;
     return super.getChild(name, clazz);
   }
 
   @Override
-  public void collectLedgers(Set<AllocationManager.BufferLedger> ledgers) { // todo: what the heck?
+  public void collectLedgers(Set<AllocationManager.BufferLedger> ledgers) {
   }
 
   public ValueVector getKeys() {
