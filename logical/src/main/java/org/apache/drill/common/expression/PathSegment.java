@@ -18,18 +18,12 @@
 package org.apache.drill.common.expression;
 
 public abstract class PathSegment {
-  // todo: remove and revert any changes to this class
-  public enum Type { // todo: add getType() method to PathSegment
-    ARRAY, NAME
-  }
 
   private PathSegment child;
-  private final Type type;
   private int hash;
-// todo: DRILL-4264 may be useful
-  public PathSegment(PathSegment child, Type type) {
+
+  public PathSegment(PathSegment child) {
     this.child = child;
-    this.type = type;
   }
 
   public abstract PathSegment cloneWithNewChild(PathSegment segment);
@@ -49,13 +43,13 @@ public abstract class PathSegment {
     }
 
     public ArraySegment(int index, PathSegment child) {
-      super(child, Type.ARRAY);
+      super(child);
       this.index = index;
       assert index >= 0;
     }
 
     public ArraySegment(PathSegment child) {
-      super(child, Type.ARRAY);
+      super(child);
       this.index = -1;
     }
 
@@ -64,7 +58,7 @@ public abstract class PathSegment {
     }
 
     public ArraySegment(int index) {
-      super(null, Type.ARRAY);
+      super(null);
       if (index < 0 ) {
         throw new IllegalArgumentException();
       }
@@ -137,12 +131,12 @@ public abstract class PathSegment {
     private final String path;
 
     public NameSegment(CharSequence n, PathSegment child) {
-      super(child, Type.NAME);
+      super(child);
       this.path = n.toString();
     }
 
     public NameSegment(CharSequence n) {
-      super(null, Type.NAME);
+      super(null);
       this.path = n.toString();
     }
 
@@ -218,14 +212,8 @@ public abstract class PathSegment {
     throw new UnsupportedOperationException();
   }
 
-  @Deprecated
   public abstract boolean isArray();
-  @Deprecated
   public abstract boolean isNamed();
-
-  public Type getType() {
-    return type;
-  }
 
   public boolean isLastPath() {
     return child == null;
@@ -312,7 +300,6 @@ public abstract class PathSegment {
     if (getClass() != otherSeg.getClass()) {
       return false;
     }
-// todo: add check for map?
     if (!segmentEquals(otherSeg)) {
       return false;
     }

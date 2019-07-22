@@ -134,9 +134,9 @@ public class ${mode}ListWriter extends AbstractFieldWriter {
     switch (mode) {
     case INIT:
       final ValueVector oldVector = container.getChild(name);
-      final TrueMapVector vector = container.addOrGet(name, TrueMapVector.TYPE, TrueMapVector.class);
+      final RepeatedTrueMapVector vector = container.addOrGet(name, RepeatedTrueMapVector.TYPE, RepeatedTrueMapVector.class);
       innerVector = vector;
-      writer = new SingleTrueMapWriter(vector, this);
+      writer = new RepeatedTrueMapWriter(vector, this);
       // oldVector will be null if it's first batch being created and it might not be same as newly added vector
       // if new batch has schema change
       if (oldVector == null || oldVector != vector) {

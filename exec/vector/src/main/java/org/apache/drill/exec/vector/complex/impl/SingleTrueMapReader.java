@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.vector.complex.impl;
 
+import org.apache.commons.lang.text.StrBuilder;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.expr.holders.ComplexHolder;
 import org.apache.drill.exec.expr.holders.ValueHolder;
@@ -24,16 +25,17 @@ import org.apache.drill.exec.util.Text;
 import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.reader.BaseReader.TrueMapReader;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.TrueMapWriter;
 import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 
 import java.math.BigDecimal;
-
-public class TrueMapReaderImpl extends RepeatedMapReaderImpl implements TrueMapReader {
+// todo: rename to SingleTrueMapReaderImpl
+public class SingleTrueMapReader extends RepeatedMapReaderImpl implements TrueMapReader {
 
   private static final int NOT_FOUND = -1;
 
-  public TrueMapReaderImpl(TrueMapVector vector) {
+  public SingleTrueMapReader(TrueMapVector vector) {
     super(vector);
   }
 
@@ -188,5 +190,21 @@ public class TrueMapReaderImpl extends RepeatedMapReaderImpl implements TrueMapR
       return;
     }
     ComplexCopier.copy(this, (FieldWriter) writer);
+  }
+
+  @Override
+  public void copyAsValue(ListWriter writer) {
+    ComplexCopier.copy(this, (FieldWriter) writer.trueMap());
+  }
+
+  @Override
+  public String getTypeString() {
+    StrBuilder sb = new StrBuilder(super.getTypeString());
+    sb.append('<')
+        .append(fields.get(TrueMapVector.FIELD_KEY_NAME).getTypeString())
+        .append(',')
+        .append(fields.get(TrueMapVector.FIELD_VALUE_NAME).getTypeString())
+        .append('>');
+    return sb.toString();
   }
 }

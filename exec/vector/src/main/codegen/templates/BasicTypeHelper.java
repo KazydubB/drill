@@ -97,7 +97,7 @@ public class BasicTypeHelper {
         case REQUIRED:
           return TrueMapVector.class;
         case REPEATED:
-          throw new IllegalArgumentException("No true repeated map yet!");
+          return RepeatedTrueMapVector.class;
       }
     case LIST:
       switch (mode) {
@@ -142,19 +142,17 @@ public class BasicTypeHelper {
       case REPEATED:
           return RepeatedMapReaderImpl.class;
       }
-    case TRUEMAP:
-      switch (mode) {
-        case REQUIRED:
-          if (!isSingularRepeated) {
-            return SingleTrueMapReaderImpl.class;
-          } else {
-            // return SingleLikeRepeatedMapReaderImpl.class;
-            throw new UnsupportedOperationException("TrueMapVector required singular repeated reader is not supported yet");
-          }
-        case REPEATED:
-          // return RepeatedMapReaderImpl.class;
-          throw new UnsupportedOperationException("TrueMapVector repeated reader is not supported yet");
-      }
+      case TRUEMAP:
+        switch (mode) {
+          case REQUIRED:
+            if (!isSingularRepeated) {
+              return SingleTrueMapReader.class;
+            } else {
+              throw new UnsupportedOperationException("TrueMapVector required singular repeated reader is not supported yet");
+            }
+          case REPEATED:
+            return RepeatedTrueMapReader.class;
+        }
     case LIST:
       switch (mode) {
       case REQUIRED:
@@ -336,7 +334,7 @@ public class BasicTypeHelper {
         case OPTIONAL:
           return new TrueMapVector(field, allocator, callBack);
         case REPEATED:
-          throw new UnsupportedOperationException("Repeated TrueMapVector is not supported yet!!!");
+          return new RepeatedTrueMapVector(field, allocator, callBack);
       }
     case LIST:
       switch (type.getMode()) {

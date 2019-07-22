@@ -410,6 +410,126 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
+  public void trueMapArray() throws Exception {
+//    String query = "select typeOf(mapcol) as mapcol from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+//    String query = "select map_array[0] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    String query = "select id, mapcol, map_array from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+//    String query = "select id, mapcol, map_array[0] as element from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+//      .baselineColumns("map_array")
+//      .baselineValues(TestBuilder.listOf(TestBuilder.mapOf()))
+//        .baselineColumns("val")
+         .baselineColumns("id", "mapcol", "map_array")
+//         .baselineColumns("id", "mapcol", "element")
+        .baselineValues(
+            3,
+            TestBuilder.mapOfObject(7L, 1, 102L, 2, 524L, 3, 901920L, 4),
+            TestBuilder.listOf(
+                TestBuilder.mapOfObject(8L, 1, 9L, 2, 523L, 4, 31L, 3),
+                TestBuilder.mapOfObject(1L, 2, 3L, 1, 5L, 3)
+            )
+        )
+        .baselineValues(
+            1,
+            TestBuilder.mapOfObject(1L, 1, 2L, 2),
+            TestBuilder.listOf(
+                TestBuilder.mapOfObject(1L, 1, 2L, 2)
+            )
+        )
+        .baselineValues(
+            2,
+            TestBuilder.mapOfObject(3L, 1, 1L, 2, 5L, 3),
+            TestBuilder.listOf(
+                TestBuilder.mapOfObject(3L, 1),
+                TestBuilder.mapOfObject(1L, 2)
+            )
+        )
+        .go();
+  }
+
+  @Test
+  public void trueMapArrayByIndex() throws Exception {
+//    String query = "select typeOf(mapcol) as mapcol from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+//    String query = "select map_array[0] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+//    String query = "select id, mapcol, map_array from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    String query = "select id, map_array[0] as element, mapcol from cp.`store/parquet/complex/map/map_and_map_array.parquet` order by id desc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+//      .baselineColumns("map_array")
+//      .baselineValues(TestBuilder.listOf(TestBuilder.mapOf()))
+//        .baselineColumns("val")
+//         .baselineColumns("id", "mapcol", "map_array")
+        .baselineColumns("id", "element", "mapcol")
+        .baselineValues(
+            3,
+            TestBuilder.mapOfObject(8L, 1, 9L, 2, 523L, 4, 31L, 3),
+            TestBuilder.mapOfObject(7L, 1, 102L, 2, 524L, 3, 901920L, 4)
+        )
+        .baselineValues(
+            2,
+            TestBuilder.mapOfObject(3L, 1),
+            TestBuilder.mapOfObject(3L, 1, 1L, 2, 5L, 3)
+        )
+        .baselineValues(
+            1,
+            TestBuilder.mapOfObject(1L, 1, 2L, 2),
+            TestBuilder.mapOfObject(1L, 1, 2L, 2)
+        )
+        .go();
+  }
+
+  @Test
+  public void trueMapArrayGetByLongKey() throws Exception {
+//    String query = "select typeOf(mapcol) as mapcol from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    String query = "select id, mapcol[1] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+//      .baselineColumns("map_array")
+//      .baselineValues(TestBuilder.listOf(TestBuilder.mapOf()))
+        .baselineColumns("id", "val")
+        // .baselineColumns("id", "mapcol", "map_array")
+        .baselineValues(3, null)
+        .baselineValues(1, 1)
+        .baselineValues(2, 2)
+        .go();
+  }
+
+  @Test
+  public void trueMapArrayByIndex2() throws Exception {
+//    String query = "select typeOf(mapcol) as mapcol from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    String query = "select map_array[0] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+//      .baselineColumns("map_array")
+//      .baselineValues(TestBuilder.listOf(TestBuilder.mapOf()))
+        .baselineColumns("val")
+        // .baselineColumns("id", "mapcol", "map_array")
+        .baselineValues(
+//            TestBuilder.listOf(
+                TestBuilder.mapOfObject(8L, 1, 9L, 2, 523L, 4, 31L, 3)
+//                TestBuilder.mapOfObject(1L, 2, 3L, 1, 5L, 3)
+//            )
+        )
+        .baselineValues(
+//            TestBuilder.listOf(
+                TestBuilder.mapOfObject(1L, 1, 2L, 2)
+//            )
+        )
+        .baselineValues(
+//            TestBuilder.listOf(
+                TestBuilder.mapOfObject(3L, 1)
+//                TestBuilder.mapOfObject(1L, 2)
+//            )
+        )
+        .go();
+  }
+
+  @Test
   public void selectMapAndElements() throws Exception {
     String query = "select marketing_info, t.marketing_info.camp_id as camp_id, t.marketing_info.keywords[2] as keyword2 from cp.`store/parquet/complex/complex.parquet` t";
     testBuilder()

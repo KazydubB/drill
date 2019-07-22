@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.vector.complex.impl;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.drill.common.types.TypeProtos.MajorType;
@@ -26,14 +27,12 @@ import org.apache.drill.exec.vector.complex.RepeatedMapVector;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter;
 
-import org.apache.drill.shaded.guava.com.google.common.collect.Maps;
-
 @SuppressWarnings("unused")
 public class RepeatedMapReaderImpl extends AbstractFieldReader{
   static final int NO_VALUES = Integer.MAX_VALUE - 1;
 
   protected final RepeatedMapVector vector;
-  protected final Map<String, FieldReader> fields = Maps.newHashMap();
+  protected final Map<String, FieldReader> fields = new HashMap<>();
   protected int currentOffset;
   protected int maxOffset;
 
@@ -178,7 +177,7 @@ public class RepeatedMapReaderImpl extends AbstractFieldReader{
     impl.container.copyFromSafe(idx(), impl.idx(), vector);
   }
 
-  protected void setChildrenPosition(int index) {
+  private void setChildrenPosition(int index) {
     for (FieldReader r : fields.values()) {
       r.setPosition(index);
     }

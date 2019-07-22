@@ -23,6 +23,7 @@ import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.store.parquet.ParquetReaderUtility;
 import org.apache.drill.exec.vector.complex.TrueMapVector;
+import org.apache.drill.exec.vector.complex.impl.RepeatedTrueMapWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.TrueMapWriter;
 import org.apache.parquet.io.api.Converter;
@@ -42,6 +43,8 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
     super(mutator, mapWriter, options, containsCorruptedDates);
     writer = mapWriter;
 
+    // todo: colNextChild...?
+
     GroupType type = schema.getType(0).asGroupType();
     Converter innerConverter = new KeyValueGroupConverter(mutator, type, columns, options, containsCorruptedDates);
     converters = Collections.singletonList(innerConverter);
@@ -50,11 +53,13 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
   @Override
   public void start() {
     writer.start();
+    System.out.println("Map start()");
   }
 
   @Override
   public void end() {
     writer.end();
+    System.out.println("Map end()");
   }
 
   private class KeyValueGroupConverter extends DrillParquetGroupConverter {
@@ -80,11 +85,12 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
           valueConverter =
             new DrillMapGroupConverter(mutator, valueWriter, groupType, columns, options, containsCorruptedDates);
         } else {
-          BaseWriter valueWriter = isLogicalListType(groupType)
+          boolean isListType = isLogicalListType(groupType);
+          BaseWriter valueWriter = isListType
                   ? writer.list(TrueMapVector.FIELD_VALUE_NAME)
                   : writer.map(TrueMapVector.FIELD_VALUE_NAME);
           valueConverter = new DrillParquetGroupConverter(mutator, valueWriter, groupType, columns, options,
-                  containsCorruptedDates, true, "KeyValueGroupConverter");
+                  containsCorruptedDates, isListType, "KeyValueGroupConverter");
         }
       } else {
         valueConverter = getConverterForType(TrueMapVector.FIELD_VALUE_NAME, valueType.asPrimitiveType());
@@ -95,11 +101,18 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
     @Override
     public void start() {
       writer.startKeyValuePair();
+      System.out.println("Map entry start()");
     }
 
     @Override
     public void end() {
       writer.endKeyValuePair();
+      System.out.println("Map entry end()");
+    }
+
+    @Override
+    boolean isMapWriter() {
+      return writer instanceof RepeatedTrueMapWriter || super.isMapWriter();
     }
   }
 }

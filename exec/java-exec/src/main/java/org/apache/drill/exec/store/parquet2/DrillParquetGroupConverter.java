@@ -168,7 +168,6 @@ public class DrillParquetGroupConverter extends GroupConverter {
         writer = getWriter(name, MapWriter::list, ListWriter::list);
         converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options, containsCorruptedDates, true, converterName);
       } else if (isLogicalMapType(fieldGroupType)) {
-//        writer = getWriter(name, MapWriter::trueMap, l -> l.list().trueMap());
         writer = getWriter(name, MapWriter::trueMap, ListWriter::trueMap);
         converter = new DrillMapGroupConverter(
           mutator, (TrueMapWriter) writer, fieldGroupType, columns, options, containsCorruptedDates);
@@ -768,7 +767,10 @@ public class DrillParquetGroupConverter extends GroupConverter {
       super(mutator, baseWriter, schema, columns, options, containsCorruptedDates, skipRepeated, parentName);
     }
 
+    @Override
     public void start() {}
+
+    @Override
     public void end() {}
   }
 

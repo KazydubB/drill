@@ -25,7 +25,7 @@ import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 public class SingleTrueMapWriter extends RepeatedMapWriter implements BaseWriter.TrueMapWriter {
 
   final TrueMapVector container;
-  private boolean rowStarted;
+  private boolean mapStarted;
 
   public SingleTrueMapWriter(TrueMapVector container, FieldWriter parent, boolean unionEnabled) {
     super(container, parent, unionEnabled);
@@ -52,7 +52,7 @@ public class SingleTrueMapWriter extends RepeatedMapWriter implements BaseWriter
   @Override
   public TrueMapWriter trueMap(String name) {
     // todo: consider the same assertion for list(String), list()??, map(String) methods
-    assert TrueMapVector.FIELD_VALUE_NAME.equals(name) : "Only value field is allowed in TrueMap";
+    assert TrueMapVector.FIELD_VALUE_NAME.equals(name) : "Only value field is allowed in TrueMap. Found: " + name;
     return super.trueMap(name);
   }
 
@@ -73,7 +73,7 @@ public class SingleTrueMapWriter extends RepeatedMapWriter implements BaseWriter
 
   @Override
   public void start() {
-    assert !rowStarted : "Row should not be started";
+    assert !mapStarted : "Map should not be started";
 
     // Make sure that the current vector can support the end position of this list.
     if (container.getValueCapacity() <= idx()) {
@@ -86,16 +86,16 @@ public class SingleTrueMapWriter extends RepeatedMapWriter implements BaseWriter
       container.getMutator().startNewValue(idx());
     }
 
-    rowStarted = true;
+    mapStarted = true;
   }
 
   @Override
   public void end() {
     checkStarted();
-    rowStarted = false;
+    mapStarted = false;
   }
 
   private void checkStarted() {
-    assert rowStarted : "Must start row (startRow()) before";
+    assert mapStarted : "Must start map (startRow()) before";
   }
 }

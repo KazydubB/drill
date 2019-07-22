@@ -37,7 +37,7 @@ import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.util.JsonStringHashMap;
 import org.apache.drill.exec.vector.SchemaChangeCallBack;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.complex.impl.TrueMapReaderImpl;
+import org.apache.drill.exec.vector.complex.impl.SingleTrueMapReader;
 // todo: remove the import?
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 
@@ -59,11 +59,11 @@ public final class TrueMapVector extends RepeatedMapVector {
 
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
-  private final TrueMapReaderImpl reader;
+  private final SingleTrueMapReader reader;
 
   public TrueMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack) {
     super(field.clone(), allocator, callBack);
-    reader = new TrueMapReaderImpl(TrueMapVector.this);
+    reader = new SingleTrueMapReader(TrueMapVector.this);
   }
 
   public TrueMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
@@ -72,7 +72,7 @@ public final class TrueMapVector extends RepeatedMapVector {
   }
 
   @Override
-  public TrueMapReaderImpl getReader() {
+  public SingleTrueMapReader getReader() {
     return reader;
   }
 

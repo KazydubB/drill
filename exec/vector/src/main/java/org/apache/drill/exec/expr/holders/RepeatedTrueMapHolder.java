@@ -15,16 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.vector.complex.reader;
+package org.apache.drill.exec.expr.holders;
 
-import org.apache.drill.exec.vector.UntypedReader;
-import org.apache.drill.exec.vector.complex.reader.BaseReader.ListReader;
-import org.apache.drill.exec.vector.complex.reader.BaseReader.MapReader;
-import org.apache.drill.exec.vector.complex.reader.BaseReader.RepeatedListReader;
-import org.apache.drill.exec.vector.complex.reader.BaseReader.RepeatedMapReader;
-import org.apache.drill.exec.vector.complex.reader.BaseReader.TrueMapReader;
-import org.apache.drill.exec.vector.complex.reader.BaseReader.ScalarReader;
+import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.exec.vector.complex.RepeatedTrueMapVector;
+import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
-public interface FieldReader extends MapReader, TrueMapReader, ListReader, ScalarReader, RepeatedMapReader, RepeatedListReader, UntypedReader {
-  String getTypeString();
+public final class RepeatedTrueMapHolder implements ValueHolder {
+
+  public TypeProtos.MajorType getType() {return RepeatedTrueMapVector.TYPE;}
+
+  /** The first index (inclusive) into the Vector. **/
+  public int start;
+
+  /** The last index (exclusive) into the Vector. **/
+  public int end;
+
+  /** The Vector holding the actual values. **/
+  public RepeatedTrueMapVector vector;
+
+  public FieldReader reader;
 }
