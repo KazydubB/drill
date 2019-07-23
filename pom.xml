@@ -30,7 +30,7 @@
 
   <groupId>org.apache.drill</groupId>
   <artifactId>drill-root</artifactId>
-  <version>1.16.0.0-mapr</version>
+  <version>1.16.0.1-mapr</version>
   <packaging>pom</packaging>
 
   <name>Apache Drill Root POM</name>
