@@ -272,12 +272,16 @@ public class ${mode}ListWriter extends AbstractFieldWriter {
 
   @Override
   public void startList() {
-    // noop
+    if (mode == Mode.IN_TRUEMAP) {
+      writer.startList();
+    }
   }
 
   @Override
   public void endList() {
-    // noop
+    if (mode == Mode.IN_TRUEMAP) {
+      writer.endList();
+    }
   }
   </#if>
 

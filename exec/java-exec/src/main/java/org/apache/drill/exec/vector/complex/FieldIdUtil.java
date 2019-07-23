@@ -176,6 +176,7 @@ public class FieldIdUtil {
 
     ValueVector v;
     if (vector instanceof TrueMapVector) {
+      // todo: add type here!
       v = ((TrueMapVector) vector).getValues();
     } else if (vector instanceof AbstractContainerVector) { // todo: next line. Changes for 'true' map should be done here. Pass key value
       String fieldName = null;
@@ -197,13 +198,16 @@ public class FieldIdUtil {
       }
     } else if (vector instanceof ListVector) {
       v = ((ListVector) vector).getDataVector();
+    } else if (vector instanceof RepeatedTrueMapVector) {
+      v = ((RepeatedTrueMapVector) vector).getDataVector();
     } else {
       throw new UnsupportedOperationException("FieldIdUtil does not support vector of type " + vector.getField().getType());
     }
 
-    /*if (v instanceof TrueMapVector) { // todo: remove
-      return getFieldIdIfMatches(((TrueMapVector) v).getValues(), builder, addToBreadCrumb, seg.getChild());
-    } else*/ if (v instanceof AbstractContainerVector) {
+    if (v instanceof TrueMapVector) { // todo: remove
+//      builder.addMajorType(level, v.getField().getType());
+      return getFieldIdIfMatches(v, builder, addToBreadCrumb, seg.getChild(), level + 1);
+    } else if (v instanceof AbstractContainerVector) {
       // we're looking for a multi path.
       AbstractContainerVector c = (AbstractContainerVector) v;
       return getFieldIdIfMatches(c, builder, addToBreadCrumb, seg.getChild(), level + 1);
@@ -307,6 +311,31 @@ public class FieldIdUtil {
       builder.intermediateType(vector.getField().getType());
       builder.addId(id);
       return getFieldIdIfMatches(c, builder, true, expectedPath.getRootSegment().getChild(), level + 1);
+    } else if (vector instanceof RepeatedTrueMapVector) {
+      RepeatedTrueMapVector mapVector = (RepeatedTrueMapVector) vector;
+      MajorType vectorType = mapVector.getField().getType();
+      builder.intermediateType(vectorType);
+      builder.addId(id);
+      if (seg.isLastPath()) {
+        builder.finalType(vectorType);
+        return builder.build();
+      } else {
+        PathSegment child = seg.getChild();
+//        builder.remainder(child);
+        if (!child.isArray()) {
+          // todo: probably show it is not OK to access repeated map not by index!
+          return null;
+        } else {
+          builder.remainder(child);
+          builder.withIndex();
+          if (child.isLastPath()) {
+            return builder.finalType(TrueMapVector.TYPE).build();
+          } else {
+            return getFieldIdIfMatches(vector, builder, true, expectedPath.getRootSegment().getChild(), level);
+          }
+        }
+//        return getFieldIdIfMatches(mapVector, builder, false, expectedPath.getRootSegment().getChild(), level);
+      }
     } else {
       builder.intermediateType(vector.getField().getType());
       builder.addId(id);

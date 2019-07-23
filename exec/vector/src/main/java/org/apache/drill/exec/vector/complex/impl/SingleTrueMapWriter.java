@@ -50,18 +50,28 @@ public class SingleTrueMapWriter extends RepeatedMapWriter implements BaseWriter
   }
 
   @Override
+  public ListWriter list(String name) {
+    checkValueName(name);
+    return super.list(name);
+  }
+
+  @Override
+  public MapWriter map(String name) {
+    checkValueName(name);
+    return super.map(name);
+  }
+
+  @Override
   public TrueMapWriter trueMap(String name) {
-    // todo: consider the same assertion for list(String), list()??, map(String) methods
-    assert TrueMapVector.FIELD_VALUE_NAME.equals(name) : "Only value field is allowed in TrueMap. Found: " + name;
+    checkValueName(name);
     return super.trueMap(name);
   }
 
-  // todo: remove!
   @Override
   public FieldWriter getKeyWriter() {
     return fields.get(TrueMapVector.FIELD_KEY_NAME);
   }
-  // todo: remove!
+
   @Override
   public FieldWriter getValueWriter() {
     return fields.get(TrueMapVector.FIELD_VALUE_NAME);
@@ -97,5 +107,9 @@ public class SingleTrueMapWriter extends RepeatedMapWriter implements BaseWriter
 
   private void checkStarted() {
     assert mapStarted : "Must start map (startRow()) before";
+  }
+
+  private void checkValueName(String name) {
+    assert TrueMapVector.FIELD_VALUE_NAME.equals(name) : "Only value field is allowed in TrueMap. Found: " + name;
   }
 }

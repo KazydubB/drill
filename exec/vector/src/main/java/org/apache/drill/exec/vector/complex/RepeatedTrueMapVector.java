@@ -45,19 +45,14 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
   private final FieldReader reader = new RepeatedTrueMapReader(this);
-  private final TrueMapVector innerVector;
   private final EmptyValuePopulator emptyPopulator;
-
-//  private final RepeatedTrueMapVector vector;
 
   public RepeatedTrueMapVector(String path, BufferAllocator allocator) {
     this(MaterializedField.create(path, TYPE), allocator, null);
   }
 
   public RepeatedTrueMapVector(MaterializedField field, BufferAllocator allocator, CallBack callback) {
-//    super(field, allocator, callback);
     super(field, allocator, new TrueMapVector(TRUEMAP_VECTOR_FIELD, allocator, callback));
-    innerVector = (TrueMapVector) vector;
     emptyPopulator = new EmptyValuePopulator(getOffsetVector());
   }
 
@@ -75,14 +70,15 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
 
   @Override
   public TransferPair makeTransferPair(ValueVector target) {
-    return new DelegateTransferPair((RepeatedTrueMapVector) target);
+    return new RepeatedTrueMapTransferPair((RepeatedTrueMapVector) target);
   }
 
-  public class DelegateTransferPair implements TransferPair {
+  public class RepeatedTrueMapTransferPair implements TransferPair {
     private final RepeatedTrueMapVector target;
     private final TransferPair[] children;
 
-    public DelegateTransferPair(RepeatedTrueMapVector target) {
+    // todo: move-out to BaseRepeatedValueVector?
+    public RepeatedTrueMapTransferPair(RepeatedTrueMapVector target) {
       this.target = Preconditions.checkNotNull(target);
       if (target.getDataVector() == DEFAULT_DATA_VECTOR) {
         target.addOrGetVector(VectorDescriptor.create(getDataVector().getField()));
@@ -96,7 +92,7 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
 
     @Override
     public void transfer() {
-      for (TransferPair child:children) {
+      for (TransferPair child : children) {
         child.transfer();
       }
     }
@@ -114,14 +110,13 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
       }
     }
 
-    @Override
+    @Override // todo: move-out to BaseRepeatedValueVector?
     public void copyValueSafe(int srcIndex, int destIndex) {
       final RepeatedTrueMapHolder holder = new RepeatedTrueMapHolder();
       getAccessor().get(srcIndex, holder);
       target.emptyPopulator.populate(destIndex+1);
       final TransferPair vectorTransfer = children[1];
       int newIndex = target.getOffsetVector().getAccessor().get(destIndex);
-      //todo: make this a bulk copy.
       for (int i = holder.start; i < holder.end; i++, newIndex++) {
         vectorTransfer.copyValueSafe(i, newIndex);
       }
@@ -146,7 +141,8 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
 
   @Override
   public void copyEntry(int toIndex, ValueVector from, int fromIndex) {
-
+    RepeatedTrueMapTransferPair pair = (RepeatedTrueMapTransferPair) from.makeTransferPair(this);
+    pair.copyValueSafe(fromIndex, toIndex);
   }
 
   public class Accessor extends BaseRepeatedValueVector.BaseRepeatedAccessor {
@@ -179,13 +175,13 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
 
     @Override
     public void startNewValue(int index) {
-      emptyPopulator.populate(index + 1); // todo: may be necessary!
+      emptyPopulator.populate(index + 1);
       offsets.getMutator().setSafe(index + 1, offsets.getAccessor().get(index));
     }
 
     @Override
     public void setValueCount(int topLevelValueCount) {
-      emptyPopulator.populate(topLevelValueCount); // todo: may be necessary!
+      emptyPopulator.populate(topLevelValueCount);
       offsets.getMutator().setValueCount(topLevelValueCount == 0 ? 0 : topLevelValueCount + 1);
       int childValueCount = offsets.getAccessor().get(topLevelValueCount);
       vector.getMutator().setValueCount(childValueCount);
@@ -196,10 +192,5 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
       offsets.getMutator().setSafe(index + 1, prevEnd + 1);
       return prevEnd;
     }
-  }
-
-  @Deprecated
-  public TrueMapVector getInnerVector() {
-    return innerVector;
   }
 }

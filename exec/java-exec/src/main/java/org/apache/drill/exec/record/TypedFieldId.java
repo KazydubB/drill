@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.drill.common.expression.PathSegment;
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.expr.BasicTypeHelper;
 import org.apache.drill.exec.vector.ValueVector;
@@ -115,9 +116,15 @@ public class TypedFieldId {
     return intermediateType;
   }
 
+  @Deprecated
   public MajorType getType(int fieldId, int level) {
 //    assert types.size() - 1 > currentIndex : "Aaaarrghh!..";
     return types.get(level);
+  }
+
+  public boolean isMap(int level) {
+    MajorType type = types.get(level);
+    return type != null && type.getMinorType() == TypeProtos.MinorType.TRUEMAP;
   }
 
   /**
@@ -157,7 +164,6 @@ public class TypedFieldId {
     boolean hyperReader = false;
     boolean withIndex = false;
     boolean isListVector = false;
-    boolean withKey;
     Map<Integer, MajorType> types = new HashMap<>();
 
     public Builder addId(int id) {
@@ -167,11 +173,6 @@ public class TypedFieldId {
 
     public Builder withIndex() {
       withIndex = true;
-      return this;
-    }
-
-    public Builder withKey() {
-      withKey = true;
       return this;
     }
 

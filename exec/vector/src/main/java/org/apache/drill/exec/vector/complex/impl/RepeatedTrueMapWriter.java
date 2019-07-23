@@ -17,27 +17,28 @@
  */
 package org.apache.drill.exec.vector.complex.impl;
 
+import com.google.common.base.Preconditions;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.expr.holders.RepeatedTrueMapHolder;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.vector.complex.RepeatedTrueMapVector;
+import org.apache.drill.exec.vector.complex.TrueMapVector;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.drill.exec.vector.complex.writer.BigIntWriter;
 import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 import org.apache.drill.exec.vector.complex.writer.IntWriter;
 
-public class RepeatedTrueMapWriter extends AbstractFieldWriter {
+public class RepeatedTrueMapWriter extends AbstractFieldWriter implements BaseWriter.TrueMapWriter {
 
   private final RepeatedTrueMapVector container;
   private final SingleTrueMapWriter trueMapWriter;
-//  private final Map<String, FieldWriter> fields = new HashMap<>();
   private int currentChildIndex;
 
   RepeatedTrueMapWriter(RepeatedTrueMapVector container, FieldWriter parent) {
     super(parent);
-    assert container != null : "Container cannot be null!";
-    this.container = container;
-    this.trueMapWriter = new SingleTrueMapWriter(container.getInnerVector(), this); // todo: or pass parent?
+    this.container = Preconditions.checkNotNull(container, "Container cannot be null!");
+    this.trueMapWriter = new SingleTrueMapWriter((TrueMapVector) container.getDataVector(), this);
   }
 
   @Override
@@ -174,8 +175,16 @@ public class RepeatedTrueMapWriter extends AbstractFieldWriter {
     trueMapWriter.endKeyValuePair();
   }
 
-  //  @Override
-//  public BigIntWriter bigInt() {
-//    return trueMapWriter.bigInt(name);
+//  @Override
+//  public void copyAsValue(BaseWriter.TrueMapWriter writer) {
+//    if (isNull()) {
+//      return;
+//    }
+//    ComplexCopier.copy(this, (FieldWriter) writer);
+//  }
+//
+//  @Override
+//  public void copyAsValue(BaseWriter.ListWriter writer) {
+//    ComplexCopier.copy(this, (FieldWriter) writer.trueMap());
 //  }
 }

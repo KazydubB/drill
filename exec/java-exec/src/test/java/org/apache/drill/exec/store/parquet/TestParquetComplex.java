@@ -499,9 +499,27 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
+  public void trueMapArrayGetByLongKey2() throws Exception {
+//    String query = "select typeOf(mapcol) as mapcol from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    String query = "select mapcol[1] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+//      .baselineColumns("map_array")
+//      .baselineValues(TestBuilder.listOf(TestBuilder.mapOf()))
+        .baselineColumns("val")
+        // .baselineColumns("id", "mapcol", "map_array")
+        .baselineValues((Integer) null)
+        .baselineValues(1)
+        .baselineValues(2)
+        .go();
+  }
+
+  @Test
   public void trueMapArrayByIndex2() throws Exception {
 //    String query = "select typeOf(mapcol) as mapcol from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
-    String query = "select map_array[0] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    String query = "select map_array[1][5] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet` order by map_array[1][5] desc";
+//    String query = "select map_array[1] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
     testBuilder()
         .sqlQuery(query)
         .ordered()
@@ -510,22 +528,36 @@ public class TestParquetComplex extends BaseTestQuery {
         .baselineColumns("val")
         // .baselineColumns("id", "mapcol", "map_array")
         .baselineValues(
+            new Object[] {null}
 //            TestBuilder.listOf(
-                TestBuilder.mapOfObject(8L, 1, 9L, 2, 523L, 4, 31L, 3)
+//                TestBuilder.mapOfObject(8L, 1, 9L, 2, 523L, 4, 31L, 3)
 //                TestBuilder.mapOfObject(1L, 2, 3L, 1, 5L, 3)
 //            )
         )
         .baselineValues(
+            new Object[] {null}
 //            TestBuilder.listOf(
-                TestBuilder.mapOfObject(1L, 1, 2L, 2)
+//                TestBuilder.mapOfObject(1L, 1, 2L, 2)
 //            )
         )
         .baselineValues(
+            3
 //            TestBuilder.listOf(
-                TestBuilder.mapOfObject(3L, 1)
+//                TestBuilder.mapOfObject(3L, 1)
 //                TestBuilder.mapOfObject(1L, 2)
 //            )
         )
+        .go();
+  }
+
+  @Test
+  public void selectTypeOfTrueMap() throws Exception {
+    String query = "select drilltypeof(map_array[0]) as type from cp.`store/parquet/complex/map/map_and_map_array.parquet` limit 1";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("type")
+        .baselineValuesForSingleColumn("TRUEMAP")
         .go();
   }
 

@@ -580,7 +580,6 @@ public class Types {
 
   public static MinorType getMinorTypeFromName(String typeName) {
     typeName = typeName.toLowerCase();
-// todo: add map?
     switch (typeName) {
     case "bool":
     case "boolean":
@@ -646,7 +645,7 @@ public class Types {
   }
 
   public static String getNameOfMinorType(final MinorType type) {
-    switch (type) { // todo: also include map?
+    switch (type) {
       case BIT:
         return "bool";
       case TINYINT:
@@ -733,8 +732,10 @@ public class Types {
    * @return true if type can be used in ORDER BY clause
    */
   public static boolean isSortable(MinorType type) {
-    // Currently only map and list columns are not sortable.
-    return type != MinorType.MAP && type != MinorType.LIST && type != MinorType.TRUEMAP;
+    // Currently only map, list and truemap columns are not sortable.
+    return type != MinorType.MAP
+        && type != MinorType.LIST
+        && type != MinorType.TRUEMAP;
   }
 
   /**

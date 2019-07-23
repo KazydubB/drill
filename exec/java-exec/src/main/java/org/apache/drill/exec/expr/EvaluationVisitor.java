@@ -512,17 +512,22 @@ public class EvaluationVisitor {
         JVar valueIndex = eval.decl(generator.getModel().INT, "valueIndex", JExpr.lit(-1));
 
         int level = 0;
-        MajorType currentType = e.getFieldId().getType(-1, level++);
-        boolean isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
+//        MajorType currentType = e.getFieldId().getType(-1, level);
+//        boolean isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
+        boolean isMap = e.getFieldId().isMap(level);
 
         while (seg != null) {
-
+          //level++;
           if (seg.isArray()) {
+            // level++;
+
             // stop once we get to the last segment and the final type is neither complex nor repeated (map, list, repeated list).
             // In case of non-complex and non-repeated type, we return Holder, in stead of FieldReader.
             if (seg.isLastPath() && !complex && !repeated && !listVector) {
               break;
             }
+
+            level++;
 
             if (isMap) {
               JExpression keyExpr = JExpr.lit(seg.getArraySegment().getIndex());
@@ -544,8 +549,9 @@ public class EvaluationVisitor {
               elseBlock.assign(isNull, JExpr.lit(1));
 
               seg = seg.getChild();
-              currentType = e.getFieldId().getType(-1, level++); // todo: pass id!
-              isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
+//              currentType = e.getFieldId().getType(-1, level); // todo: pass id!
+//              isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
+              isMap = e.getFieldId().isMap(level);
               continue;
             }
 
@@ -577,6 +583,7 @@ public class EvaluationVisitor {
           } else {
 
             if (isMap) {
+              level++;
               JExpression keyExpr = JExpr.lit(seg.getNameSegment().getPath());
               MajorType finalType = e.getFieldId().getFinalType();
               if (seg.getChild() == null && !(Types.isComplex(finalType) || Types.isRepeated(finalType))) {
@@ -601,8 +608,9 @@ public class EvaluationVisitor {
               elseBlock.add(trueMapReader.invoke("setPosition").arg(valueIndex));
 
               seg = seg.getChild();
-              currentType = e.getFieldId().getType(-1, level++);
-              isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
+//              currentType = e.getFieldId().getType(-1, level);
+//              isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
+              isMap = e.getFieldId().isMap(level);
               continue;
             }
 
@@ -611,6 +619,9 @@ public class EvaluationVisitor {
           }
           seg = seg.getChild();
         }
+
+//        currentType = e.getFieldId().getType(-1, level); // todo: pass id!
+//        isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
 
         if (complex || repeated) {
 
@@ -645,7 +656,7 @@ public class EvaluationVisitor {
         } else {
           if (seg != null) {
             JExpression holderExpr = out.getHolder();
-            if (isMap) {
+            if (e.getFieldId().isMap(level)) {
               holderExpr = JExpr.cast(generator.getModel()._ref(ValueHolder.class), holderExpr);
             }
             eval.add(expr.invoke("read").arg(JExpr.lit(seg.getArraySegment().getIndex())).arg(holderExpr));
