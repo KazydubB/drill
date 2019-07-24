@@ -24,7 +24,7 @@
   <parent>
     <artifactId>drill-root</artifactId>
     <groupId>org.apache.drill</groupId>
-    <version>1.16.0.1-mapr</version>
+    <version>1.16.0.2-mapr</version>
   </parent>
 
   <artifactId>drill-logical</artifactId>
