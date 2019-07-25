@@ -551,6 +551,17 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
+  public void trueMapArrayByStringIndex3() throws Exception {
+    String query = "select map_array[1]['5'] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("val")
+        .baselineValuesForSingleColumn(3, null, null)
+        .go();
+  }
+
+  @Test
   public void selectTypeOfTrueMap() throws Exception {
     String query = "select typeof(map_array[0]) as type from cp.`store/parquet/complex/map/map_and_map_array.parquet` limit 1";
     testBuilder()

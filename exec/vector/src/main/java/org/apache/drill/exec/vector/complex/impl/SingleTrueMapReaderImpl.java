@@ -123,7 +123,8 @@ public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements Tr
 
   @Override
   public void read(String key, ValueHolder holder) {
-    read(new Text(key), holder);
+    Object typedKey = getAppropriateKey(key);
+    read(typedKey, holder);
   }
 
   @Override
@@ -138,7 +139,7 @@ public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements Tr
     }
 
     int index = find(key);
-    FieldReader valueReader = super.reader(TrueMapVector.FIELD_VALUE_NAME);
+    FieldReader valueReader = reader(TrueMapVector.FIELD_VALUE_NAME);
     valueReader.setPosition(index);
     if (index != NOT_FOUND) {
       valueReader.read(holder);

@@ -582,7 +582,7 @@ public class EvaluationVisitor {
             listNum++;
           } else {
 
-            if (isMap) {
+            if (e.getFieldId().isMap(level)) {
               level++;
               JExpression keyExpr = JExpr.lit(seg.getNameSegment().getPath());
               MajorType finalType = e.getFieldId().getFinalType();

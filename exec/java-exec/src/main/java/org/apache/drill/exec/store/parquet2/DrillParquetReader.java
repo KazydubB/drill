@@ -132,9 +132,9 @@ public class DrillParquetReader extends CommonParquetRecordReader {
         boolean isMap = segmentType != null && segmentType.getOriginalType() == OriginalType.MAP;
         if (seg.isNamed()) {
           segments.add(seg.getNameSegment().getPath());
-          if (isMap) {
-            break;
-          }
+        }
+        if (isMap) {
+          break;
         }
       }
 
@@ -190,12 +190,12 @@ public class DrillParquetReader extends CommonParquetRecordReader {
    * @return type corresponding to the {@code segment} or {@code null} if there is no field found in {@code type}.
    */
   private static Type getType(Type type, PathSegment segment) {
+    Type result = null;
     if (type != null && !type.isPrimitive()) {
       GroupType groupType = type.asGroupType();
-      String fieldName = null;
-      boolean found = false;
       if (segment.isNamed()) {
-        fieldName = segment.getNameSegment().getPath();
+        boolean found = false;
+        String fieldName = segment.getNameSegment().getPath();
         for (Type field : groupType.getFields()) {
           if (field.getName().equalsIgnoreCase(fieldName)) {
             fieldName = field.getName();
@@ -203,10 +203,16 @@ public class DrillParquetReader extends CommonParquetRecordReader {
             break;
           }
         }
+        result = found ? groupType.getType(fieldName) : null;
+      } else {
+        // the segment is array index
+        if (groupType.getOriginalType() == OriginalType.LIST) {
+          // get element type of the list
+          result = groupType.getType(0).asGroupType().getType(0);
+        }
       }
-      return found ? groupType.getType(fieldName) : null;
     }
-    return null;
+    return result;
   }
 
   @Override
