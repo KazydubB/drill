@@ -494,7 +494,6 @@ public class EvaluationVisitor {
         JExpression expr = vv1.invoke("getReader");
         PathSegment seg = e.getReadPath();
 
-        // todo: this is not needed in case of TRUEMAP or discard same changes in handleTrueMap
         JVar isNull = null;
         boolean isNullReaderLikely = isNullReaderLikely(seg, complex || repeated || listVector);
         if (isNullReaderLikely) {
@@ -512,14 +511,10 @@ public class EvaluationVisitor {
         JVar valueIndex = eval.decl(generator.getModel().INT, "valueIndex", JExpr.lit(-1));
 
         int level = 0;
-//        MajorType currentType = e.getFieldId().getType(-1, level);
-//        boolean isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
         boolean isMap = e.getFieldId().isMap(level);
 
         while (seg != null) {
-          //level++;
           if (seg.isArray()) {
-            // level++;
 
             // stop once we get to the last segment and the final type is neither complex nor repeated (map, list, repeated list).
             // In case of non-complex and non-repeated type, we return Holder, in stead of FieldReader.
@@ -538,9 +533,6 @@ public class EvaluationVisitor {
 
               JConditional conditional = eval._if(valueIndex.gt(JExpr.lit(-1)));
               JBlock ifFound = conditional._then().block();
-              // todo: do I really need to set position to keyReader? This should be all about value.
-              // todo: also, find another way to supplement proper index if possible
-              ifFound.add(trueMapReader.invoke("reader").arg(JExpr.lit("key")).invoke("setPosition").arg(valueIndex));
               expr = trueMapReader.invoke("reader").arg(JExpr.lit("value"));
               ifFound.add(expr.invoke("setPosition").arg(valueIndex));
 
@@ -549,8 +541,6 @@ public class EvaluationVisitor {
               elseBlock.assign(isNull, JExpr.lit(1));
 
               seg = seg.getChild();
-//              currentType = e.getFieldId().getType(-1, level); // todo: pass id!
-//              isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
               isMap = e.getFieldId().isMap(level);
               continue;
             }
@@ -593,14 +583,11 @@ public class EvaluationVisitor {
               }
               eval.assign(valueIndex, expr.invoke("find").arg(keyExpr));
 
-              JVar trueMapReader = generator.declareClassField("trueMapReader", generator.getModel()._ref(FieldReader.class)); // todo: change class to TrueMapReader?
+              JVar trueMapReader = generator.declareClassField("trueMapReader", generator.getModel()._ref(FieldReader.class));
               eval.assign(trueMapReader, expr);
 
               JConditional conditional = eval._if(valueIndex.gt(JExpr.lit(-1)));
               JBlock ifFound = conditional._then().block();
-              // todo: do I really need to set position to keyReader? This should be all about value.
-              // todo: also, find another way to supplement proper index if possible
-              ifFound.add(trueMapReader.invoke("reader").arg(JExpr.lit("key")).invoke("setPosition").arg(valueIndex));
               expr = trueMapReader.invoke("reader").arg(JExpr.lit("value"));
               ifFound.add(expr.invoke("setPosition").arg(valueIndex));
 
@@ -608,8 +595,6 @@ public class EvaluationVisitor {
               elseBlock.add(trueMapReader.invoke("setPosition").arg(valueIndex));
 
               seg = seg.getChild();
-//              currentType = e.getFieldId().getType(-1, level);
-//              isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
               isMap = e.getFieldId().isMap(level);
               continue;
             }
@@ -619,9 +604,6 @@ public class EvaluationVisitor {
           }
           seg = seg.getChild();
         }
-
-//        currentType = e.getFieldId().getType(-1, level); // todo: pass id!
-//        isMap = currentType != null && currentType.getMinorType() == TypeProtos.MinorType.TRUEMAP;
 
         if (complex || repeated) {
 
