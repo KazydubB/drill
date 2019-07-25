@@ -282,7 +282,7 @@ public class SchemaPath extends LogicalExpressionBase {
   }
 
   public SchemaPath getChild(String childPath) {
-    NameSegment newRoot = rootSegment.cloneWithNewChild(new PathSegment.NameSegment(childPath));
+    NameSegment newRoot = rootSegment.cloneWithNewChild(new NameSegment(childPath));
     return new SchemaPath(newRoot);
   }
 

@@ -166,21 +166,25 @@ public class DrillParquetGroupConverter extends GroupConverter {
       GroupType fieldGroupType = fieldType.asGroupType();
       if (isLogicalListType(fieldGroupType)) {
         writer = getWriter(name, MapWriter::list, ListWriter::list);
-        converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options, containsCorruptedDates, true, converterName);
+        converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
+            containsCorruptedDates, true, converterName);
       } else if (isLogicalMapType(fieldGroupType)) {
         writer = getWriter(name, MapWriter::trueMap, ListWriter::trueMap);
         converter = new DrillMapGroupConverter(
           mutator, (TrueMapWriter) writer, fieldGroupType, options, containsCorruptedDates);
       } else if (fieldType.isRepetition(Repetition.REPEATED)) {
         if (skipRepeated) {
-          converter = new DrillIntermediateParquetGroupConverter(mutator, baseWriter, fieldGroupType, columns, options, containsCorruptedDates, false, converterName);
+          converter = new DrillIntermediateParquetGroupConverter(mutator, baseWriter, fieldGroupType, columns, options,
+              containsCorruptedDates, false, converterName);
         } else {
           writer = getWriter(name, (m, s) -> m.list(s).map(), l -> l.list().map());
-          converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options, containsCorruptedDates, false, converterName);
+          converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
+              containsCorruptedDates, false, converterName);
         }
       } else {
         writer = getWriter(name, MapWriter::map, ListWriter::map);
-        converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options, containsCorruptedDates, false, converterName);
+        converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
+            containsCorruptedDates, false, converterName);
       }
 
     }

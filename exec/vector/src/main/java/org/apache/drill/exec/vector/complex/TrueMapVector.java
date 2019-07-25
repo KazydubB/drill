@@ -82,7 +82,7 @@ public final class TrueMapVector extends RepeatedMapVector {
   }
 
   @Override
-  public TransferPair getTransferPair(BufferAllocator allocator) { // todo: see this!
+  public TransferPair getTransferPair(BufferAllocator allocator) {
     return new MapTransferPair(this, getField().getName(), allocator);
   }
 

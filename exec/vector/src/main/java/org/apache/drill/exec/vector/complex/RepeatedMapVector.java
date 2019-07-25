@@ -58,10 +58,10 @@ public class RepeatedMapVector extends AbstractMapVector
   public final static MajorType TYPE = MajorType.newBuilder().setMinorType(MinorType.MAP).setMode(DataMode.REPEATED).build();
 
   protected final UInt4Vector offsets;   // offsets to start of each record (considering record indices are 0-indexed)
-  private final RepeatedMapReaderImpl reader = new RepeatedMapReaderImpl(RepeatedMapVector.this); // todo: introduce constructor to set these
+  private final RepeatedMapReaderImpl reader = new RepeatedMapReaderImpl(RepeatedMapVector.this);
   private final RepeatedMapAccessor accessor = new RepeatedMapAccessor();
   private final Mutator mutator = new Mutator();
-  protected final EmptyValuePopulator emptyPopulator;
+  private final EmptyValuePopulator emptyPopulator;
 
   public RepeatedMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack) {
     this(field, new UInt4Vector(BaseRepeatedValueVector.OFFSETS_FIELD, allocator), callBack);
@@ -206,7 +206,7 @@ public class RepeatedMapVector extends AbstractMapVector
   }
 
   public TransferPair getTransferPairToSingleMap(String reference, BufferAllocator allocator) {
-    return new SingleMapTransferPair(this, reference, allocator); // todo: this is needed for flatten (Implement in TrueMapVector)
+    return new SingleMapTransferPair(this, reference, allocator);
   }
 
   @Override

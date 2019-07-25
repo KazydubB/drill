@@ -260,7 +260,7 @@ public class MapVector extends AbstractMapVector {
   }
 
   @Override
-  public void load(SerializedField metadata, DrillBuf buf) { // todo: metadata is interesting
+  public void load(SerializedField metadata, DrillBuf buf) {
     final List<SerializedField> fields = metadata.getChildList();
     valueCount = metadata.getValueCount();
 
@@ -310,7 +310,7 @@ public class MapVector extends AbstractMapVector {
   public class Accessor extends BaseValueVector.BaseAccessor {
 
     @Override
-    public Object getObject(int index) { // todo: check
+    public Object getObject(int index) {
       Map<String, Object> vv = new JsonStringHashMap<>();
       for (String child:getChildFieldNames()) {
         ValueVector v = getChild(child);

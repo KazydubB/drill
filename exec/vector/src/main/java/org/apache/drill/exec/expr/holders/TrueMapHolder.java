@@ -22,7 +22,7 @@ import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
 public final class TrueMapHolder extends ComplexHolder {
-  // todo:?
+
   public static final TypeProtos.MajorType TYPE = TrueMapVector.TYPE;
 
   public TrueMapVector vector;

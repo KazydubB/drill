@@ -37,7 +37,7 @@ public abstract class AbstractRecordReader implements RecordReader {
   // For text reader, the default columns to read is "columns[0]".
   protected static final List<SchemaPath> DEFAULT_TEXT_COLS_TO_READ = ImmutableList.of(new SchemaPath(new PathSegment.NameSegment("columns", new PathSegment.ArraySegment(0))));
 
-  protected Collection<SchemaPath> columns = null;
+  private Collection<SchemaPath> columns = null;
   private boolean isStarQuery = false;
   private boolean isSkipQuery = false;
 

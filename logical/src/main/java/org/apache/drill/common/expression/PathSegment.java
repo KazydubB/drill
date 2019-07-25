@@ -20,6 +20,7 @@ package org.apache.drill.common.expression;
 public abstract class PathSegment {
 
   private PathSegment child;
+
   private int hash;
 
   public PathSegment(PathSegment child) {
@@ -300,6 +301,7 @@ public abstract class PathSegment {
     if (getClass() != otherSeg.getClass()) {
       return false;
     }
+
     if (!segmentEquals(otherSeg)) {
       return false;
     }

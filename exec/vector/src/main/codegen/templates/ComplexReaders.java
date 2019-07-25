@@ -48,7 +48,6 @@ package org.apache.drill.exec.vector.complex.impl;
 /*
  * This class is generated using freemarker and the ${.template_name} template.
  */
-// todo: strange name for a file containing PRIMITIVE readers too
 @SuppressWarnings("unused")
 public class ${nullMode}${name}ReaderImpl extends AbstractFieldReader {
   

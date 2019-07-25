@@ -45,7 +45,7 @@ public class SingleMapReaderImpl extends AbstractFieldReader{
   }
 
   @Override
-  public FieldReader reader(String name){ // todo: this should not be present for real map?
+  public FieldReader reader(String name){
     FieldReader reader = fields.get(name);
     if(reader == null){
       ValueVector child = vector.getChild(name);
@@ -70,7 +70,7 @@ public class SingleMapReaderImpl extends AbstractFieldReader{
 
   @Override
   public Object readObject() {
-    return vector.getAccessor().getObject(idx()); // todo: this...
+    return vector.getAccessor().getObject(idx());
   }
 
   @Override
