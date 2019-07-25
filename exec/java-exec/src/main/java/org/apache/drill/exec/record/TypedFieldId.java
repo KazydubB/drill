@@ -44,7 +44,7 @@ public class TypedFieldId {
   final int[] fieldIds;
   final boolean isHyperReader;
   final boolean isListVector;
-  final PathSegment remainder; // todo: use this one for maps!
+  final PathSegment remainder;
   private final Map<Integer, MajorType> types;
 
   public TypedFieldId(MajorType type, int... fieldIds) {
@@ -114,12 +114,6 @@ public class TypedFieldId {
 
   public MajorType getIntermediateType() {
     return intermediateType;
-  }
-
-  @Deprecated
-  public MajorType getType(int fieldId, int level) {
-//    assert types.size() - 1 > currentIndex : "Aaaarrghh!..";
-    return types.get(level);
   }
 
   public boolean isMap(int level) {

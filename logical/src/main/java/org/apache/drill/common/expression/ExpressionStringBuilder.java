@@ -136,10 +136,6 @@ public class ExpressionStringBuilder extends AbstractExprVisitor<Void, StringBui
         sb.append('`');
         sb.append(escapeBackTick(seg.getNameSegment().getPath()));
         sb.append('`');
-//      } else if (seg.isMap()) {
-//        sb.append('[');
-//        sb.append(seg.getMapSegment().getKey());
-//        sb.append(']');
       } else {
         sb.append('[');
         sb.append(seg.getArraySegment().getIndex());

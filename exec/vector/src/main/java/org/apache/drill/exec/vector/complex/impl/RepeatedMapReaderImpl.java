@@ -28,7 +28,7 @@ import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter;
 
 @SuppressWarnings("unused")
-public class RepeatedMapReaderImpl extends AbstractFieldReader{
+public class RepeatedMapReaderImpl extends AbstractFieldReader {
   static final int NO_VALUES = Integer.MAX_VALUE - 1;
 
   protected final RepeatedMapVector vector;
@@ -117,7 +117,7 @@ public class RepeatedMapReaderImpl extends AbstractFieldReader{
   }
 
   @Override
-  public boolean next() { // todo: actually this is of interest
+  public boolean next() {
     if (currentOffset < maxOffset) {
       setChildrenPosition(++currentOffset);
       return true;

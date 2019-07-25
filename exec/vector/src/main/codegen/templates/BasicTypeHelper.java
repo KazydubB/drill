@@ -146,12 +146,12 @@ public class BasicTypeHelper {
         switch (mode) {
           case REQUIRED:
             if (!isSingularRepeated) {
-              return SingleTrueMapReader.class;
+              return SingleTrueMapReaderImpl.class;
             } else {
               throw new UnsupportedOperationException("TrueMapVector required singular repeated reader is not supported yet");
             }
           case REPEATED:
-            return RepeatedTrueMapReader.class;
+            return RepeatedTrueMapReaderImpl.class;
         }
     case LIST:
       switch (mode) {
@@ -184,8 +184,7 @@ public class BasicTypeHelper {
     switch (type) {
     case UNION: return UnionWriter.class;
     case MAP: return MapWriter.class;
-    // todo: change to interface when one is available
-    case TRUEMAP: return TrueMapWriter.class; // todo: change!
+    case TRUEMAP: return TrueMapWriter.class;
     case LIST: return ListWriter.class;
 <#list vv.types as type>
   <#list type.minor as minor>
@@ -216,7 +215,7 @@ public class BasicTypeHelper {
         case OPTIONAL:
           return SingleTrueMapWriter.class;
         case REPEATED:
-          throw new UnsupportedOperationException("Reapeated writer for TrueMapVector is not supported yet");
+          return RepeatedTrueMapWriter.class;
       }
     case LIST:
       switch (mode) {

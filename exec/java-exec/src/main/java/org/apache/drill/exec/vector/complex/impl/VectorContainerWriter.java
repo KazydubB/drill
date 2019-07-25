@@ -25,7 +25,7 @@ import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.MapVector;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
-// todo: take a look
+
 public class VectorContainerWriter extends AbstractFieldWriter implements ComplexWriter {
   //private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(VectorContainerWriter.class);
 
@@ -36,7 +36,7 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
   public VectorContainerWriter(OutputMutator mutator, boolean unionEnabled) {
     super(null);
     this.mutator = mutator;
-    mapVector = new SpecialMapVector(mutator.getCallBack()); // todo: what's so special?
+    mapVector = new SpecialMapVector(mutator.getCallBack());
     mapRoot = new SingleMapWriter(mapVector, this, unionEnabled);
   }
 
@@ -111,23 +111,6 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
         throw new IllegalStateException(e);
       }
     }
-
-//    @Override // todo: remove
-//    @Deprecated
-//    public TrueMapVector addOrGet(String name, MajorType keyType, MajorType valueType) {
-//      try {
-//        // TrueMapVector vector = BasicTypeHelper.getNewMapVector(name, allocator, callBack, keyType, valueType);
-//        // todo: this was changed!
-//        // TrueMapVector vector = ((ScanBatch.Mutator) mutator).addField(MaterializedField.create(name, TrueMapVector.TYPE), keyType, valueType, TrueMapVector.class);
-//        TrueMapVector vector = mutator.addField(MaterializedField.create(name, TrueMapVector.TYPE), TrueMapVector.class);
-//        vector.setKeyValueTypes(keyType, valueType); // todo: neeeded?
-//        putChild(name, vector);
-//        // return this.typeify(vector, TrueMapVector.class);
-//        return vector;
-//      } catch (SchemaChangeException e) {
-//        throw new IllegalStateException(e);
-//      }
-//    }
   }
 
   @Override

@@ -17,7 +17,6 @@
  */
 package org.apache.drill.exec.vector.complex;
 
-import com.google.common.base.Preconditions;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.exception.OutOfMemoryException;
@@ -28,8 +27,7 @@ import org.apache.drill.exec.record.TransferPair;
 import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.util.JsonStringArrayList;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.VectorDescriptor;
-import org.apache.drill.exec.vector.complex.impl.RepeatedTrueMapReader;
+import org.apache.drill.exec.vector.complex.impl.RepeatedTrueMapReaderImpl;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
 import java.util.List;
@@ -44,7 +42,7 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
 
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
-  private final FieldReader reader = new RepeatedTrueMapReader(this);
+  private final FieldReader reader = new RepeatedTrueMapReaderImpl(this);
   private final EmptyValuePopulator emptyPopulator;
 
   public RepeatedTrueMapVector(String path, BufferAllocator allocator) {
@@ -73,54 +71,18 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
     return new RepeatedTrueMapTransferPair((RepeatedTrueMapVector) target);
   }
 
-  public class RepeatedTrueMapTransferPair implements TransferPair {
-    private final RepeatedTrueMapVector target;
-    private final TransferPair[] children;
+  public class RepeatedTrueMapTransferPair extends BaseRepeatedValueVectorTransferPair<RepeatedTrueMapVector> {
 
-    // todo: move-out to BaseRepeatedValueVector?
     public RepeatedTrueMapTransferPair(RepeatedTrueMapVector target) {
-      this.target = Preconditions.checkNotNull(target);
-      if (target.getDataVector() == DEFAULT_DATA_VECTOR) {
-        target.addOrGetVector(VectorDescriptor.create(getDataVector().getField()));
-        target.getDataVector().allocateNew();
-      }
-      this.children = new TransferPair[] {
-          getOffsetVector().makeTransferPair(target.getOffsetVector()),
-          getDataVector().makeTransferPair(target.getDataVector())
-      };
+      super(target);
     }
 
     @Override
-    public void transfer() {
-      for (TransferPair child : children) {
-        child.transfer();
-      }
-    }
-
-    @Override
-    public ValueVector getTo() {
-      return target;
-    }
-
-    @Override
-    public void splitAndTransfer(int startIndex, int length) {
-      target.allocateNew();
-      for (int i = 0; i < length; i++) {
-        copyValueSafe(startIndex + i, i);
-      }
-    }
-
-    @Override // todo: move-out to BaseRepeatedValueVector?
     public void copyValueSafe(int srcIndex, int destIndex) {
       final RepeatedTrueMapHolder holder = new RepeatedTrueMapHolder();
       getAccessor().get(srcIndex, holder);
       target.emptyPopulator.populate(destIndex+1);
-      final TransferPair vectorTransfer = children[1];
-      int newIndex = target.getOffsetVector().getAccessor().get(destIndex);
-      for (int i = holder.start; i < holder.end; i++, newIndex++) {
-        vectorTransfer.copyValueSafe(i, newIndex);
-      }
-      target.getOffsetVector().getMutator().setSafe(destIndex + 1, newIndex);
+      copyValueSafe(destIndex, holder.start, holder.end);
     }
   }
 

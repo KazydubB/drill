@@ -303,7 +303,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
   }
 
   private boolean doAlloc(int recordCount) {
-    //Allocate vv in the allocationVectors. // todo: why this allocationVectors are empty?
+    //Allocate vv in the allocationVectors.
     for (final ValueVector v : this.allocationVectors) {
       AllocationHelper.allocateNew(v, recordCount);
     }
@@ -359,7 +359,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
     return expr.getPath().contains(SchemaPath.DYNAMIC_STAR);
   }
 
-  private void setupNewSchemaFromInput(RecordBatch incomingBatch) throws SchemaChangeException { // todo: incomingBatch is not empty!
+  private void setupNewSchemaFromInput(RecordBatch incomingBatch) throws SchemaChangeException {
     long setupNewSchemaStartTime = System.currentTimeMillis();
     // get the output batch size from config.
     int configuredBatchSize = (int) context.getOptions().getOption(ExecConstants.OUTPUT_BATCH_SIZE_VALIDATOR);
@@ -427,18 +427,6 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
               final FieldReference ref = new FieldReference(name);
               final ValueVector vvOut = container.addOrGet(MaterializedField.create(
                   ref.getAsNamePart().getName(), vvIn.getField().getType()), callBack);
-//              if (vvIn.getField().getType().getMinorType() == MinorType.TRUEMAP) {
-//                // List<MaterializedField> children = new ArrayList<>(vvIn.getField().getChildren());
-//                List<MaterializedField> children = (List<MaterializedField>) vvIn.getField().getChildren();
-//                // todo: do not pass a field: use a name instead (as the field will be reconstructed)
-//                // todo: make sure proper children are used
-//                // todo: pass TrueMapVector instead?
-//                vvOut = container.addOrGet(ref.getAsNamePart().getName(), vvIn.getField().getType(), // todo: use the same method as below and handle TrueMap inside the method
-//                    children.get(0).getType(), children.get(1).getType(), callBack);
-//              } else {
-//                vvOut = container.addOrGet(MaterializedField.create(
-//                    ref.getAsNamePart().getName(), vvIn.getField().getType()), callBack);
-//              }
               final TransferPair tp = vvIn.makeTransferPair(vvOut);
               memoryManager.addTransferField(vvIn, vvIn.getField().getName(), vvOut.getField().getName());
               transfers.add(tp);
@@ -514,21 +502,12 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
 
         final ValueVectorReadExpression vectorRead = (ValueVectorReadExpression) expr;
         final TypedFieldId id = vectorRead.getFieldId();
-        final ValueVector vvIn = incomingBatch.getValueAccessorById(id.getIntermediateClass(), id.getFieldIds()).getValueVector(); // todo: intermediateClass is ObjectVector?!
-        Preconditions.checkNotNull(incomingBatch); // todo: vvIn still not empty
+        final ValueVector vvIn = incomingBatch.getValueAccessorById(id.getIntermediateClass(), id.getFieldIds()).getValueVector();
+        Preconditions.checkNotNull(incomingBatch);
 
         final FieldReference ref = getRef(namedExpression);
         final ValueVector vvOut = container.addOrGet(MaterializedField.create(
             ref.getLastSegment().getNameSegment().getPath(), vectorRead.getMajorType()), callBack);
-//        final ValueVector vvOut; // todo: git gud
-//        if (vvIn.getField().getType().getMinorType() == MinorType.TRUEMAP) { // todo: there
-//          List<MaterializedField> children = (List<MaterializedField>) vvIn.getField().getChildren(); // todo: use the method below and handle TrueMap inside the method
-//          vvOut = container.addOrGet(ref.getLastSegment().getNameSegment().getPath(), vectorRead.getMajorType(),
-//              children.get(0).getType(), children.get(1).getType(), callBack);
-//        } else {
-//          vvOut = container.addOrGet(MaterializedField.create(
-//              ref.getLastSegment().getNameSegment().getPath(), vectorRead.getMajorType()), callBack);
-//        }
         final TransferPair tp = vvIn.makeTransferPair(vvOut);
         memoryManager.addTransferField(vvIn, TypedFieldId.getPath(id, incomingBatch), vvOut.getField().getName());
         transfers.add(tp);
@@ -588,7 +567,6 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
     } catch (ClassTransformationException | IOException e) {
       throw new SchemaChangeException("Failure while attempting to load generated class", e);
     }
-// transfers.to is empty...
     long setupNewSchemaEndTime = System.currentTimeMillis();
       logger.trace("setupNewSchemaFromInput: time {}  ms, Project {}, incoming {}",
                   (setupNewSchemaEndTime - setupNewSchemaStartTime), this, incomingBatch);

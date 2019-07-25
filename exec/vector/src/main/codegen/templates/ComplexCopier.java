@@ -39,7 +39,7 @@ public class ComplexCopier {
   public static void copy(FieldReader input, FieldWriter output) {
     writeValue(input, output);
   }
-  // todo: use this for TrueMAP too
+
   private static void writeValue(FieldReader reader, FieldWriter writer) {
     final DataMode m = reader.getType().getMode();
     final MinorType mt = reader.getType().getMinorType();
@@ -73,7 +73,7 @@ public class ComplexCopier {
         case TRUEMAP:
           TrueMapWriter wr = (TrueMapWriter) writer;
           wr.start();
-          if (reader.isSet()) { // todo: add else?
+          if (reader.isSet()) {
             while (reader.next()) {
               wr.startKeyValuePair();
               FieldReader keyReader = reader.reader(TrueMapVector.FIELD_KEY_NAME);

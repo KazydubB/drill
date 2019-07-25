@@ -17,11 +17,10 @@
  */
 package org.apache.drill.exec.vector.complex.impl;
 
-import org.apache.commons.lang.text.StrBuilder;
 import org.apache.drill.common.types.TypeProtos;
-import org.apache.drill.exec.expr.holders.ComplexHolder;
 import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.apache.drill.exec.util.Text;
+import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.TrueMapVector;
 import org.apache.drill.exec.vector.complex.reader.BaseReader.TrueMapReader;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
@@ -30,12 +29,12 @@ import org.apache.drill.exec.vector.complex.writer.BaseWriter.TrueMapWriter;
 import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 
 import java.math.BigDecimal;
-// todo: rename to SingleTrueMapReaderImpl
-public class SingleTrueMapReader extends RepeatedMapReaderImpl implements TrueMapReader {
+
+public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements TrueMapReader {
 
   private static final int NOT_FOUND = -1;
 
-  public SingleTrueMapReader(TrueMapVector vector) {
+  public SingleTrueMapReaderImpl(TrueMapVector vector) {
     super(vector);
   }
 
@@ -57,18 +56,17 @@ public class SingleTrueMapReader extends RepeatedMapReaderImpl implements TrueMa
     return find(typifiedKey);
   }
 
-  // todo: actually, key can be of any concrete type, since only literals are passed here?
-  // todo: if key-uniqueness is not guaranteed, then return the last one for the key
   private int find(Object key) {
-    int idx = vector.getOffsetVector().getAccessor().get(idx() + 1);
-    int offset = vector.getOffsetVector().getAccessor().get(idx());
+    int start = vector.getOffsetVector().getAccessor().get(idx());
+    int end = vector.getOffsetVector().getAccessor().get(idx() + 1);
     int index = NOT_FOUND;
-    // todo: if key-uniqueness is not guaranteed, then return the last one for the key
-    for (int i = 0; i < idx - offset; i++) {
-      // todo: probably get key value of byte[] type and compare with actual values?
-      Object keyValue = vector.getChild(TrueMapVector.FIELD_KEY_NAME).getAccessor().getObject(offset + i);
+    ValueVector keys = vector.getChild(TrueMapVector.FIELD_KEY_NAME);
+
+    // start from the end to ensure the most recent value for a key is found (in case if key is not unique)
+    for (int i = end - 1; i >= start; i--) {
+      Object keyValue = keys.getAccessor().getObject(i);
       if (keyValue.equals(key)) {
-        index = offset + i;
+        index = i;
         break;
       }
     }
@@ -92,7 +90,7 @@ public class SingleTrueMapReader extends RepeatedMapReaderImpl implements TrueMa
       case VARDECIMAL:
         return BigDecimal.valueOf(key);
       case BIT:
-        return key != 0; // todo: !
+        return key != 0;
       default:
         String message = String.format("Unknown value %d for key of type %s", key, keyType.getMinorType().toString());
         throw new IllegalArgumentException(message);
@@ -142,26 +140,9 @@ public class SingleTrueMapReader extends RepeatedMapReaderImpl implements TrueMa
     int index = find(key);
     FieldReader valueReader = super.reader(TrueMapVector.FIELD_VALUE_NAME);
     valueReader.setPosition(index);
-    // todo: pass the index into the method instead of setting position to the reader
     if (index != NOT_FOUND) {
       valueReader.read(holder);
     }
-  }
-
-  // todo: should this be removed?
-  // todo: probably make it similarly to primitive types above
-  public void read(Object key, ComplexHolder holder) {
-    int index = find(key);
-    if (index == NOT_FOUND) {
-      holder.isSet = 0;
-      // todo: include holder.reader = valueReader?
-      return;
-    }
-
-    holder.isSet = 1;
-    FieldReader valueReader = super.reader(TrueMapVector.FIELD_VALUE_NAME);
-    valueReader.setPosition(index);
-    holder.reader = valueReader;
   }
 
   @Override
@@ -199,11 +180,13 @@ public class SingleTrueMapReader extends RepeatedMapReaderImpl implements TrueMa
 
   @Override
   public String getTypeString() {
-    StrBuilder sb = new StrBuilder(super.getTypeString());
+    StringBuilder sb = new StringBuilder(super.getTypeString());
+    // child readers may be empty so vector is used instead to get key and value type
+    TrueMapVector vector = (TrueMapVector) this.vector;
     sb.append('<')
-        .append(fields.get(TrueMapVector.FIELD_KEY_NAME).getTypeString())
+        .append(vector.getKeys().getField().getType().getMinorType().name())
         .append(',')
-        .append(fields.get(TrueMapVector.FIELD_VALUE_NAME).getTypeString())
+        .append(vector.getValues().getField().getType().getMinorType().name())
         .append('>');
     return sb.toString();
   }

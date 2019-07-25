@@ -439,7 +439,7 @@ public class RecordBatchSizer {
           if (isVariableWidth) {
             totalDataSize = ((VariableWidthVector) v).getCurrentSizeInBytes();
           } else {
-            totalDataSize = v.getPayloadByteCount(valueCount); // todo: this should be not zero
+            totalDataSize = v.getPayloadByteCount(valueCount);
           }
           break;
 
@@ -757,14 +757,15 @@ public class RecordBatchSizer {
     if ( arg <= 32 ) { return 32; }
     return 64;
   }
-// todo: important!?
+
   private ColumnSize measureColumn(ValueVector v, String prefix) {
     ColumnSize colSize = new ColumnSize(v, prefix);
     switch (v.getField().getType().getMinorType()) {
-      case MAP: // todo:
+      case MAP:
+      case TRUEMAP:
         // Maps consume no size themselves. However, their contained
-        // vectors do consume space, so visit columns recursively.//todo: field.name == order_items
-        expandMap(colSize, (AbstractMapVector) v, prefix + v.getField().getName() + ".");
+        // vectors do consume space, so visit columns recursively.
+        expandMap(colSize, v, prefix + v.getField().getName() + ".");
         break;
       case LIST:
         // complex ListVector cannot be casted to RepeatedListVector.
@@ -783,17 +784,16 @@ public class RecordBatchSizer {
 
     return colSize;
   }
-// todo:
-  private void expandMap(ColumnSize colSize, AbstractMapVector mapVector, String prefix) {
+
+  private void expandMap(ColumnSize colSize, ValueVector mapVector, String prefix) {
     for (ValueVector vector : mapVector) {
       colSize.children.put(vector.getField().getName(), measureColumn(vector, prefix));
     }
 
     // For a repeated map, we need the memory for the offset vector (only).
     // Map elements are recursively expanded above.
-// todo: this is interesting
-    if (mapVector.getField().getDataMode() == DataMode.REPEATED) { // todo: order_items.map is repeated
-      ((RepeatedMapVector) mapVector).getOffsetVector().collectLedgers(ledgers);
+    if (mapVector.getField().getDataMode() == DataMode.REPEATED) {
+      ((RepeatedValueVector) mapVector).getOffsetVector().collectLedgers(ledgers);
     }
   }
 

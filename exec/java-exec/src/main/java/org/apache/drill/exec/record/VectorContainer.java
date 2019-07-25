@@ -32,7 +32,6 @@ import org.apache.drill.exec.record.selection.SelectionVector2;
 import org.apache.drill.exec.record.selection.SelectionVector4;
 import org.apache.drill.exec.vector.SchemaChangeCallBack;
 import org.apache.drill.exec.vector.ValueVector;
-
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 import org.apache.drill.shaded.guava.com.google.common.collect.Sets;
@@ -40,7 +39,7 @@ import org.apache.drill.shaded.guava.com.google.common.collect.Sets;
 public class VectorContainer implements VectorAccessible {
 
   private final BufferAllocator allocator;
-  protected final List<VectorWrapper<?>> wrappers = Lists.newArrayList(); // todo: VectorWrapper for TrueMapVector?
+  protected final List<VectorWrapper<?>> wrappers = Lists.newArrayList();
   private BatchSchema schema;
 
   private int recordCount = 0;
@@ -161,26 +160,6 @@ public class VectorContainer implements VectorAccessible {
     }
     return (T) vector;
   }
-
-  // todo: handle TrueMapVector inside instead of outside
-  // todo: remove
-//  @Deprecated
-//  public TrueMapVector addOrGet(String fieldName, MajorType fieldType, MajorType keyType, MajorType valueType, final SchemaChangeCallBack callBack) {
-//    final TypedFieldId id = getValueVectorId(SchemaPath.getSimplePath(fieldName));
-//    final TrueMapVector vector;
-//    if (id != null) {
-//      vector = (TrueMapVector) getValueAccessorById(id.getFieldIds()).getValueVector();
-//      if (id.getFieldIds().length == 1 && !vector.getField().getType().equals(fieldType)) {
-//        TrueMapVector newVector = TypeHelper.getNewMapVector(fieldName, this.getAllocator(), callBack, keyType, valueType);
-//        replace(vector, newVector);
-//        return newVector;
-//      }
-//    } else {
-//      vector = TypeHelper.getNewMapVector(fieldName, this.getAllocator(), callBack, keyType, valueType);
-//      add(vector);
-//    }
-//    return vector;
-//  }
 
   public <T extends ValueVector> T addOrGet(String name, MajorType type, Class<T> clazz) {
     MaterializedField field = MaterializedField.create(name, type);
@@ -316,7 +295,7 @@ public class VectorContainer implements VectorAccessible {
 
   @Override
   public TypedFieldId getValueVectorId(SchemaPath path) {
-    for (int i = 0; i < wrappers.size(); i++) { // todo: there should be check if wrappers.get(i).vector is Map and treat path as key
+    for (int i = 0; i < wrappers.size(); i++) {
       VectorWrapper<?> va = wrappers.get(i);
       TypedFieldId id = va.getFieldIdIfMatches(i, path);
       if (id != null) {

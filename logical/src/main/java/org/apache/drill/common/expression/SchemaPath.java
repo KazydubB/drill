@@ -38,7 +38,6 @@ import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 /**
  * This is the path for the column in the table
  */
-// todo: adapt this to new MapSegment
 public class SchemaPath extends LogicalExpressionBase {
 
   // AKA "Wildcard": expand all columns
@@ -73,19 +72,6 @@ public class SchemaPath extends LogicalExpressionBase {
       s = new NameSegment(strings[i], s);
     }
     return new SchemaPath(s);
-    /*PathSegment s = null;
-    // loop through strings in reverse order
-    for (int i = strings.length - 1; i >= 0; i--) {
-      if (!strings[i].startsWith(PathSegment.MapSegment.MAP_PREFIX)) {
-        s = new NameSegment(strings[i], s);
-      } else {
-        int index = strings[i].indexOf('[');
-        String path = strings[i].substring(PathSegment.MapSegment.MAP_PREFIX.length(), index);
-        String key = strings[i].substring(index, strings[i].length() - 2);
-        s = new PathSegment.MapSegment(path, key, s);
-      }
-    }
-    return new SchemaPath(s);*/
   }
 
   public PathSegment getLastSegment() {
@@ -118,7 +104,7 @@ public class SchemaPath extends LogicalExpressionBase {
       }
     }
 
-    if (s.isArray()) { // todo: interesting
+    if (s.isArray()) {
       if (s.getArraySegment().hasIndex()) {
         throw new IllegalStateException("You cannot convert a indexed schema path to a NamePart.  NameParts can only reference Vectors, not individual records or values.");
       }
@@ -296,8 +282,7 @@ public class SchemaPath extends LogicalExpressionBase {
   }
 
   public SchemaPath getChild(String childPath) {
-//    NameSegment newRoot = rootSegment.cloneWithNewChild(new PathSegment.MapSegment(childPath)); // todo: change!
-    NameSegment newRoot = rootSegment.cloneWithNewChild(new PathSegment.NameSegment(childPath)); // todo: change!
+    NameSegment newRoot = rootSegment.cloneWithNewChild(new PathSegment.NameSegment(childPath));
     return new SchemaPath(newRoot);
   }
 

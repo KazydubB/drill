@@ -15,10 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import org.apache.drill.exec.expr.holders.ValueHolder;
-import org.apache.drill.exec.vector.complex.writer.FieldWriter;
-
 <@pp.dropOutputFile />
 <@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/reader/BaseReader.java" />
 
@@ -40,10 +36,8 @@ public interface BaseReader extends Positionable{
   void reset();
   void read(UnionHolder holder);
   void read(int index, UnionHolder holder);
-  // todo: add method read(Object key, holder)
   void copyAsValue(UnionWriter writer);
   boolean isSet();
-  // todo: probably remove this method and cast holder to appropriate type
   void read(ValueHolder holder);
 
   public interface MapReader extends BaseReader, Iterable<String>{
@@ -74,7 +68,7 @@ public interface BaseReader extends Positionable{
     void copyAsValue(ListWriter writer);
   }
   
-  public interface ScalarReader extends  // todo: add read(ValueHolder holder) method here (probably pass the desired index into the method and not setPosition to reader)
+  public interface ScalarReader extends
   <#list vv.types as type><#list type.minor as minor><#assign name = minor.class?cap_first /> ${name}Reader, </#list></#list> 
   <#list vv.types as type><#list type.minor as minor><#assign name = minor.class?cap_first /> Repeated${name}Reader, </#list></#list>
   BaseReader {}

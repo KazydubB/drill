@@ -48,8 +48,6 @@ public interface OutputMutator {
    */
   public <T extends ValueVector> T addField(MaterializedField field, Class<T> clazz) throws SchemaChangeException;
 
-  // <T extends ValueVector> T addField(MaterializedField field, TypeProtos.MajorType keyType, TypeProtos.MajorType valueType, Class<T> clazz) throws SchemaChangeException;
-
   public void allocate(int recordCount);
 
   /**

@@ -15,28 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import org.apache.drill.exec.vector.complex.writer.FieldWriter;
+
+<@pp.dropOutputFile />
+<@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/impl/RepeatedTrueMapWriter.java" />
+
+<#include "/@includes/license.ftl" />
 package org.apache.drill.exec.vector.complex.impl;
 
-import org.apache.drill.exec.expr.holders.RepeatedTrueMapHolder;
-import org.apache.drill.exec.record.MaterializedField;
-import org.apache.drill.exec.vector.complex.RepeatedTrueMapVector;
-import org.apache.drill.exec.vector.complex.TrueMapVector;
-import org.apache.drill.exec.vector.complex.writer.BaseWriter;
-import org.apache.drill.exec.vector.complex.writer.BigIntWriter;
-import org.apache.drill.exec.vector.complex.writer.FieldWriter;
-import org.apache.drill.exec.vector.complex.writer.IntWriter;
-import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
+<#include "/@includes/vv_imports.ftl" />
 
-// todo: remove!
-@Deprecated
-class RepeatedTrueMapWriter1 extends AbstractFieldWriter implements BaseWriter.TrueMapWriter {
+/*
+ * This class is generated using freemarker and the ${.template_name} template.
+ */
+public class RepeatedTrueMapWriter extends AbstractFieldWriter implements BaseWriter.TrueMapWriter {
 
   final RepeatedTrueMapVector container;
 
   private final SingleTrueMapWriter trueMapWriter;
   private int currentChildIndex;
 
-  RepeatedTrueMapWriter1(RepeatedTrueMapVector container, FieldWriter parent) {
+  RepeatedTrueMapWriter(RepeatedTrueMapVector container, FieldWriter parent) {
     super(parent);
     this.container = Preconditions.checkNotNull(container, "Container cannot be null!");
     this.trueMapWriter = new SingleTrueMapWriter((TrueMapVector) container.getDataVector(), this);
@@ -94,20 +94,6 @@ class RepeatedTrueMapWriter1 extends AbstractFieldWriter implements BaseWriter.T
   }
 
   @Override
-  public BigIntWriter bigInt(String name) {
-    FieldWriter writer = (FieldWriter) trueMapWriter.bigInt(name);
-    writer.setPosition(currentChildIndex);
-    return writer;
-  }
-
-  @Override
-  public IntWriter integer(String name) {
-    FieldWriter writer = (FieldWriter) trueMapWriter.integer(name);
-    writer.setPosition(currentChildIndex);
-    return writer;
-  }
-
-  @Override
   public void start() {
     currentChildIndex = container.getMutator().add(idx());
     trueMapWriter.setPosition(currentChildIndex);
@@ -128,4 +114,48 @@ class RepeatedTrueMapWriter1 extends AbstractFieldWriter implements BaseWriter.T
   public void endKeyValuePair() {
     trueMapWriter.endKeyValuePair();
   }
+
+  @Override
+  public ListWriter list(String name) {
+    ListWriter writer = trueMapWriter.list(name);
+    writer.setPosition(currentChildIndex);
+    return writer;
+  }
+
+  @Override
+  public MapWriter map(String name) {
+    MapWriter writer = trueMapWriter.map(name);
+    writer.setPosition(currentChildIndex);
+    return writer;
+  }
+
+  @Override
+  public TrueMapWriter trueMap(String name) {
+    TrueMapWriter writer = trueMapWriter.trueMap(name);
+    writer.setPosition(currentChildIndex);
+    return writer;
+  }
+
+  <#list vv.types as type>
+    <#list type.minor as minor>
+      <#assign lowerName = minor.class?uncap_first />
+      <#if lowerName == "int" ><#assign lowerName = "integer" /></#if>
+
+  @Override
+  public ${minor.class}Writer ${lowerName}(String name) {
+    FieldWriter writer = (FieldWriter) trueMapWriter.${lowerName}(name);
+    writer.setPosition(currentChildIndex);
+    return writer;
+  }
+      <#if minor.class?contains("Decimal") >
+
+  @Override
+  public ${minor.class}Writer ${lowerName}(String name, int scale, int precision) {
+    FieldWriter writer = (FieldWriter) trueMapWriter.${lowerName}(name, scale, precision);
+    writer.setPosition(currentChildIndex);
+    return writer;
+  }
+      </#if>
+    </#list>
+  </#list>
 }

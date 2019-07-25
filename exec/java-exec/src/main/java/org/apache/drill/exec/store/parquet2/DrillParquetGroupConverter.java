@@ -170,7 +170,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
       } else if (isLogicalMapType(fieldGroupType)) {
         writer = getWriter(name, MapWriter::trueMap, ListWriter::trueMap);
         converter = new DrillMapGroupConverter(
-          mutator, (TrueMapWriter) writer, fieldGroupType, columns, options, containsCorruptedDates);
+          mutator, (TrueMapWriter) writer, fieldGroupType, options, containsCorruptedDates);
       } else if (fieldType.isRepetition(Repetition.REPEATED)) {
         if (skipRepeated) {
           converter = new DrillIntermediateParquetGroupConverter(mutator, baseWriter, fieldGroupType, columns, options, containsCorruptedDates, false, converterName);

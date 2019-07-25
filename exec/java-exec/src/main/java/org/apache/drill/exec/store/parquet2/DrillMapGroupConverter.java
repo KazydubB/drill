@@ -18,7 +18,6 @@
 package org.apache.drill.exec.store.parquet2;
 
 import org.apache.drill.common.exceptions.DrillRuntimeException;
-import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.store.parquet.ParquetReaderUtility;
@@ -30,7 +29,6 @@ import org.apache.parquet.io.api.Converter;
 import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.Type;
 
-import java.util.Collection;
 import java.util.Collections;
 
 class DrillMapGroupConverter extends DrillParquetGroupConverter {
@@ -38,58 +36,56 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
   private final TrueMapWriter writer;
 
   DrillMapGroupConverter(OutputMutator mutator, TrueMapWriter mapWriter, GroupType schema,
-                    Collection<SchemaPath> columns, OptionManager options,
-                    ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
+                    OptionManager options, ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
     super(mutator, mapWriter, options, containsCorruptedDates);
     writer = mapWriter;
 
-    // todo: colNextChild...?
-
     GroupType type = schema.getType(0).asGroupType();
-    Converter innerConverter = new KeyValueGroupConverter(mutator, type, columns, options, containsCorruptedDates);
+    Converter innerConverter = new KeyValueGroupConverter(mutator, type, options, containsCorruptedDates);
     converters = Collections.singletonList(innerConverter);
   }
 
   @Override
   public void start() {
     writer.start();
-    System.out.println("Map start()");
   }
 
   @Override
   public void end() {
     writer.end();
-    System.out.println("Map end()");
   }
 
   private class KeyValueGroupConverter extends DrillParquetGroupConverter {
 
-    KeyValueGroupConverter(OutputMutator mutator, GroupType schema, Collection<SchemaPath> columns,
-                           OptionManager options, ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
+    private static final int INDEX_KEY = 0;
+    private static final int INDEX_VALUE = 1;
+
+    KeyValueGroupConverter(OutputMutator mutator, GroupType schema, OptionManager options,
+                           ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
       super(mutator, writer, options, containsCorruptedDates);
 
-      Type keyType = schema.getType(0);
+      Type keyType = schema.getType(INDEX_KEY);
       if (!keyType.isPrimitive()) {
         throw new DrillRuntimeException("Map supports primitive key only. Found: " + keyType);
       } else {
         Converter keyConverter = getConverterForType(TrueMapVector.FIELD_KEY_NAME, keyType.asPrimitiveType());
         converters.add(keyConverter);
       }
-      Type valueType = schema.getType(1);
 
+      Type valueType = schema.getType(INDEX_VALUE);
       Converter valueConverter;
       if (!valueType.isPrimitive()) {
         GroupType groupType = valueType.asGroupType();
         if (isLogicalMapType(groupType)) {
           TrueMapWriter valueWriter = writer.trueMap(TrueMapVector.FIELD_VALUE_NAME);
           valueConverter =
-            new DrillMapGroupConverter(mutator, valueWriter, groupType, columns, options, containsCorruptedDates);
+            new DrillMapGroupConverter(mutator, valueWriter, groupType, options, containsCorruptedDates);
         } else {
           boolean isListType = isLogicalListType(groupType);
           BaseWriter valueWriter = isListType
                   ? writer.list(TrueMapVector.FIELD_VALUE_NAME)
                   : writer.map(TrueMapVector.FIELD_VALUE_NAME);
-          valueConverter = new DrillParquetGroupConverter(mutator, valueWriter, groupType, columns, options,
+          valueConverter = new DrillParquetGroupConverter(mutator, valueWriter, groupType, Collections.emptyList(), options,
                   containsCorruptedDates, isListType, "KeyValueGroupConverter");
         }
       } else {
@@ -101,13 +97,11 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
     @Override
     public void start() {
       writer.startKeyValuePair();
-      System.out.println("Map entry start()");
     }
 
     @Override
     public void end() {
       writer.endKeyValuePair();
-      System.out.println("Map entry end()");
     }
 
     @Override

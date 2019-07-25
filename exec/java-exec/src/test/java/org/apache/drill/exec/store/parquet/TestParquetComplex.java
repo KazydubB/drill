@@ -552,12 +552,12 @@ public class TestParquetComplex extends BaseTestQuery {
 
   @Test
   public void selectTypeOfTrueMap() throws Exception {
-    String query = "select drilltypeof(map_array[0]) as type from cp.`store/parquet/complex/map/map_and_map_array.parquet` limit 1";
+    String query = "select typeof(map_array[0]) as type from cp.`store/parquet/complex/map/map_and_map_array.parquet` limit 1";
     testBuilder()
         .sqlQuery(query)
         .ordered()
         .baselineColumns("type")
-        .baselineValuesForSingleColumn("TRUEMAP")
+        .baselineValuesForSingleColumn("TRUEMAP<BIGINT,INT>")
         .go();
   }
 

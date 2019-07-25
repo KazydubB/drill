@@ -137,8 +137,8 @@ public class RecordBatchLoader implements VectorAccessible, Iterable<VectorWrapp
           // Schema only
         } else if (field.getValueCount() == 0) {
           AllocationHelper.allocate(vector, 0, 0, 0);
-        } else { // todo: load works a little bit off here: keys and values are partially loaded
-          vector.load(field, buf.slice(bufOffset, field.getBufferLength())); // todo: this is all here. load does not load offsets
+        } else {
+          vector.load(field, buf.slice(bufOffset, field.getBufferLength()));
         }
         bufOffset += field.getBufferLength();
         newVectors.add(vector);

@@ -72,7 +72,7 @@ public class TypeHelper extends BasicTypeHelper {
     case UNION:
       return model._ref(UnionHolder.class);
     case TRUEMAP:
-      // return model._ref(TrueMapHolder.class);
+      return model._ref(TrueMapHolder.class);
     case MAP:
     case LIST:
       return model._ref(ComplexHolder.class);

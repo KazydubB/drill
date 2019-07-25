@@ -35,7 +35,7 @@ import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.util.JsonStringHashMap;
 import org.apache.drill.exec.vector.SchemaChangeCallBack;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.complex.impl.SingleTrueMapReader;
+import org.apache.drill.exec.vector.complex.impl.SingleTrueMapReaderImpl;
 
 public final class TrueMapVector extends RepeatedMapVector {
 
@@ -54,11 +54,11 @@ public final class TrueMapVector extends RepeatedMapVector {
 
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
-  private final SingleTrueMapReader reader;
+  private final SingleTrueMapReaderImpl reader;
 
   public TrueMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack) {
     super(field.clone(), allocator, callBack);
-    reader = new SingleTrueMapReader(TrueMapVector.this);
+    reader = new SingleTrueMapReaderImpl(TrueMapVector.this);
   }
 
   public TrueMapVector(MaterializedField field, BufferAllocator allocator, CallBack callBack, MajorType keyType, MajorType valueType) {
@@ -67,7 +67,7 @@ public final class TrueMapVector extends RepeatedMapVector {
   }
 
   @Override
-  public SingleTrueMapReader getReader() {
+  public SingleTrueMapReaderImpl getReader() {
     return reader;
   }
 
@@ -126,16 +126,24 @@ public final class TrueMapVector extends RepeatedMapVector {
   @Override
   public void putChild(String name, ValueVector vector) {
     super.putChild(name, vector);
+    MajorType fieldType = vector.getField().getType();
     switch (name) {
       case FIELD_KEY_NAME:
-        keyType = vector.getField().getType();
+        checkTypes(keyType, fieldType, FIELD_KEY_NAME);
+        keyType = fieldType;
         break;
       case FIELD_VALUE_NAME:
-        valueType = vector.getField().getType();
+        checkTypes(valueType, fieldType, FIELD_VALUE_NAME);
+        valueType = fieldType;
         break;
       default:
         throw new DrillRuntimeException(String.format("Unknown field %s is added to TRUEMAP vector", name));
     }
+  }
+
+  private void checkTypes(MajorType type, MajorType newType, String fieldName) {
+    assert type == null || newType.equals(type)
+        : String.format("Type mismatch for %s field in TRUEMAP: expected '%s' but found '%s'", fieldName, type, newType);
   }
 
   @Override

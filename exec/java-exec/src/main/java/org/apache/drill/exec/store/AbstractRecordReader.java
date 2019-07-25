@@ -69,7 +69,7 @@ public abstract class AbstractRecordReader implements RecordReader {
     }
 
     isStarQuery = Utilities.isStarQuery(columnsToRead);
-    columns = transformColumns(columnsToRead); // todo: this could be used to transform columns
+    columns = transformColumns(columnsToRead);
 
     logger.debug("columns to read : {}", columns);
   }
@@ -77,7 +77,7 @@ public abstract class AbstractRecordReader implements RecordReader {
   protected Collection<SchemaPath> getColumns() {
     return columns;
   }
-// todo: it is possible to override the method in DrillParquetReader!
+
   protected Collection<SchemaPath> transformColumns(Collection<SchemaPath> projected) {
     return projected;
   }

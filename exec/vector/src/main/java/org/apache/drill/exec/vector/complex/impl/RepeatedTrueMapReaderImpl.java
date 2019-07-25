@@ -18,49 +18,29 @@
 package org.apache.drill.exec.vector.complex.impl;
 
 import org.apache.drill.common.types.TypeProtos;
-import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.expr.holders.RepeatedTrueMapHolder;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.RepeatedTrueMapVector;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
-import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 
-public class RepeatedTrueMapReader extends AbstractFieldReader {
+public class RepeatedTrueMapReaderImpl extends AbstractFieldReader {
 
   private static final int NO_VALUES = Integer.MAX_VALUE - 1;
-  private static final TypeProtos.MajorType TYPE = Types.repeated(TypeProtos.MinorType.LIST);
-//  private final String name;
+
   private final RepeatedTrueMapVector container;
+
   private TrueMapReader reader;
   private int currentOffset;
   private int maxOffset;
 
-  public RepeatedTrueMapReader(RepeatedTrueMapVector container) {
+  public RepeatedTrueMapReaderImpl(RepeatedTrueMapVector container) {
     super();
     this.container = container;
   }
 
   @Override
   public TypeProtos.MajorType getType() {
-    return TYPE;
-  }
-
-  @Override
-  public void copyAsValue(BaseWriter.ListWriter writer) {
-    if (isEmpty()) {
-      return;
-    }
-    RepeatedTrueMapWriter impl = (RepeatedTrueMapWriter) writer;
-//    impl.container.copyFromSafe(idx(), impl.idx(), container);
-  }
-
-  @Override
-  public void copyAsField(String name, BaseWriter.MapWriter writer) {
-    if (isEmpty()) {
-      return;
-    }
-    RepeatedTrueMapWriter impl = (RepeatedTrueMapWriter) writer.list(name);
-//    impl.container.copyFromSafe(idx(), impl.idx(), container);
+    return RepeatedTrueMapVector.TYPE;
   }
 
   @Override
