@@ -518,8 +518,8 @@ public class EvaluationVisitor {
 
         JVar valueIndex = eval.decl(generator.getModel().INT, "valueIndex", JExpr.lit(-1));
 
-        int level = 0;
-        boolean isMap = e.getFieldId().isMap(level);
+        int depth = 0;
+        boolean isMap = e.getFieldId().isMap(depth);
 
         while (seg != null) {
           if (seg.isArray()) {
@@ -530,26 +530,26 @@ public class EvaluationVisitor {
               break;
             }
 
-            level++;
+            depth++;
 
             if (isMap) {
               JExpression keyExpr = JExpr.lit(seg.getArraySegment().getIndex());
 
-              JVar trueMapReader = generator.declareClassField("trueMapReader", generator.getModel()._ref(BaseReader.TrueMapReader.class));
-              eval.assign(trueMapReader, expr);
+              JVar dictReader = generator.declareClassField("dictReader", generator.getModel()._ref(BaseReader.DictReader.class));
+              eval.assign(dictReader, expr);
               eval.assign(valueIndex, expr.invoke("find").arg(keyExpr));
 
               JConditional conditional = eval._if(valueIndex.gt(JExpr.lit(-1)));
               JBlock ifFound = conditional._then().block();
-              expr = trueMapReader.invoke("reader").arg(JExpr.lit("value"));
+              expr = dictReader.invoke("reader").arg(JExpr.lit("value"));
               ifFound.add(expr.invoke("setPosition").arg(valueIndex));
 
               JBlock elseBlock = conditional._else().block();
-              elseBlock.add(trueMapReader.invoke("setPosition").arg(valueIndex));
+              elseBlock.add(dictReader.invoke("setPosition").arg(valueIndex));
               elseBlock.assign(isNull, JExpr.lit(1));
 
               seg = seg.getChild();
-              isMap = e.getFieldId().isMap(level);
+              isMap = e.getFieldId().isMap(depth);
               continue;
             }
 
@@ -580,8 +580,8 @@ public class EvaluationVisitor {
             listNum++;
           } else {
 
-            if (e.getFieldId().isMap(level)) {
-              level++;
+            if (e.getFieldId().isMap(depth)) {
+              depth++;
               JExpression keyExpr = JExpr.lit(seg.getNameSegment().getPath());
               MajorType finalType = e.getFieldId().getFinalType();
               if (seg.getChild() == null && !(Types.isComplex(finalType) || Types.isRepeated(finalType))) {
@@ -591,19 +591,19 @@ public class EvaluationVisitor {
               }
               eval.assign(valueIndex, expr.invoke("find").arg(keyExpr));
 
-              JVar trueMapReader = generator.declareClassField("trueMapReader", generator.getModel()._ref(FieldReader.class));
-              eval.assign(trueMapReader, expr);
+              JVar dictReader = generator.declareClassField("dictReader", generator.getModel()._ref(FieldReader.class));
+              eval.assign(dictReader, expr);
 
               JConditional conditional = eval._if(valueIndex.gt(JExpr.lit(-1)));
               JBlock ifFound = conditional._then().block();
-              expr = trueMapReader.invoke("reader").arg(JExpr.lit("value"));
+              expr = dictReader.invoke("reader").arg(JExpr.lit("value"));
               ifFound.add(expr.invoke("setPosition").arg(valueIndex));
 
               JBlock elseBlock = conditional._else().block();
-              elseBlock.add(trueMapReader.invoke("setPosition").arg(valueIndex));
+              elseBlock.add(dictReader.invoke("setPosition").arg(valueIndex));
 
               seg = seg.getChild();
-              isMap = e.getFieldId().isMap(level);
+              isMap = e.getFieldId().isMap(depth);
               continue;
             }
 
@@ -616,10 +616,10 @@ public class EvaluationVisitor {
         if (complex || repeated) {
 
           if (isMap) {
-            JVar trueMapReader = generator.declareClassField("trueMapReader", generator.getModel()._ref(FieldReader.class));
-            eval.assign(trueMapReader, expr);
+            JVar dictReader = generator.declareClassField("dictReader", generator.getModel()._ref(FieldReader.class));
+            eval.assign(dictReader, expr);
 
-            return new HoldingContainer(e.getMajorType(), trueMapReader, null, null, false, true);
+            return new HoldingContainer(e.getMajorType(), dictReader, null, null, false, true);
           }
 
           JVar complexReader = generator.declareClassField("reader", generator.getModel()._ref(FieldReader.class));
@@ -646,7 +646,7 @@ public class EvaluationVisitor {
         } else {
           if (seg != null) {
             JExpression holderExpr = out.getHolder();
-            if (e.getFieldId().isMap(level)) {
+            if (e.getFieldId().isMap(depth)) {
               holderExpr = JExpr.cast(generator.getModel()._ref(ValueHolder.class), holderExpr);
             }
             eval.add(expr.invoke("read").arg(JExpr.lit(seg.getArraySegment().getIndex())).arg(holderExpr));

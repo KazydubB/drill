@@ -64,6 +64,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.Function;
@@ -199,22 +200,15 @@ public class DrillParquetReader extends CommonParquetRecordReader {
     if (type != null && !type.isPrimitive()) {
       GroupType groupType = type.asGroupType();
       if (segment.isNamed()) {
-        boolean found = false;
         String fieldName = segment.getNameSegment().getPath();
-        for (Type field : groupType.getFields()) {
-          if (field.getName().equalsIgnoreCase(fieldName)) {
-            fieldName = field.getName();
-            found = true;
-            break;
-          }
-        }
-        result = found ? groupType.getType(fieldName) : null;
-      } else {
-        // the segment is array index
-        if (groupType.getOriginalType() == OriginalType.LIST) {
-          // get element type of the list
-          result = groupType.getType(0).asGroupType().getType(0);
-        }
+        Optional<Type> foundType = groupType.getFields().stream()
+            .filter(f -> f.getName().equalsIgnoreCase(fieldName))
+            .findAny();
+        result = foundType.map(field -> groupType.getType(field.getName()))
+            .orElse(null);
+      } else if (type.getOriginalType() == OriginalType.LIST) { // the segment is array index
+        // get element type of the list
+        result = groupType.getType(0).asGroupType().getType(0);
       }
     }
     return result;

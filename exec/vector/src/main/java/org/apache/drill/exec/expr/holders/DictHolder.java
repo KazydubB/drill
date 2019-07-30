@@ -18,15 +18,12 @@
 package org.apache.drill.exec.expr.holders;
 
 import org.apache.drill.common.types.TypeProtos;
-import org.apache.drill.exec.vector.complex.TrueMapVector;
-import org.apache.drill.exec.vector.complex.reader.FieldReader;
+import org.apache.drill.exec.vector.complex.DictVector;
 
-public final class TrueMapHolder extends ComplexHolder {
+public final class DictHolder extends RepeatedValueHolder {
 
-  public static final TypeProtos.MajorType TYPE = TrueMapVector.TYPE;
+  public static final TypeProtos.MajorType TYPE = DictVector.TYPE;
 
-  public TrueMapVector vector;
-  public FieldReader reader;
-  public int start;
-  public int end;
+  public DictVector vector;
+  public int isSet;
 }

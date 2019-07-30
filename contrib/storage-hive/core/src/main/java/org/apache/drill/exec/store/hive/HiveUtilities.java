@@ -369,11 +369,6 @@ public class HiveUtilities {
       }
 
       case MAP:
-        return MajorType.newBuilder()
-            .setMinorType(MinorType.TRUEMAP)
-            .setMode(DataMode.OPTIONAL)
-            .build();
-
       case LIST:
       case STRUCT:
       case UNION:

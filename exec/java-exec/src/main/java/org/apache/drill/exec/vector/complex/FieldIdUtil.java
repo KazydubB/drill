@@ -58,15 +58,16 @@ public class FieldIdUtil {
   }
 
 
-  public static TypedFieldId getFieldIdIfMatches(ValueVector vector, TypedFieldId.Builder builder, boolean addToBreadCrumb, PathSegment seg) {
+  public static TypedFieldId getFieldIdIfMatches(ValueVector vector, TypedFieldId.Builder builder,
+                                                 boolean addToBreadCrumb, PathSegment seg) {
     return getFieldIdIfMatches(vector, builder, addToBreadCrumb, seg, 0);
   }
 
-  public static TypedFieldId getFieldIdIfMatches(ValueVector vector, TypedFieldId.Builder builder, boolean addToBreadCrumb, PathSegment seg, int level) {
-    if (vector instanceof TrueMapVector) {
-      TrueMapVector mapVector = (TrueMapVector) vector;
-      MajorType vectorType = mapVector.getField().getType();
-      builder.addMajorType(level, vectorType);
+  private static TypedFieldId getFieldIdIfMatches(ValueVector vector, TypedFieldId.Builder builder,
+                                                  boolean addToBreadCrumb, PathSegment seg, int depth) {
+    if (vector instanceof DictVector) {
+      MajorType vectorType = vector.getField().getType();
+      builder.addMajorType(depth, vectorType);
     } else if (vector instanceof RepeatedMapVector && seg != null && seg.isArray() && !seg.isLastPath()) {
       if (addToBreadCrumb) {
         addToBreadCrumb = false;
@@ -124,14 +125,14 @@ public class FieldIdUtil {
     }
 
     ValueVector v;
-    if (vector instanceof TrueMapVector) {
-      v = ((TrueMapVector) vector).getValues();
+    if (vector instanceof DictVector) {
+      v = ((DictVector) vector).getValues();
     } else if (vector instanceof AbstractContainerVector) {
       String fieldName = null;
       if (seg.isNamed()) {
         fieldName = seg.getNameSegment().getPath();
       }
-      VectorWithOrdinal vord = ((AbstractContainerVector) vector).getChildVectorWithOrdinal(seg.isArray() ? null : fieldName);
+      VectorWithOrdinal vord = ((AbstractContainerVector) vector).getChildVectorWithOrdinal(fieldName);
       if (vord == null) {
         return null;
       }
@@ -140,24 +141,15 @@ public class FieldIdUtil {
         builder.intermediateType(v.getField().getType());
         builder.addId(vord.ordinal);
       }
-    } else if (vector instanceof ListVector) {
-      v = ((ListVector) vector).getDataVector();
-    } else if (vector instanceof RepeatedTrueMapVector) {
-      v = ((RepeatedTrueMapVector) vector).getDataVector();
+    } else if (vector instanceof ListVector || vector instanceof RepeatedDictVector) {
+      v = ((RepeatedValueVector) vector).getDataVector();
     } else {
       throw new UnsupportedOperationException("FieldIdUtil does not support vector of type " + vector.getField().getType());
     }
 
-    if (v instanceof TrueMapVector) {
-      return getFieldIdIfMatches(v, builder, addToBreadCrumb, seg.getChild(), level + 1);
-    } else if (v instanceof AbstractContainerVector) {
-      // we're looking for a multi path.
-      AbstractContainerVector c = (AbstractContainerVector) v;
-      return getFieldIdIfMatches(c, builder, addToBreadCrumb, seg.getChild(), level + 1);
-    } else if(v instanceof ListVector) {
-      ListVector list = (ListVector) v;
-      return getFieldIdIfMatches(list, builder, addToBreadCrumb, seg.getChild(), level + 1);
-    } else if (v instanceof  UnionVector) {
+    if (v instanceof AbstractContainerVector || v instanceof ListVector) {
+      return getFieldIdIfMatches(v, builder, addToBreadCrumb, seg.getChild(), depth + 1);
+    } else if (v instanceof UnionVector) {
       return getFieldIdIfMatchesUnion((UnionVector) v, builder, addToBreadCrumb, seg.getChild());
     } else {
       if (seg.isNamed()) {
@@ -189,10 +181,6 @@ public class FieldIdUtil {
   }
 
   public static TypedFieldId getFieldId(ValueVector vector, int id, SchemaPath expectedPath, boolean hyper) {
-    return getFieldId(vector, id, expectedPath, hyper, 0);
-  }
-
-  public static TypedFieldId getFieldId(ValueVector vector, int id, SchemaPath expectedPath, boolean hyper, int level) {
     if (!expectedPath.getRootSegment().getPath().equalsIgnoreCase(vector.getField().getName())) {
       return null;
     }
@@ -218,13 +206,11 @@ public class FieldIdUtil {
         return getFieldIdIfMatchesUnion((UnionVector) vector, builder, false, seg.getChild());
       }
     } else if (vector instanceof ListVector) {
-      ListVector list = (ListVector) vector;
       builder.intermediateType(vector.getField().getType());
       builder.addId(id);
-      return getFieldIdIfMatches(list, builder, true, expectedPath.getRootSegment().getChild(), level + 1);
-    } else if (vector instanceof TrueMapVector) {
-      TrueMapVector mapVector = (TrueMapVector) vector;
-      MajorType vectorType = mapVector.getField().getType();
+      return getFieldIdIfMatches(vector, builder, true, expectedPath.getRootSegment().getChild(), 1);
+    } else if (vector instanceof DictVector) {
+      MajorType vectorType = vector.getField().getType();
       builder.intermediateType(vectorType);
       builder.addId(id);
       if (seg.isLastPath()) {
@@ -233,17 +219,15 @@ public class FieldIdUtil {
       } else {
         PathSegment child = seg.getChild();
         builder.remainder(child);
-        return getFieldIdIfMatches(mapVector, builder, false, expectedPath.getRootSegment().getChild(), level);
+        return getFieldIdIfMatches(vector, builder, false, expectedPath.getRootSegment().getChild(), 0);
       }
     } else if (vector instanceof AbstractContainerVector) {
       // we're looking for a multi path.
-      AbstractContainerVector c = (AbstractContainerVector) vector;
       builder.intermediateType(vector.getField().getType());
       builder.addId(id);
-      return getFieldIdIfMatches(c, builder, true, expectedPath.getRootSegment().getChild(), level + 1);
-    } else if (vector instanceof RepeatedTrueMapVector) {
-      RepeatedTrueMapVector mapVector = (RepeatedTrueMapVector) vector;
-      MajorType vectorType = mapVector.getField().getType();
+      return getFieldIdIfMatches(vector, builder, true, expectedPath.getRootSegment().getChild(), 1);
+    } else if (vector instanceof RepeatedDictVector) {
+      MajorType vectorType = vector.getField().getType();
       builder.intermediateType(vectorType);
       builder.addId(id);
       if (seg.isLastPath()) {
@@ -258,9 +242,9 @@ public class FieldIdUtil {
           builder.remainder(child);
           builder.withIndex();
           if (child.isLastPath()) {
-            return builder.finalType(TrueMapVector.TYPE).build();
+            return builder.finalType(DictVector.TYPE).build();
           } else {
-            return getFieldIdIfMatches(vector, builder, true, expectedPath.getRootSegment().getChild(), level);
+            return getFieldIdIfMatches(vector, builder, true, expectedPath.getRootSegment().getChild(), 0);
           }
         }
       }

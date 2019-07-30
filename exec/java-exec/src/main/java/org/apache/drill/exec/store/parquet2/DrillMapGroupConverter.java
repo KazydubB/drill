@@ -21,10 +21,9 @@ import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.store.parquet.ParquetReaderUtility;
-import org.apache.drill.exec.vector.complex.TrueMapVector;
-import org.apache.drill.exec.vector.complex.impl.RepeatedTrueMapWriter;
+import org.apache.drill.exec.vector.complex.DictVector;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
-import org.apache.drill.exec.vector.complex.writer.BaseWriter.TrueMapWriter;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter.DictWriter;
 import org.apache.parquet.io.api.Converter;
 import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.Type;
@@ -33,9 +32,9 @@ import java.util.Collections;
 
 class DrillMapGroupConverter extends DrillParquetGroupConverter {
 
-  private final TrueMapWriter writer;
+  private final DictWriter writer;
 
-  DrillMapGroupConverter(OutputMutator mutator, TrueMapWriter mapWriter, GroupType schema,
+  DrillMapGroupConverter(OutputMutator mutator, DictWriter mapWriter, GroupType schema,
                     OptionManager options, ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
     super(mutator, mapWriter, options, containsCorruptedDates);
     writer = mapWriter;
@@ -68,7 +67,7 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
       if (!keyType.isPrimitive()) {
         throw new DrillRuntimeException("Map supports primitive key only. Found: " + keyType);
       } else {
-        Converter keyConverter = getConverterForType(TrueMapVector.FIELD_KEY_NAME, keyType.asPrimitiveType());
+        Converter keyConverter = getConverterForType(DictVector.FIELD_KEY_NAME, keyType.asPrimitiveType());
         converters.add(keyConverter);
       }
 
@@ -77,19 +76,19 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
       if (!valueType.isPrimitive()) {
         GroupType groupType = valueType.asGroupType();
         if (isLogicalMapType(groupType)) {
-          TrueMapWriter valueWriter = writer.trueMap(TrueMapVector.FIELD_VALUE_NAME);
+          DictWriter valueWriter = writer.dict(DictVector.FIELD_VALUE_NAME);
           valueConverter =
             new DrillMapGroupConverter(mutator, valueWriter, groupType, options, containsCorruptedDates);
         } else {
           boolean isListType = isLogicalListType(groupType);
           BaseWriter valueWriter = isListType
-                  ? writer.list(TrueMapVector.FIELD_VALUE_NAME)
-                  : writer.map(TrueMapVector.FIELD_VALUE_NAME);
+                  ? writer.list(DictVector.FIELD_VALUE_NAME)
+                  : writer.map(DictVector.FIELD_VALUE_NAME);
           valueConverter = new DrillParquetGroupConverter(mutator, valueWriter, groupType, Collections.emptyList(), options,
                   containsCorruptedDates, isListType, "KeyValueGroupConverter");
         }
       } else {
-        valueConverter = getConverterForType(TrueMapVector.FIELD_VALUE_NAME, valueType.asPrimitiveType());
+        valueConverter = getConverterForType(DictVector.FIELD_VALUE_NAME, valueType.asPrimitiveType());
       }
       converters.add(valueConverter);
     }
@@ -106,7 +105,7 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
 
     @Override
     boolean isMapWriter() {
-      return writer instanceof RepeatedTrueMapWriter || super.isMapWriter();
+      return true;
     }
   }
 }

@@ -142,7 +142,7 @@ public class NullReader extends AbstractBaseReader implements FieldReader {
   </#list>
 
   @Override
-  public void copyAsValue(TrueMapWriter writer) {}
+  public void copyAsValue(DictWriter writer) {}
 
   @Override
   public int find(String key) {

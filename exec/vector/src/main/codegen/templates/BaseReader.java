@@ -50,8 +50,8 @@ public interface BaseReader extends Positionable{
     void copyAsValue(MapWriter writer);
   }
 
-  public interface TrueMapReader extends RepeatedMapReader {
-    void copyAsValue(TrueMapWriter writer);
+  public interface DictReader extends RepeatedMapReader {
+    void copyAsValue(DictWriter writer);
     int find(String key);
     int find(int key);
     void read(String key, ValueHolder holder);

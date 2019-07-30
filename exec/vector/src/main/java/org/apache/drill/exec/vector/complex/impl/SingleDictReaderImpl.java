@@ -21,26 +21,26 @@ import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.apache.drill.exec.util.Text;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.complex.TrueMapVector;
-import org.apache.drill.exec.vector.complex.reader.BaseReader.TrueMapReader;
+import org.apache.drill.exec.vector.complex.DictVector;
+import org.apache.drill.exec.vector.complex.reader.BaseReader.DictReader;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter;
-import org.apache.drill.exec.vector.complex.writer.BaseWriter.TrueMapWriter;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter.DictWriter;
 import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 
 import java.math.BigDecimal;
 
-public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements TrueMapReader {
+public class SingleDictReaderImpl extends AbstractRepeatedMapReaderImpl<DictVector> implements DictReader {
 
   private static final int NOT_FOUND = -1;
 
-  public SingleTrueMapReaderImpl(TrueMapVector vector) {
+  public SingleDictReaderImpl(DictVector vector) {
     super(vector);
   }
 
   @Override
   public FieldReader reader(String name){
-    assert TrueMapVector.fieldNames.contains(name);
+    assert DictVector.fieldNames.contains(name);
     return super.reader(name);
   }
 
@@ -60,7 +60,7 @@ public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements Tr
     int start = vector.getOffsetVector().getAccessor().get(idx());
     int end = vector.getOffsetVector().getAccessor().get(idx() + 1);
     int index = NOT_FOUND;
-    ValueVector keys = vector.getChild(TrueMapVector.FIELD_KEY_NAME);
+    ValueVector keys = vector.getChild(DictVector.FIELD_KEY_NAME);
 
     // start from the end to ensure the most recent value for a key is found (in case if key is not unique)
     for (int i = end - 1; i >= start; i--) {
@@ -75,7 +75,7 @@ public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements Tr
   }
 
   private Object getAppropriateKey(int key) {
-    TypeProtos.MajorType keyType = ((TrueMapVector) vector).getKeyType();
+    TypeProtos.MajorType keyType = vector.getKeyType();
     switch (keyType.getMinorType()) {
       case SMALLINT:
         return (short) key;
@@ -98,7 +98,7 @@ public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements Tr
   }
 
   private Object getAppropriateKey(String key) {
-    TypeProtos.MajorType keyType = ((TrueMapVector) vector).getKeyType();
+    TypeProtos.MajorType keyType = vector.getKeyType();
     switch (keyType.getMinorType()) {
       case VARCHAR:
       case VARBINARY:
@@ -123,8 +123,8 @@ public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements Tr
 
   @Override
   public void read(String key, ValueHolder holder) {
-    Object typedKey = getAppropriateKey(key);
-    read(typedKey, holder);
+    Object typifiedKey = getAppropriateKey(key);
+    read(typifiedKey, holder);
   }
 
   @Override
@@ -134,12 +134,12 @@ public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements Tr
   }
 
   private void read(Object key, ValueHolder holder) {
-    if (isNull()) {
+    if (isEmpty()) {
       return;
     }
 
     int index = find(key);
-    FieldReader valueReader = reader(TrueMapVector.FIELD_VALUE_NAME);
+    FieldReader valueReader = reader(DictVector.FIELD_VALUE_NAME);
     valueReader.setPosition(index);
     if (index != NOT_FOUND) {
       valueReader.read(holder);
@@ -157,18 +157,8 @@ public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements Tr
   }
 
   @Override
-  public boolean isSet() {
-    return currentOffset != NO_VALUES;
-  }
-
-  @Override
-  public TypeProtos.MajorType getType(){
-    return vector.getField().getType();
-  }
-
-  @Override
-  public void copyAsValue(TrueMapWriter writer) {
-    if (isNull()) {
+  public void copyAsValue(DictWriter writer) {
+    if (isEmpty()) {
       return;
     }
     ComplexCopier.copy(this, (FieldWriter) writer);
@@ -176,14 +166,13 @@ public class SingleTrueMapReaderImpl extends RepeatedMapReaderImpl implements Tr
 
   @Override
   public void copyAsValue(ListWriter writer) {
-    ComplexCopier.copy(this, (FieldWriter) writer.trueMap());
+    ComplexCopier.copy(this, (FieldWriter) writer.dict());
   }
 
   @Override
   public String getTypeString() {
     StringBuilder sb = new StringBuilder(super.getTypeString());
     // child readers may be empty so vector is used instead to get key and value type
-    TrueMapVector vector = (TrueMapVector) this.vector;
     if (vector.getKeyType() != null && vector.getValueType() != null) {
       sb.append('<')
           .append(vector.getKeyType().getMinorType().name())

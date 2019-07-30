@@ -46,12 +46,12 @@ import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.store.parquet.ParquetReaderUtility;
 import org.apache.drill.exec.store.parquet.columnreaders.ParquetColumnMetadata;
-import org.apache.drill.exec.vector.complex.impl.RepeatedMapWriter;
+import org.apache.drill.exec.vector.complex.impl.AbstractRepeatedMapWriter;
 import org.apache.drill.exec.vector.complex.impl.SingleMapWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter;
-import org.apache.drill.exec.vector.complex.writer.BaseWriter.TrueMapWriter;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter.DictWriter;
 import org.apache.drill.exec.vector.complex.writer.BigIntWriter;
 import org.apache.drill.exec.vector.complex.writer.BitWriter;
 import org.apache.drill.exec.vector.complex.writer.DateWriter;
@@ -169,9 +169,9 @@ public class DrillParquetGroupConverter extends GroupConverter {
         converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
             containsCorruptedDates, true, converterName);
       } else if (isLogicalMapType(fieldGroupType)) {
-        writer = getWriter(name, MapWriter::trueMap, ListWriter::trueMap);
+        writer = getWriter(name, MapWriter::dict, ListWriter::dict);
         converter = new DrillMapGroupConverter(
-          mutator, (TrueMapWriter) writer, fieldGroupType, options, containsCorruptedDates);
+          mutator, (DictWriter) writer, fieldGroupType, options, containsCorruptedDates);
       } else if (fieldType.isRepetition(Repetition.REPEATED)) {
         if (skipRepeated) {
           converter = new DrillIntermediateParquetGroupConverter(mutator, baseWriter, fieldGroupType, columns, options,
@@ -450,7 +450,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
 
   boolean isMapWriter() {
     return baseWriter instanceof SingleMapWriter
-        || baseWriter instanceof RepeatedMapWriter;
+        || baseWriter instanceof AbstractRepeatedMapWriter;
   }
 
   @Override

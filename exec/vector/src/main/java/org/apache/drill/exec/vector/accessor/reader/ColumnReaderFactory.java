@@ -47,7 +47,7 @@ public class ColumnReaderFactory {
     case NULL:
     case LIST:
     case MAP:
-    case TRUEMAP:
+    case DICT:
       throw new UnsupportedOperationException(type.toString());
     default:
       return newAccessor(type, requiredReaders);

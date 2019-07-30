@@ -25,6 +25,7 @@ import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.rpc.user.QueryDataBatch;
 import org.apache.drill.exec.store.StorageStrategy;
+import org.apache.drill.test.TestBuilder;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
@@ -354,6 +355,62 @@ public class TestCTAS extends BaseTestQuery {
           .go();
     } finally {
       test("DROP TABLE IF EXISTS `%s`.`%s`", DFS_TMP_SCHEMA, tableName);
+    }
+  }
+
+  @Test
+  public void testCTASWithTrueMapInSelect() throws Exception {
+    String tableName = "table_with_dict";
+    try {
+      test("use dfs.tmp");
+      test("create table %s as select id, mapcol from cp.`store/parquet/complex/map/map_where.parquet`", tableName);
+      testBuilder()
+          .sqlQuery("select * from %s", tableName)
+          .unOrdered()
+          .baselineColumns("id", "mapcol")
+          .baselineValues(4, TestBuilder.mapOfObject("b", null, "c", 8, "d", 9, "e", 10))
+          .baselineValues(2, TestBuilder.mapOfObject("a", 3, "b", 4, "c", 5))
+          .baselineValues(1, TestBuilder.mapOfObject("a", 1, "b", 2, "c", 3))
+          .baselineValues(3, TestBuilder.mapOfObject("b", 6, "c", 7))
+          .go();
+    } finally {
+      test("DROP TABLE IF EXISTS %s", tableName);
+    }
+  }
+
+  @Test
+  public void testCTASWithRepeatedTrueMapInSelect() throws Exception {
+    String tableName = "table_with_dict_array";
+    try {
+      test("use dfs.tmp");
+      test("create table %s as select id, map_array from cp.`store/parquet/complex/map/map_and_map_array.parquet`", tableName);
+      testBuilder()
+          .sqlQuery("select * from %s", tableName)
+          .unOrdered()
+          .baselineColumns("id", "map_array")
+          .baselineValues(
+              3,
+              TestBuilder.listOf(
+                  TestBuilder.mapOfObject(8L, 1, 9L, 2, 523L, 4, 31L, 3),
+                  TestBuilder.mapOfObject(1L, 2, 3L, 1, 5L, 3)
+              )
+          )
+          .baselineValues(
+              1,
+              TestBuilder.listOf(
+                  TestBuilder.mapOfObject(1L, 1, 2L, 2)
+              )
+          )
+          .baselineValues(
+              2,
+              TestBuilder.listOf(
+                  TestBuilder.mapOfObject(3L, 1),
+                  TestBuilder.mapOfObject(1L, 2)
+              )
+          )
+          .go();
+    } finally {
+      test("DROP TABLE IF EXISTS %s", tableName);
     }
   }
 

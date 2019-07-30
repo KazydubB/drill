@@ -18,30 +18,30 @@
 package org.apache.drill.exec.vector.complex.impl;
 
 import org.apache.drill.common.types.TypeProtos;
-import org.apache.drill.exec.expr.holders.RepeatedTrueMapHolder;
+import org.apache.drill.exec.expr.holders.RepeatedDictHolder;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.complex.RepeatedTrueMapVector;
+import org.apache.drill.exec.vector.complex.RepeatedDictVector;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 
-public class RepeatedTrueMapReaderImpl extends AbstractFieldReader {
+public class RepeatedDictReaderImpl extends AbstractFieldReader {
 
   private static final int NO_VALUES = Integer.MAX_VALUE - 1;
 
-  private final RepeatedTrueMapVector container;
+  private final RepeatedDictVector container;
 
-  private TrueMapReader reader;
+  private DictReader reader;
   private int currentOffset;
   private int maxOffset;
 
-  public RepeatedTrueMapReaderImpl(RepeatedTrueMapVector container) {
+  public RepeatedDictReaderImpl(RepeatedDictVector container) {
     super();
     this.container = container;
   }
 
   @Override
   public TypeProtos.MajorType getType() {
-    return RepeatedTrueMapVector.TYPE;
+    return RepeatedDictVector.TYPE;
   }
 
   @Override
@@ -68,7 +68,7 @@ public class RepeatedTrueMapReaderImpl extends AbstractFieldReader {
     }
 
     super.setPosition(index);
-    RepeatedTrueMapHolder h = new RepeatedTrueMapHolder();
+    RepeatedDictHolder h = new RepeatedDictHolder();
     container.getAccessor().get(index, h);
     if (h.start == h.end) {
       currentOffset = NO_VALUES;
@@ -119,19 +119,19 @@ public class RepeatedTrueMapReaderImpl extends AbstractFieldReader {
   }
 
   @Override
-  public void copyAsValue(BaseWriter.TrueMapWriter writer) {
+  public void copyAsValue(BaseWriter.DictWriter writer) {
     if (isEmpty()) {
       return;
     }
 
     ValueVector vector;
     int srcId;
-    if (writer instanceof RepeatedTrueMapWriter) {
-      vector = ((RepeatedTrueMapWriter) writer).container;
-      srcId = ((RepeatedTrueMapWriter) writer).idx();
+    if (writer instanceof RepeatedDictWriter) {
+      vector = ((RepeatedDictWriter) writer).container;
+      srcId = ((RepeatedDictWriter) writer).idx();
     } else {
-      vector = ((SingleTrueMapWriter) writer).container;
-      srcId = ((SingleTrueMapWriter) writer).idx();
+      vector = ((SingleDictWriter) writer).container;
+      srcId = ((SingleDictWriter) writer).idx();
     }
     vector.copyEntry(srcId, container, idx());
   }

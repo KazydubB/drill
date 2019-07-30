@@ -19,7 +19,7 @@
 import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 
 <@pp.dropOutputFile />
-<@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/impl/RepeatedTrueMapWriter.java" />
+<@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/impl/RepeatedDictWriter.java" />
 
 <#include "/@includes/license.ftl" />
 package org.apache.drill.exec.vector.complex.impl;
@@ -29,17 +29,17 @@ package org.apache.drill.exec.vector.complex.impl;
 /*
  * This class is generated using freemarker and the ${.template_name} template.
  */
-public class RepeatedTrueMapWriter extends AbstractFieldWriter implements BaseWriter.TrueMapWriter {
+public class RepeatedDictWriter extends AbstractFieldWriter implements BaseWriter.DictWriter {
 
-  final RepeatedTrueMapVector container;
+  final RepeatedDictVector container;
 
-  private final SingleTrueMapWriter trueMapWriter;
+  private final SingleDictWriter dictWriter;
   private int currentChildIndex;
 
-  public RepeatedTrueMapWriter(RepeatedTrueMapVector container, FieldWriter parent) {
+  public RepeatedDictWriter(RepeatedDictVector container, FieldWriter parent) {
     super(parent);
     this.container = Preconditions.checkNotNull(container, "Container cannot be null!");
-    this.trueMapWriter = new SingleTrueMapWriter((TrueMapVector) container.getDataVector(), this);
+    this.dictWriter = new SingleDictWriter((DictVector) container.getDataVector(), this);
   }
 
   @Override
@@ -75,7 +75,7 @@ public class RepeatedTrueMapWriter extends AbstractFieldWriter implements BaseWr
     }
 
     // update the repeated vector to state that there is current+1 objects.
-    final RepeatedTrueMapHolder h = new RepeatedTrueMapHolder();
+    final RepeatedDictHolder h = new RepeatedDictHolder();
     container.getAccessor().get(idx(), h);
     if (h.start >= h.end) {
       container.getMutator().startNewValue(idx());
@@ -96,42 +96,42 @@ public class RepeatedTrueMapWriter extends AbstractFieldWriter implements BaseWr
   @Override
   public void start() {
     currentChildIndex = container.getMutator().add(idx());
-    trueMapWriter.setPosition(currentChildIndex);
-    trueMapWriter.start();
+    dictWriter.setPosition(currentChildIndex);
+    dictWriter.start();
   }
 
   @Override
   public void end() {
-    trueMapWriter.end();
+    dictWriter.end();
   }
 
   @Override
   public void startKeyValuePair() {
-    trueMapWriter.startKeyValuePair();
+    dictWriter.startKeyValuePair();
   }
 
   @Override
   public void endKeyValuePair() {
-    trueMapWriter.endKeyValuePair();
+    dictWriter.endKeyValuePair();
   }
 
   @Override
   public ListWriter list(String name) {
-    ListWriter writer = trueMapWriter.list(name);
+    ListWriter writer = dictWriter.list(name);
     writer.setPosition(currentChildIndex);
     return writer;
   }
 
   @Override
   public MapWriter map(String name) {
-    MapWriter writer = trueMapWriter.map(name);
+    MapWriter writer = dictWriter.map(name);
     writer.setPosition(currentChildIndex);
     return writer;
   }
 
   @Override
-  public TrueMapWriter trueMap(String name) {
-    TrueMapWriter writer = trueMapWriter.trueMap(name);
+  public DictWriter dict(String name) {
+    DictWriter writer = dictWriter.dict(name);
     writer.setPosition(currentChildIndex);
     return writer;
   }
@@ -143,7 +143,7 @@ public class RepeatedTrueMapWriter extends AbstractFieldWriter implements BaseWr
 
   @Override
   public ${minor.class}Writer ${lowerName}(String name) {
-    FieldWriter writer = (FieldWriter) trueMapWriter.${lowerName}(name);
+    FieldWriter writer = (FieldWriter) dictWriter.${lowerName}(name);
     writer.setPosition(currentChildIndex);
     return writer;
   }
@@ -151,7 +151,7 @@ public class RepeatedTrueMapWriter extends AbstractFieldWriter implements BaseWr
 
   @Override
   public ${minor.class}Writer ${lowerName}(String name, int scale, int precision) {
-    FieldWriter writer = (FieldWriter) trueMapWriter.${lowerName}(name, scale, precision);
+    FieldWriter writer = (FieldWriter) dictWriter.${lowerName}(name, scale, precision);
     writer.setPosition(currentChildIndex);
     return writer;
   }

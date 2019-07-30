@@ -20,37 +20,37 @@ package org.apache.drill.exec.vector.complex;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.exception.OutOfMemoryException;
-import org.apache.drill.exec.expr.holders.RepeatedTrueMapHolder;
+import org.apache.drill.exec.expr.holders.RepeatedDictHolder;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.TransferPair;
 import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.util.JsonStringArrayList;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.complex.impl.RepeatedTrueMapReaderImpl;
+import org.apache.drill.exec.vector.complex.impl.RepeatedDictReaderImpl;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
 import java.util.List;
 
-public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
+public class RepeatedDictVector extends BaseRepeatedValueVector {
 
-  public final static TypeProtos.MajorType TYPE = Types.repeated(TypeProtos.MinorType.TRUEMAP);
+  public final static TypeProtos.MajorType TYPE = Types.repeated(TypeProtos.MinorType.DICT);
 
-  private final static String TRUEMAP_VECTOR_NAME = "$inner$";
-  private  final static MaterializedField TRUEMAP_VECTOR_FIELD =
-      MaterializedField.create(TRUEMAP_VECTOR_NAME, TrueMapVector.TYPE);
+  private final static String DICT_VECTOR_NAME = "$inner$";
+  private  final static MaterializedField DICT_VECTOR_FIELD =
+      MaterializedField.create(DICT_VECTOR_NAME, DictVector.TYPE);
 
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
-  private final FieldReader reader = new RepeatedTrueMapReaderImpl(this);
+  private final FieldReader reader = new RepeatedDictReaderImpl(this);
   private final EmptyValuePopulator emptyPopulator;
 
-  public RepeatedTrueMapVector(String path, BufferAllocator allocator) {
+  public RepeatedDictVector(String path, BufferAllocator allocator) {
     this(MaterializedField.create(path, TYPE), allocator, null);
   }
 
-  public RepeatedTrueMapVector(MaterializedField field, BufferAllocator allocator, CallBack callback) {
-    super(field, allocator, new TrueMapVector(TRUEMAP_VECTOR_FIELD, allocator, callback));
+  public RepeatedDictVector(MaterializedField field, BufferAllocator allocator, CallBack callback) {
+    super(field, allocator, new DictVector(DICT_VECTOR_FIELD, allocator, callback));
     emptyPopulator = new EmptyValuePopulator(getOffsetVector());
   }
 
@@ -63,27 +63,34 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
 
   @Override
   public TransferPair getTransferPair(String ref, BufferAllocator allocator) {
-    return makeTransferPair(new RepeatedTrueMapVector(ref, allocator));
+    return makeTransferPair(new RepeatedDictVector(ref, allocator));
   }
 
   @Override
   public TransferPair makeTransferPair(ValueVector target) {
-    return new RepeatedTrueMapTransferPair((RepeatedTrueMapVector) target);
+    return new RepeatedDictTransferPair((RepeatedDictVector) target);
   }
 
-  public class RepeatedTrueMapTransferPair extends BaseRepeatedValueVectorTransferPair<RepeatedTrueMapVector> {
+  public class RepeatedDictTransferPair extends BaseRepeatedValueVectorTransferPair<RepeatedDictVector> {
 
-    public RepeatedTrueMapTransferPair(RepeatedTrueMapVector target) {
+    public RepeatedDictTransferPair(RepeatedDictVector target) {
       super(target);
     }
 
     @Override
     public void copyValueSafe(int srcIndex, int destIndex) {
-      final RepeatedTrueMapHolder holder = new RepeatedTrueMapHolder();
+      final RepeatedDictHolder holder = new RepeatedDictHolder();
       getAccessor().get(srcIndex, holder);
       target.emptyPopulator.populate(destIndex+1);
       copyValueSafe(destIndex, holder.start, holder.end);
     }
+  }
+
+  @Override
+  public MaterializedField getField() {
+    MaterializedField field = this.field.clone();
+    field.addChild(vector.getField());
+    return field;
   }
 
   @Override
@@ -103,7 +110,7 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
 
   @Override
   public void copyEntry(int toIndex, ValueVector from, int fromIndex) {
-    RepeatedTrueMapTransferPair pair = (RepeatedTrueMapTransferPair) from.makeTransferPair(this);
+    RepeatedDictTransferPair pair = (RepeatedDictTransferPair) from.makeTransferPair(this);
     pair.copyValueSafe(fromIndex, toIndex);
   }
 
@@ -121,12 +128,12 @@ public class RepeatedTrueMapVector extends BaseRepeatedValueVector {
       return list;
     }
 
-    public void get(int index, RepeatedTrueMapHolder holder) {
+    public void get(int index, RepeatedDictHolder holder) {
       int valueCapacity = getValueCapacity();
       assert index < valueCapacity :
         String.format("Attempted to access index %d when value capacity is %d", index, valueCapacity);
 
-      holder.vector = RepeatedTrueMapVector.this;
+      holder.vector = RepeatedDictVector.this;
       holder.reader = reader;
       holder.start = getOffsetVector().getAccessor().get(index);
       holder.end =  getOffsetVector().getAccessor().get(index + 1);

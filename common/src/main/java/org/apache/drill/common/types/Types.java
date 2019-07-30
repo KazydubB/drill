@@ -49,7 +49,7 @@ public class Types {
     switch(type.getMinorType()) {
     case LIST:
     case MAP:
-    case TRUEMAP:
+    case DICT:
       return true;
     default:
       return false;
@@ -189,7 +189,7 @@ public class Types {
       // or not) except ARRAY types (handled above):
 
       case MAP:             return "STRUCT"; // Drill map represents struct and in future will be renamed
-      case TRUEMAP:        return "MAP";
+      case DICT:        return "MAP";
       case LATE:            return "ANY";
       case NULL:            return "NULL";
       case UNION:           return "UNION";
@@ -347,7 +347,7 @@ public class Types {
           case LATE:
           case LIST:
           case MAP:
-          case TRUEMAP:
+          case DICT:
           case UNION:
           case NULL:
           case TIMETZ:      // SQL TIME WITH TIME ZONE
@@ -435,7 +435,7 @@ public class Types {
 
       case INTERVAL:
       case MAP:
-      case TRUEMAP:
+      case DICT:
       case LATE:
       case NULL:
       case UNION:
@@ -732,10 +732,10 @@ public class Types {
    * @return true if type can be used in ORDER BY clause
    */
   public static boolean isSortable(MinorType type) {
-    // Currently only map, list and truemap columns are not sortable.
+    // Currently only map, list and dict columns are not sortable.
     return type != MinorType.MAP
         && type != MinorType.LIST
-        && type != MinorType.TRUEMAP;
+        && type != MinorType.DICT;
   }
 
   /**
@@ -834,6 +834,18 @@ public class Types {
       return 38;
     default:
       return 0;
+    }
+  }
+
+  public static boolean isNullable(final MajorType type) {
+    switch (type.getMode()) {
+      case REQUIRED:
+      case REPEATED:
+        return false;
+      case OPTIONAL:
+        return !isComplex(type);
+      default:
+        throw new UnsupportedOperationException("Unexpected/unhandled DataMode value " + type.getMode());
     }
   }
 }

@@ -17,12 +17,19 @@
  */
 <@pp.dropOutputFile />
 <#list ["Single", "Repeated"] as mode>
-<@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/impl/${mode}MapWriter.java" />
+
+<#if mode == "Repeated">
+<#assign className = "AbstractRepeatedMapWriter">
+<#else>
+<#assign className = "${mode}MapWriter">
+</#if>
+
+<@pp.changeOutputFile name="/org/apache/drill/exec/vector/complex/impl/${className}.java" />
 <#if mode == "Single">
 <#assign containerClass = "MapVector" />
 <#assign index = "idx()">
 <#else>
-<#assign containerClass = "RepeatedMapVector" />
+<#assign containerClass = "T" />
 <#assign index = "currentChildIndex">
 </#if>
 
@@ -44,7 +51,11 @@ import org.apache.drill.exec.vector.complex.writer.FieldWriter;
  * This class is generated using FreeMarker and the ${.template_name} template.
  */
 @SuppressWarnings("unused")
-public class ${mode}MapWriter extends AbstractFieldWriter {
+<#if mode == "Repeated">
+public abstract class ${className}<${containerClass} extends AbstractRepeatedMapVector> extends AbstractFieldWriter {
+<#else>
+public class ${className} extends AbstractFieldWriter {
+</#if>
 
   protected final ${containerClass} container;
   <#if mode == "Repeated">protected<#else>private</#if> final Map<String, FieldWriter> fields = new HashMap<>();
@@ -52,13 +63,13 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
 
   private final boolean unionEnabled;
 
-  public ${mode}MapWriter(${containerClass} container, FieldWriter parent, boolean unionEnabled) {
+  public ${className}(${containerClass} container, FieldWriter parent, boolean unionEnabled) {
     super(parent);
     this.container = container;
     this.unionEnabled = unionEnabled;
   }
 
-  public ${mode}MapWriter(${containerClass} container, FieldWriter parent) {
+  public ${className}(${containerClass} container, FieldWriter parent) {
     this(container, parent, false);
   }
 
@@ -98,13 +109,13 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
   }
 
   @Override
-  public TrueMapWriter trueMap(String name) {
+  public DictWriter dict(String name) {
     FieldWriter writer = fields.get(name.toLowerCase());
     if (writer == null) {
       int vectorCount = container.size();
 
-      TrueMapVector vector = container.addOrGet(name, TrueMapVector.TYPE, TrueMapVector.class);
-      writer = new SingleTrueMapWriter(vector, this);
+      DictVector vector = container.addOrGet(name, DictVector.TYPE, DictVector.class);
+      writer = new SingleDictWriter(vector, this);
 
       fields.put(name.toLowerCase(), writer);
       if(vectorCount != container.size()) {
@@ -155,34 +166,7 @@ public class ${mode}MapWriter extends AbstractFieldWriter {
     }
     return writer;
   }
-  <#if mode == "Repeated">
-
-  public void start() {
-      // update the repeated vector to state that there is current+1 objects.
-    final RepeatedMapHolder h = new RepeatedMapHolder();
-    final RepeatedMapVector map = container;
-    final RepeatedMapVector.Mutator mutator = map.getMutator();
-
-    // Make sure that the current vector can support the end position of this list.
-    if(container.getValueCapacity() <= idx()) {
-      mutator.setValueCount(idx()+1);
-    }
-
-    map.getAccessor().get(idx(), h);
-    if (h.start >= h.end) {
-      container.getMutator().startNewValue(idx());
-    }
-    currentChildIndex = container.getMutator().add(idx());
-    for(final FieldWriter w : fields.values()) {
-      w.setPosition(currentChildIndex);
-    }
-  }
-
-
-  public void end() {
-    // noop
-  }
-  <#else>
+  <#if mode != "Repeated">
 
   public void setValueCount(int count) {
     container.getMutator().setValueCount(count);

@@ -77,8 +77,8 @@ public class UnionReader extends AbstractFieldReader {
       return NullReader.INSTANCE;
     case MinorType.MAP_VALUE:
       return (FieldReader) getMap();
-    case MinorType.TRUEMAP_VALUE:
-      return (FieldReader) getTrueMap();
+    case MinorType.DICT_VALUE:
+      return (FieldReader) getDict();
     case MinorType.LIST_VALUE:
       return (FieldReader) getList();
     <#list vv.types as type><#list type.minor as minor><#assign name = minor.class?cap_first />
@@ -104,15 +104,15 @@ public class UnionReader extends AbstractFieldReader {
     return mapReader;
   }
 
-  private SingleTrueMapReaderImpl trueMapReader;
+  private SingleDictReaderImpl dictReader;
 
-  private TrueMapReader getTrueMap() {
-    if (trueMapReader == null) {
-      trueMapReader = (SingleTrueMapReaderImpl) data.getTrueMap().getReader();
-      trueMapReader.setPosition(idx());
-      readers[MinorType.TRUEMAP_VALUE] = trueMapReader;
+  private DictReader getDict() {
+    if (dictReader == null) {
+      dictReader = (SingleDictReaderImpl) data.getDict().getReader();
+      dictReader.setPosition(idx());
+      readers[MinorType.DICT_VALUE] = dictReader;
     }
-    return trueMapReader;
+    return dictReader;
   }
 
   private UnionListReader listReader;

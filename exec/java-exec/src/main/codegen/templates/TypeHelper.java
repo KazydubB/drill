@@ -59,7 +59,7 @@ public class TypeHelper extends BasicTypeHelper {
     </#list>
     </#list>
     case MAP:
-    case TRUEMAP:
+    case DICT:
     case LIST:
     case NULL:
       return new GenericAccessor(vector);
@@ -71,8 +71,8 @@ public class TypeHelper extends BasicTypeHelper {
     switch (type) {
     case UNION:
       return model._ref(UnionHolder.class);
-    case TRUEMAP:
-      return model._ref(TrueMapHolder.class);
+    case DICT:
+      return model._ref(DictHolder.class);
     case MAP:
     case LIST:
       return model._ref(ComplexHolder.class);

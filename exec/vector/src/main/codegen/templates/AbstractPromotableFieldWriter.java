@@ -105,8 +105,8 @@ abstract class AbstractPromotableFieldWriter extends AbstractFieldWriter {
   }
 
   @Override
-  public TrueMapWriter trueMap() {
-    return getWriter(MinorType.LIST).trueMap();
+  public DictWriter dict() {
+    return getWriter(MinorType.LIST).dict();
   }
 
   @Override

@@ -223,7 +223,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapBigIntValue() throws Exception {
+  public void selectDictBigIntValue() throws Exception {
     String query = "select order_items from cp.`store/parquet/complex/simple_map.parquet`";
     testBuilder()
         .sqlQuery(query)
@@ -234,7 +234,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapStructValue() throws Exception {
+  public void selectDictStructValue() throws Exception {
     String query = "select order_id, order_items from cp.`store/parquet/complex/map/m_a.parquet`";
     testBuilder()
         .sqlQuery(query)
@@ -260,7 +260,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapIntArrayValue() throws Exception {
+  public void selectDictIntArrayValue() throws Exception {
     /*
       3 {3:[3,4,5],5:[5,3]}
       1 {1:[1,2,3,4,5]}
@@ -292,7 +292,25 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapTrueMapValue() throws Exception {
+  public void selectDictIntArrayValueGetByKey() throws Exception {
+    /*
+      3 {3:[3,4,5],5:[5,3]}
+      1 {1:[1,2,3,4,5]}
+      2 {1:[1,2,3,4,5],2:[2,3]}
+     */
+    String query = "select id, mapcol[1] as val from cp.`store/parquet/complex/map/map_int_to_int_array.parquet` order by id asc";
+    testBuilder()
+        .sqlQuery(query)
+        .ordered()
+        .baselineColumns("id", "val")
+        .baselineValues(1, TestBuilder.listOf(1, 2, 3, 4, 5))
+        .baselineValues(2, TestBuilder.listOf(1, 2, 3, 4, 5))
+        .baselineValues(3, TestBuilder.listOf())
+        .go();
+  }
+
+  @Test
+  public void selectDictDictValue() throws Exception {
     /*
       2 {3:{"a":1,"b":2},4:{"c":3},5:{"d":4,"e":5}}
       1 {1:{"a":1,"b":2}}
@@ -322,7 +340,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapGetByIntKey() throws Exception {
+  public void selectDictGetByIntKey() throws Exception {
     /*
       2 {3:{"a":1,"b":2},4:{"c":3},5:{"d":4,"e":5}}
       1 {1:{"a":1,"b":2}}
@@ -340,7 +358,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapGetByStringKey() throws Exception {
+  public void selectDictGetByStringKey() throws Exception {
     /*
       3 {"b":6,"c":7}
       1 {"a":1,"b":2,"c":3}
@@ -357,7 +375,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapGetByStringKey2() throws Exception {
+  public void selectDictGetByStringKey2() throws Exception {
     /*
       3 {"b":6,"c":7}
       1 {"a":1,"b":2,"c":3}
@@ -377,7 +395,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapGetByKeyComplexValue() throws Exception {
+  public void selectDictGetByKeyComplexValue() throws Exception {
     /*
       2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
       1, {1: {"a", 1, "b", 2}}
@@ -395,7 +413,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapByKeyComplexValue2() throws Exception {
+  public void selectDictByKeyComplexValue2() throws Exception {
     /*
       1, {1: {"a", 1, "b", 2}}
       2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
@@ -419,7 +437,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapGetByKeyComplexValue3() throws Exception {
+  public void selectDictGetByKeyComplexValue3() throws Exception {
     /*
       1, {1: {"a", 1, "b", 2}}
       2, {3: {"a", 1, "b", 2}, 4: {"c", 3}, 5: {"d", 4, "e", 5}}
@@ -437,7 +455,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapOrderByAnotherField() throws Exception {
+  public void testDictOrderByAnotherField() throws Exception {
     String query = "select id, mapcol from cp.`store/parquet/complex/map/map_where.parquet` order by id desc";
     testBuilder()
         .sqlQuery(query)
@@ -451,7 +469,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapWithLimit() throws Exception {
+  public void testDictWithLimit() throws Exception {
     /*
       3 {"b":6,"c":7}
       1 {"a":1,"b":2,"c":3}
@@ -469,7 +487,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapTrueMapArrayValue() throws Exception {
+  public void testDictDictArrayValue() throws Exception {
     String query = "select id, mapcol, map_array from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
     testBuilder()
         .sqlQuery(query)
@@ -502,7 +520,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapArrayGetElementByIndex() throws Exception {
+  public void testDictArrayGetElementByIndex() throws Exception {
     String query = "select id, map_array[0] as element, mapcol from cp.`store/parquet/complex/map/map_and_map_array.parquet` order by id desc";
     testBuilder()
         .sqlQuery(query)
@@ -527,7 +545,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapGetByLongKey() throws Exception {
+  public void testDictGetByLongKey() throws Exception {
     String query = "select id, mapcol[1] as val from cp.`store/parquet/complex/map/map_and_map_array.parquet`";
     testBuilder()
         .sqlQuery(query)
@@ -540,7 +558,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapOrderByBigIntValue() throws Exception {
+  public void testDictOrderByBigIntValue() throws Exception {
     /*
       3 {7:1,102:2,524:3,901920:4} [{8:1,9:2,523:4,31:3},{1:2,3:1,5:3}]
       1 {1:1,2:2} [{1:1,2:2}]
@@ -556,7 +574,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapArrayElementGetByKey() throws Exception {
+  public void testDictArrayElementGetByKey() throws Exception {
     /*
       3 {7:1,102:2,524:3,901920:4} [{8:1,9:2,523:4,31:3},{1:2,3:1,5:3}]
       1 {1:1,2:2} [{1:1,2:2}]
@@ -572,7 +590,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapArrayElementGetByStringKey() throws Exception {
+  public void testDictArrayElementGetByStringKey() throws Exception {
     /*
       3 {7:1,102:2,524:3,901920:4} [{8:1,9:2,523:4,31:3},{1:2,3:1,5:3}]
       1 {1:1,2:2} [{1:1,2:2}]
@@ -588,18 +606,18 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapTypeOf() throws Exception {
+  public void testDictTypeOf() throws Exception {
     String query = "select typeof(map_array[0]) as type from cp.`store/parquet/complex/map/map_and_map_array.parquet` limit 1";
     testBuilder()
         .sqlQuery(query)
         .ordered()
         .baselineColumns("type")
-        .baselineValuesForSingleColumn("TRUEMAP<BIGINT,INT>")
+        .baselineValuesForSingleColumn("DICT<BIGINT,INT>")
         .go();
   }
 
   @Test
-  public void testTrueMapFlatten() throws Exception {
+  public void testDictFlatten() throws Exception {
     /*
       1, {1 : [1, 2, 3, 4, 5]}
       2, {1 : [1, 2, 3, 4, 5], 2 : [2, 3]}
@@ -629,7 +647,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapArrayFlatten() throws Exception {
+  public void testDictArrayFlatten() throws Exception {
     /*
       3 {7:1,102:2,524:3,901920:4} [{8:1,9:2,523:4,31:3},{1:2,3:1,5:3}]
       1 {1:1,2:2} [{1:1,2:2}]
@@ -651,7 +669,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapArrayAndElementFlatten() throws Exception {
+  public void testDictArrayAndElementFlatten() throws Exception {
     /*
       3 {7:1,102:2,524:3,901920:4} [{8:1,9:2,523:4,31:3},{1:2,3:1,5:3}]
       1 {1:1,2:2} [{1:1,2:2}]
@@ -679,7 +697,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void selectTrueMapFlattenListValue() throws Exception {
+  public void selectDictFlattenListValue() throws Exception {
     /*
       1, {1 : [1, 2, 3, 4, 5]}
       2, {1 : [1, 2, 3, 4, 5], 2 : [2, 3]}
@@ -704,7 +722,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapValueInFilter() throws Exception {
+  public void testDictValueInFilter() throws Exception {
     String query = "select id, mapcol from cp.`store/parquet/complex/map/map_where.parquet` where mapcol['c'] > 5";
     testBuilder()
         .sqlQuery(query)
@@ -716,7 +734,7 @@ public class TestParquetComplex extends BaseTestQuery {
   }
 
   @Test
-  public void testTrueMapValueInFilter2() throws Exception {
+  public void testDictValueInFilter2() throws Exception {
     String query = "select id, mapcol from cp.`store/parquet/complex/map/map_where.parquet` where mapcol['b'] is not null order by id asc";
     testBuilder()
         .sqlQuery(query)

@@ -37,8 +37,8 @@ import org.apache.drill.exec.vector.UInt4Vector;
 import org.apache.drill.exec.vector.UntypedNullVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.AbstractMapVector;
+import org.apache.drill.exec.vector.complex.AbstractRepeatedMapVector;
 import org.apache.drill.exec.vector.complex.RepeatedListVector;
-import org.apache.drill.exec.vector.complex.RepeatedMapVector;
 import org.apache.drill.exec.vector.complex.RepeatedValueVector;
 import org.apache.drill.exec.vector.VariableWidthVector;
 
@@ -326,10 +326,15 @@ public class RecordBatchSizer {
     }
 
     public boolean isComplex() {
-      return metadata.getType().getMinorType() == MinorType.MAP ||
-        metadata.getType().getMinorType() == MinorType.TRUEMAP ||
-        metadata.getType().getMinorType() == MinorType.UNION ||
-        metadata.getType().getMinorType() == MinorType.LIST;
+      switch (metadata.getType().getMinorType()) {
+        case LIST:
+        case MAP:
+        case DICT:
+        case UNION:
+          return true;
+        default:
+          return false;
+      }
     }
 
     public boolean isRepeatedList() {
@@ -458,8 +463,8 @@ public class RecordBatchSizer {
     }
 
     private void allocateMap(AbstractMapVector map, int recordCount) {
-      if (map instanceof RepeatedMapVector) {
-        ((RepeatedMapVector) map).allocateOffsetsNew(recordCount);
+      if (map instanceof AbstractRepeatedMapVector) {
+        ((AbstractRepeatedMapVector) map).allocateOffsetsNew(recordCount);
           recordCount *= getEntryCardinalityForAlloc();
         }
 
@@ -762,7 +767,7 @@ public class RecordBatchSizer {
     ColumnSize colSize = new ColumnSize(v, prefix);
     switch (v.getField().getType().getMinorType()) {
       case MAP:
-      case TRUEMAP:
+      case DICT:
         // Maps consume no size themselves. However, their contained
         // vectors do consume space, so visit columns recursively.
         expandMap(colSize, v, prefix + v.getField().getName() + ".");

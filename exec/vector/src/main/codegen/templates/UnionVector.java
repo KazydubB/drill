@@ -214,12 +214,12 @@ public class UnionVector implements ValueVector {
     return mapVector;
   }
 
-  public TrueMapVector getTrueMap() {
-    TrueMapVector trueMapVector = subtype(MinorType.TRUEMAP);
-    if (trueMapVector == null) {
-      trueMapVector = classicAddType(MinorType.TRUEMAP, TrueMapVector.class);
+  public DictVector getDict() {
+    DictVector dictVector = subtype(MinorType.DICT);
+    if (dictVector == null) {
+      dictVector = classicAddType(MinorType.DICT, DictVector.class);
     }
-    return trueMapVector;
+    return dictVector;
   }
 
   public ListVector getList() {

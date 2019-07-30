@@ -18,21 +18,12 @@
 package org.apache.drill.exec.expr.holders;
 
 import org.apache.drill.common.types.TypeProtos;
-import org.apache.drill.exec.vector.complex.RepeatedTrueMapVector;
-import org.apache.drill.exec.vector.complex.reader.FieldReader;
+import org.apache.drill.exec.vector.complex.RepeatedDictVector;
 
-public final class RepeatedTrueMapHolder implements ValueHolder {
+public final class RepeatedDictHolder extends RepeatedValueHolder {
 
-  public TypeProtos.MajorType getType() {return RepeatedTrueMapVector.TYPE;}
-
-  /** The first index (inclusive) into the Vector. **/
-  public int start;
-
-  /** The last index (exclusive) into the Vector. **/
-  public int end;
+  public TypeProtos.MajorType getType() {return RepeatedDictVector.TYPE;}
 
   /** The Vector holding the actual values. **/
-  public RepeatedTrueMapVector vector;
-
-  public FieldReader reader;
+  public RepeatedDictVector vector;
 }

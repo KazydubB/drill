@@ -95,8 +95,8 @@ abstract class AbstractFieldWriter extends AbstractBaseWriter implements FieldWr
   }
 
   @Override
-  public TrueMapWriter trueMap() {
-    fail("TrueMap");
+  public DictWriter dict() {
+    fail("Dict");
     return null;
   }
 
@@ -113,8 +113,8 @@ abstract class AbstractFieldWriter extends AbstractBaseWriter implements FieldWr
   }
 
   @Override
-  public TrueMapWriter trueMap(String name) {
-    fail("TrueMap");
+  public DictWriter dict(String name) {
+    fail("Dict");
     return null;
   }
 

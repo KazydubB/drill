@@ -18,7 +18,7 @@
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.vector.UntypedNullHolder;
 import org.apache.drill.exec.vector.UntypedNullVector;
-import org.apache.drill.exec.vector.complex.TrueMapVector;
+import org.apache.drill.exec.vector.complex.DictVector;
 import org.apache.drill.exec.vector.complex.impl.UntypedHolderReaderImpl;
 
 <@pp.dropOutputFile />
@@ -35,7 +35,7 @@ import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.vector.complex.RepeatedMapVector;
-import org.apache.drill.exec.vector.complex.TrueMapVector;
+import org.apache.drill.exec.vector.complex.DictVector;
 import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.shaded.guava.com.google.common.annotations.VisibleForTesting;
@@ -91,13 +91,13 @@ public class BasicTypeHelper {
         return RepeatedMapVector.class;
       }
 
-    case TRUEMAP:
+    case DICT:
       switch (mode) {
         case OPTIONAL:
         case REQUIRED:
-          return TrueMapVector.class;
+          return DictVector.class;
         case REPEATED:
-          return RepeatedTrueMapVector.class;
+          return RepeatedDictVector.class;
       }
     case LIST:
       switch (mode) {
@@ -142,16 +142,16 @@ public class BasicTypeHelper {
       case REPEATED:
           return RepeatedMapReaderImpl.class;
       }
-      case TRUEMAP:
+      case DICT:
         switch (mode) {
           case REQUIRED:
             if (!isSingularRepeated) {
-              return SingleTrueMapReaderImpl.class;
+              return SingleDictReaderImpl.class;
             } else {
-              throw new UnsupportedOperationException("TrueMapVector required singular repeated reader is not supported yet");
+              throw new UnsupportedOperationException("DictVector required singular repeated reader is not supported yet");
             }
           case REPEATED:
-            return RepeatedTrueMapReaderImpl.class;
+            return RepeatedDictReaderImpl.class;
         }
     case LIST:
       switch (mode) {
@@ -184,7 +184,7 @@ public class BasicTypeHelper {
     switch (type) {
     case UNION: return UnionWriter.class;
     case MAP: return MapWriter.class;
-    case TRUEMAP: return TrueMapWriter.class;
+    case DICT: return DictWriter.class;
     case LIST: return ListWriter.class;
 <#list vv.types as type>
   <#list type.minor as minor>
@@ -209,13 +209,13 @@ public class BasicTypeHelper {
       case REPEATED:
         return RepeatedMapWriter.class;
       }
-    case TRUEMAP:
+    case DICT:
       switch (mode) {
         case REQUIRED:
         case OPTIONAL:
-          return SingleTrueMapWriter.class;
+          return SingleDictWriter.class;
         case REPEATED:
-          return RepeatedTrueMapWriter.class;
+          return RepeatedDictWriter.class;
       }
     case LIST:
       switch (mode) {
@@ -327,13 +327,13 @@ public class BasicTypeHelper {
       case REPEATED:
         return new RepeatedMapVector(field, allocator, callBack);
       }
-    case TRUEMAP:
+    case DICT:
       switch (type.getMode()) {
         case REQUIRED:
         case OPTIONAL:
-          return new TrueMapVector(field, allocator, callBack);
+          return new DictVector(field, allocator, callBack);
         case REPEATED:
-          return new RepeatedTrueMapVector(field, allocator, callBack);
+          return new RepeatedDictVector(field, allocator, callBack);
       }
     case LIST:
       switch (type.getMode()) {

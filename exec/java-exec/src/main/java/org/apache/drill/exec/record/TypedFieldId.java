@@ -116,9 +116,9 @@ public class TypedFieldId {
     return intermediateType;
   }
 
-  public boolean isMap(int level) {
-    MajorType type = types.get(level);
-    return type != null && type.getMinorType() == TypeProtos.MinorType.TRUEMAP;
+  public boolean isMap(int depth) {
+    MajorType type = types.get(depth);
+    return type != null && type.getMinorType() == TypeProtos.MinorType.DICT;
   }
 
   /**
@@ -200,8 +200,8 @@ public class TypedFieldId {
       return this;
     }
 
-    public Builder addMajorType(int index, MajorType type) {
-      this.types.put(index, type);
+    public Builder addMajorType(int depth, MajorType type) {
+      this.types.put(depth, type);
       return this;
     }
 
@@ -209,9 +209,6 @@ public class TypedFieldId {
       Preconditions.checkNotNull(intermediateType);
       Preconditions.checkNotNull(finalType);
 
-      if (intermediateType == null) {
-        intermediateType = finalType;
-      }
       if (secondaryFinal == null) {
         secondaryFinal = finalType;
       }
