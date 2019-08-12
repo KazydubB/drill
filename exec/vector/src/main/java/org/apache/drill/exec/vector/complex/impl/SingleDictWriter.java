@@ -76,7 +76,7 @@ public class SingleDictWriter extends AbstractRepeatedMapWriter<DictVector> impl
       throw new DrillRuntimeException("Key in DICT cannot be null. Index: " + idx());
     }
     // If value was not written, write it as null explicitly if supported
-    if (container.isValueNullable()
+    if (container.getValues() != null && container.isValueNullable()
         && container.getValues().getAccessor().getValueCount() == currentChildIndex) {
       ((AbstractFieldWriter) getValueWriter()).writeNull();
     }

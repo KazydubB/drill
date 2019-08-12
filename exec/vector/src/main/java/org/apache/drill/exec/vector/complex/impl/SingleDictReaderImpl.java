@@ -60,7 +60,7 @@ public class SingleDictReaderImpl extends AbstractRepeatedMapReaderImpl<DictVect
     int start = vector.getOffsetVector().getAccessor().get(idx());
     int end = vector.getOffsetVector().getAccessor().get(idx() + 1);
     int index = NOT_FOUND;
-    ValueVector keys = vector.getChild(DictVector.FIELD_KEY_NAME);
+    ValueVector keys = vector.getKeys();
 
     // start from the end to ensure the most recent value for a key is found (in case if key is not unique)
     for (int i = end - 1; i >= start; i--) {

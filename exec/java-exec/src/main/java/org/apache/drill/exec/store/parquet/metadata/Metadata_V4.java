@@ -27,6 +27,7 @@ import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -292,6 +293,8 @@ public class Metadata_V4 {
     @JsonProperty
     public OriginalType originalType;
     @JsonProperty
+    public List<OriginalType> parentTypes;
+    @JsonProperty
     public int precision;
     @JsonProperty
     public int scale;
@@ -311,7 +314,8 @@ public class Metadata_V4 {
     public ColumnTypeMetadata_v4() {
     }
 
-    public ColumnTypeMetadata_v4(String[] name, PrimitiveType.PrimitiveTypeName primitiveType, OriginalType originalType, int precision, int scale, int repetitionLevel, int definitionLevel, long totalNullCount, boolean isInteresting) {
+    public ColumnTypeMetadata_v4(String[] name, PrimitiveType.PrimitiveTypeName primitiveType, OriginalType originalType, int precision, int scale, int repetitionLevel,
+                                 int definitionLevel, long totalNullCount, boolean isInteresting, List<OriginalType> parentTypes) {
       this.name = name;
       this.primitiveType = primitiveType;
       this.originalType = originalType;
@@ -322,6 +326,7 @@ public class Metadata_V4 {
       this.key = new Key(name);
       this.totalNullCount = totalNullCount;
       this.isInteresting = isInteresting;
+      this.parentTypes = new ArrayList<>(parentTypes);
     }
 
     @JsonIgnore
@@ -400,11 +405,23 @@ public class Metadata_V4 {
    * Note: Since the structure of column metadata hasn't changes from v3, ColumnMetadata_v4 extends ColumnMetadata_v3
    */
   public static class ColumnMetadata_v4 extends Metadata_V3.ColumnMetadata_v3 {
+
+    List<OriginalType> originalTypes;
+
     public ColumnMetadata_v4() {
     }
 
     public ColumnMetadata_v4(String[] name, PrimitiveType.PrimitiveTypeName primitiveType, Object minValue, Object maxValue, Long nulls) {
+      this(name, primitiveType, minValue, maxValue, nulls, new ArrayList<>());
+    }
+
+    public ColumnMetadata_v4(String[] name, PrimitiveType.PrimitiveTypeName primitiveType, Object minValue, Object maxValue, Long nulls, List<OriginalType> originalTypes) {
       super(name, primitiveType, minValue, maxValue, nulls);
+      this.originalTypes = Collections.unmodifiableList(originalTypes);
+    }
+
+    public List<OriginalType> getOriginalTypes() {
+      return originalTypes;
     }
   }
 

@@ -601,6 +601,7 @@ public class EvaluationVisitor {
 
               JBlock elseBlock = conditional._else().block();
               elseBlock.add(dictReader.invoke("setPosition").arg(valueIndex));
+              elseBlock.assign(isNull, JExpr.lit(1));
 
               seg = seg.getChild();
               isMap = e.getFieldId().isMap(depth);

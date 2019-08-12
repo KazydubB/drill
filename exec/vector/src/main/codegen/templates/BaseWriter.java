@@ -123,6 +123,8 @@ package org.apache.drill.exec.vector.complex.writer;
     void end();
     MapOrListWriter map(String name);
     MapOrListWriter listoftmap(String name);
+    MapOrListWriter dict(String name);
+    MapOrListWriter listOfDict();
     MapOrListWriter list(String name);
     boolean isMapWriter();
     boolean isListWriter();

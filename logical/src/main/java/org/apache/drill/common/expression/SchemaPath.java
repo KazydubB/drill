@@ -74,6 +74,16 @@ public class SchemaPath extends LogicalExpressionBase {
     return new SchemaPath(s);
   }
 
+  public static SchemaPath getCompoundPath(int to, String... strings) {
+    Preconditions.checkArgument(to > 0);
+    NameSegment s = null;
+    // loop through strings in reverse order
+    for (int i = to - 1; i >= 0; i--) {
+      s = new NameSegment(strings[i], s);
+    }
+    return new SchemaPath(s);
+  }
+
   public PathSegment getLastSegment() {
     PathSegment s = rootSegment;
     while (s.getChild() != null) {

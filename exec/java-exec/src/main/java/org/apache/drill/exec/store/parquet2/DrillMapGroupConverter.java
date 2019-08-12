@@ -75,7 +75,7 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
       Converter valueConverter;
       if (!valueType.isPrimitive()) {
         GroupType groupType = valueType.asGroupType();
-        if (isLogicalMapType(groupType)) {
+        if (ParquetReaderUtility.isLogicalMapType(groupType)) {
           DictWriter valueWriter = writer.dict(DictVector.FIELD_VALUE_NAME);
           valueConverter =
             new DrillMapGroupConverter(mutator, valueWriter, groupType, options, containsCorruptedDates);

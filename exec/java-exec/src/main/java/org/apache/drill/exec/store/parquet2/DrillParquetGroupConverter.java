@@ -168,7 +168,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
         writer = getWriter(name, MapWriter::list, ListWriter::list);
         converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
             containsCorruptedDates, true, converterName);
-      } else if (isLogicalMapType(fieldGroupType)) {
+      } else if (ParquetReaderUtility.isLogicalMapType(fieldGroupType)) {
         writer = getWriter(name, MapWriter::dict, ListWriter::dict);
         converter = new DrillMapGroupConverter(
           mutator, (DictWriter) writer, fieldGroupType, options, containsCorruptedDates);
@@ -213,35 +213,6 @@ public class DrillParquetGroupConverter extends GroupConverter {
           && !nestedField.isPrimitive()
           && nestedField.getOriginalType() == null
           && nestedField.asGroupType().getFieldCount() == 1;
-    }
-    return false;
-  }
-
-  /**
-   * Checks whether group field matches pattern for Logical Map type:
-   *
-   * <map-repetition> group <name> (MAP) {
-   *   repeated group key_value {
-   *     required <key-type> key;
-   *     <value-repetition> <value-type> value;
-   *   }
-   * }
-   *
-   * Note, that actual group names are not checked specifically.
-   *
-   * @param groupType parquet type which may be of MAP type
-   * @return whether the type is MAP
-   * @see <a href="https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#maps">Parquet Map logical type</a>
-   */
-  boolean isLogicalMapType(GroupType groupType) {
-    OriginalType type = groupType.getOriginalType();
-    // MAP_KEY_VALUE is here for backward-compatibility reasons
-    if ((type == OriginalType.MAP || type == OriginalType.MAP_KEY_VALUE)
-        && groupType.getFieldCount() == 1) {
-      Type nestedField = groupType.getFields().get(0);
-      return nestedField.isRepetition(Repetition.REPEATED)
-          && !nestedField.isPrimitive()
-          && nestedField.asGroupType().getFieldCount() == 2;
     }
     return false;
   }

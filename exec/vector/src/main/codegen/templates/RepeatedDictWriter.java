@@ -117,23 +117,17 @@ public class RepeatedDictWriter extends AbstractFieldWriter implements BaseWrite
 
   @Override
   public ListWriter list(String name) {
-    ListWriter writer = dictWriter.list(name);
-    writer.setPosition(currentChildIndex);
-    return writer;
+    return dictWriter.list(name);
   }
 
   @Override
   public MapWriter map(String name) {
-    MapWriter writer = dictWriter.map(name);
-    writer.setPosition(currentChildIndex);
-    return writer;
+    return dictWriter.map(name);
   }
 
   @Override
   public DictWriter dict(String name) {
-    DictWriter writer = dictWriter.dict(name);
-    writer.setPosition(currentChildIndex);
-    return writer;
+    return dictWriter.dict(name);
   }
 
   <#list vv.types as type>
@@ -143,17 +137,13 @@ public class RepeatedDictWriter extends AbstractFieldWriter implements BaseWrite
 
   @Override
   public ${minor.class}Writer ${lowerName}(String name) {
-    FieldWriter writer = (FieldWriter) dictWriter.${lowerName}(name);
-    writer.setPosition(currentChildIndex);
-    return writer;
+    return (FieldWriter) dictWriter.${lowerName}(name);
   }
       <#if minor.class?contains("Decimal") >
 
   @Override
   public ${minor.class}Writer ${lowerName}(String name, int scale, int precision) {
-    FieldWriter writer = (FieldWriter) dictWriter.${lowerName}(name, scale, precision);
-    writer.setPosition(currentChildIndex);
-    return writer;
+    return (FieldWriter) dictWriter.${lowerName}(name, scale, precision);
   }
       </#if>
     </#list>

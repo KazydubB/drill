@@ -17,61 +17,56 @@
  */
 package org.apache.drill.exec.record.metadata;
 
-import org.apache.drill.common.types.TypeProtos.DataMode;
-import org.apache.drill.common.types.TypeProtos.MinorType;
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.record.MaterializedField;
 
-/**
- * Describes a map and repeated map. Both are tuples that have a tuple
- * schema as part of the column definition.
- */
-public class MapColumnMetadata extends AbstractMapColumnMetadata {
+public class DictColumnMetadata extends AbstractMapColumnMetadata {
 
   /**
-   * Build a new map column from the field provided
+   * Build a new dict column from the field provided
    *
    * @param schema materialized field description of the map
    */
-  public MapColumnMetadata(MaterializedField schema) {
+  public DictColumnMetadata(MaterializedField schema) {
     this(schema, null);
   }
 
   /**
-   * Build a map column metadata by cloning the type information (but not
+   * Build a dict column metadata by cloning the type information (but not
    * the children) of the materialized field provided.
    *
    * @param schema the schema to use
-   * @param tupleSchema parent schema
+   * @param mapSchema parent schema
    */
-  MapColumnMetadata(MaterializedField schema, TupleSchema tupleSchema) {
-    super(schema, tupleSchema);
+  DictColumnMetadata(MaterializedField schema, TupleSchema mapSchema) {
+    super(schema, mapSchema);
   }
 
-  public MapColumnMetadata(MapColumnMetadata from) {
+  public DictColumnMetadata(DictColumnMetadata from) {
     super(from);
   }
 
-  public MapColumnMetadata(String name, DataMode mode, TupleSchema tupleSchema) {
-    super(name, MinorType.MAP, mode, tupleSchema);
+  public DictColumnMetadata(String name, TypeProtos.DataMode mode, TupleSchema mapSchema) {
+    super(name, TypeProtos.MinorType.DICT, mode, mapSchema);
   }
 
   @Override
   public ColumnMetadata copy() {
-    return new MapColumnMetadata(this);
+    return new DictColumnMetadata(this);
   }
 
   @Override
   public ColumnMetadata cloneEmpty() {
-    return new MapColumnMetadata(name, mode, new TupleSchema());
+    return new DictColumnMetadata(name, mode, new TupleSchema());
   }
 
   @Override
-  public boolean isMap() {
+  public boolean isDict() {
     return true;
   }
 
   @Override
   protected String getStringType() {
-    return "STRUCT";
+    return "MAP";
   }
 }
