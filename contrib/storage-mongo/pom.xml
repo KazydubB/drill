@@ -23,7 +23,7 @@
   <parent>
     <artifactId>drill-contrib-parent</artifactId>
     <groupId>org.apache.drill.contrib</groupId>
-    <version>1.16.0.2-mapr</version>
+    <version>1.16.0.3-mapr</version>
   </parent>
 
   <artifactId>drill-mongo-storage</artifactId>
