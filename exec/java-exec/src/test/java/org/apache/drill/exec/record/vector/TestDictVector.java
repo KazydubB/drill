@@ -36,7 +36,6 @@ import org.apache.drill.exec.vector.complex.reader.BaseReader;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.drill.test.TestBuilder;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -105,8 +104,8 @@ public class TestDictVector extends ExecTest {
           mapReader.next();
           Float actualKey = mapReader.reader(DictVector.FIELD_KEY_NAME).readFloat();
           Long actualValue = mapReader.reader(DictVector.FIELD_VALUE_NAME).readLong();
-          Assert.assertEquals(entry.getKey(), actualKey);
-          Assert.assertEquals(entry.getValue(), actualValue);
+          assertEquals(entry.getKey(), actualKey);
+          assertEquals(entry.getValue(), actualValue);
         }
       }
     }
@@ -147,13 +146,13 @@ public class TestDictVector extends ExecTest {
       index = 0;
       for (Map<Object, Object> map : maps) {
         mapReader.setPosition(index++);
-        Assert.assertEquals(map.size(), mapReader.size());
+        assertEquals(map.size(), mapReader.size());
         for (Map.Entry<Object, Object> entry : map.entrySet()) {
           mapReader.next();
           Float actualKey = mapReader.reader(DictVector.FIELD_KEY_NAME).readFloat();
           Long actualValue = mapReader.reader(DictVector.FIELD_VALUE_NAME).readLong();
-          Assert.assertEquals(entry.getKey(), actualKey);
-          Assert.assertEquals(entry.getValue(), actualValue);
+          assertEquals(entry.getKey(), actualKey);
+          assertEquals(entry.getValue(), actualValue);
         }
       }
     }
@@ -239,8 +238,8 @@ public class TestDictVector extends ExecTest {
           mapReader.next();
           Float actualKey = mapReader.reader(DictVector.FIELD_KEY_NAME).readFloat();
           Long actualValue = mapReader.reader(DictVector.FIELD_VALUE_NAME).readLong();
-          Assert.assertEquals(entry.getKey(), actualKey);
-          Assert.assertEquals(entry.getValue(), actualValue);
+          assertEquals(entry.getKey(), actualKey);
+          assertEquals(entry.getValue(), actualValue);
         }
       }
 
@@ -291,8 +290,8 @@ public class TestDictVector extends ExecTest {
           mapReader.next();
           Float actualKey = mapReader.reader(DictVector.FIELD_KEY_NAME).readFloat();
           Long actualValue = mapReader.reader(DictVector.FIELD_VALUE_NAME).readLong();
-          Assert.assertEquals(entry.getKey(), actualKey);
-          Assert.assertEquals(entry.getValue(), actualValue);
+          assertEquals(entry.getKey(), actualKey);
+          assertEquals(entry.getValue(), actualValue);
         }
       }
 
@@ -390,7 +389,7 @@ public class TestDictVector extends ExecTest {
         mapReader.setPosition(index++);
         mapReader.next();
         mapReader.read(stringKey, valueHolder);
-        Assert.assertEquals(map.get(key), valueHolder.isSet == 1 ? valueHolder.value : null);
+        assertEquals(map.get(key), valueHolder.isSet == 1 ? valueHolder.value : null);
         // reset value holder to reuse it for the next row
         valueHolder.isSet = 0;
       }
@@ -451,8 +450,8 @@ public class TestDictVector extends ExecTest {
           mapReader.next();
           Integer actualKey = mapReader.reader(DictVector.FIELD_KEY_NAME).readInteger();
           Object actualValue = mapReader.reader(DictVector.FIELD_VALUE_NAME).readObject();
-          Assert.assertEquals(entry.getKey(), actualKey);
-          Assert.assertEquals(entry.getValue(), actualValue);
+          assertEquals(entry.getKey(), actualKey);
+          assertEquals(entry.getValue(), actualValue);
         }
       }
     }

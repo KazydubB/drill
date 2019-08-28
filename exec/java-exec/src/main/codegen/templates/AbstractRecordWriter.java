@@ -73,12 +73,12 @@ public abstract class AbstractRecordWriter implements RecordWriter {
 
   @Override
   public FieldConverter getNewDictConverter(int fieldId, String fieldName, FieldReader reader) {
-    throw new UnsupportedOperationException("Doesn't support writing TrueMap");
+    throw new UnsupportedOperationException("Doesn't support writing Dict");
   }
 
   @Override
   public FieldConverter getNewRepeatedDictConverter(int fieldId, String fieldName, FieldReader reader) {
-    throw new UnsupportedOperationException("Doesn't support writing RepeatedTrueMap");
+    throw new UnsupportedOperationException("Doesn't support writing RepeatedDict");
   }
 
 <#list vv.types as type>

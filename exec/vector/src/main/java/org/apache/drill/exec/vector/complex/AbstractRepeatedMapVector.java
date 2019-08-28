@@ -73,7 +73,7 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
   @Override
   public void setInitialCapacity(int numRecords) {
     offsets.setInitialCapacity(numRecords + 1);
-    for (final ValueVector v : this) {
+    for (ValueVector v : this) {
       v.setInitialCapacity(numRecords * RepeatedValueVector.DEFAULT_REPEAT_PER_RECORD);
     }
   }
@@ -85,14 +85,12 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
       for (ValueVector v : getChildren()) {
         AllocationHelper.allocatePrecomputedChildCount(v, groupCount, 50, innerValueCount);
       }
-    } catch (OutOfMemoryException e){
+    } catch (OutOfMemoryException e) {
       clear();
       throw e;
     }
-    reset();
+    getMutator().reset();
   }
-
-  abstract void reset();
 
   public void allocateOffsetsNew(int groupCount) {
     offsets.allocateNew(groupCount + 1);
@@ -105,14 +103,14 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
 
   @Override
   public List<ValueVector> getPrimitiveVectors() {
-    final List<ValueVector> primitiveVectors = super.getPrimitiveVectors();
+    List<ValueVector> primitiveVectors = super.getPrimitiveVectors();
     primitiveVectors.add(offsets);
     return primitiveVectors;
   }
 
   @Override
   public int getBufferSize() {
-    if (getValueCount() == 0) {
+    if (getAccessor().getValueCount() == 0) {
       return 0;
     }
     return offsets.getBufferSize() + super.getBufferSize();
@@ -124,13 +122,13 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
   }
 
   @Override
-  public int getBufferSizeFor(final int valueCount) {
+  public int getBufferSizeFor(int valueCount) {
     if (valueCount == 0) {
       return 0;
     }
 
     long bufferSize = offsets.getBufferSizeFor(valueCount);
-    for (final ValueVector v : this) {
+    for (ValueVector v : this) {
       bufferSize += v.getBufferSizeFor(valueCount);
     }
 
@@ -146,15 +144,6 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
   public TransferPair getTransferPairToSingleMap(String reference, BufferAllocator allocator) {
     return new SingleMapTransferPair(this, reference, allocator);
   }
-
-  @Override
-  public abstract TransferPair getTransferPair(BufferAllocator allocator);
-
-  @Override
-  public abstract TransferPair makeTransferPair(ValueVector to);
-
-  @Override
-  public abstract TransferPair getTransferPair(String ref, BufferAllocator allocator);
 
   @Override
   public boolean allocateNewSafe() {
@@ -188,23 +177,23 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
       this(to, true);
     }
 
+    @SuppressWarnings("unchecked")
     public AbstractRepeatedMapTransferPair(T to, boolean allocate) {
       this.from = (T) AbstractRepeatedMapVector.this;
       this.to = to;
       this.pairs = new TransferPair[from.size()];
-      // todo: this.to.ephPair
 
       int i = 0;
       ValueVector vector;
-      for (final String child : from.getChildFieldNames()) {
-        final int preSize = to.size();
+      for (String child : from.getChildFieldNames()) {
+        int preSize = to.size();
         vector = from.getChild(child);
         if (vector == null) {
           continue;
         }
 
-        final ValueVector newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
-        if (to.size() != preSize) {
+        ValueVector newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
+        if (allocate && to.size() != preSize) {
           newVector.allocateNew();
         }
 
@@ -241,13 +230,13 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
     }
 
     @Override
-    public void splitAndTransfer(final int groupStart, final int groups) {
-      final UInt4Vector.Accessor a = from.offsets.getAccessor();
-      final UInt4Vector.Mutator m = to.offsets.getMutator();
+    public void splitAndTransfer(int groupStart, int groups) {
+      UInt4Vector.Accessor a = from.offsets.getAccessor();
+      UInt4Vector.Mutator m = to.offsets.getMutator();
 
-      final int startPos = a.get(groupStart);
-      final int endPos = a.get(groupStart + groups);
-      final int valuesToCopy = endPos - startPos;
+      int startPos = a.get(groupStart);
+      int endPos = a.get(groupStart + groups);
+      int valuesToCopy = endPos - startPos;
 
       to.offsets.clear();
       to.offsets.allocateNew(groups + 1);
@@ -261,7 +250,7 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
       m.setValueCount(groups + 1);
       to.emptyPopulator.populate(groups);
 
-      for (final TransferPair p : pairs) {
+      for (TransferPair p : pairs) {
         p.splitAndTransfer(startPos, valuesToCopy);
       }
     }
@@ -285,13 +274,13 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
       this.pairs = new TransferPair[from.size()];
       int i = 0;
       ValueVector vector;
-      for (final String child : from.getChildFieldNames()) {
+      for (String child : from.getChildFieldNames()) {
         int preSize = to.size();
         vector = from.getChild(child);
         if (vector == null) {
           continue;
         }
-        final ValueVector newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
+        ValueVector newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
         if (allocate && to.size() != preSize) {
           newVector.allocateNew();
         }
@@ -361,22 +350,22 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
 
   @Override
   public void load(SerializedField metadata, DrillBuf buffer) {
-    final List<SerializedField> children = metadata.getChildList();
+    List<SerializedField> children = metadata.getChildList();
 
-    final SerializedField offsetField = children.get(0);
+    SerializedField offsetField = children.get(0);
     offsets.load(offsetField, buffer);
     int bufOffset = offsetField.getBufferLength();
 
     for (int i = 1; i < children.size(); i++) {
-      final SerializedField child = children.get(i);
-      final MaterializedField fieldDef = MaterializedField.create(child);
+      SerializedField child = children.get(i);
+      MaterializedField fieldDef = MaterializedField.create(child);
       ValueVector vector = getChild(fieldDef.getName());
       if (vector == null) {
         // if we arrive here, we didn't have a matching vector.
         vector = BasicTypeHelper.getNewVector(fieldDef, allocator);
         putChild(fieldDef.getName(), vector);
       }
-      final int vectorLength = child.getBufferLength();
+      int vectorLength = child.getBufferLength();
       vector.load(child, buffer.slice(bufOffset, vectorLength));
       bufOffset += vectorLength;
     }
@@ -391,9 +380,9 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
         .setBufferLength(getBufferSize())
         // while we don't need to actually read this on load, we need it to
         // make sure we don't skip deserialization of this vector
-        .setValueCount(getValueCount());
+        .setValueCount(getAccessor().getValueCount());
     builder.addChild(offsets.getMetadata());
-    for (final ValueVector child : getChildren()) {
+    for (ValueVector child : getChildren()) {
       builder.addChild(child.getMetadata());
     }
     return builder.build();
@@ -405,13 +394,10 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
       assert index < getValueCapacity() :
           String.format("Attempted to access index %d when value capacity is %d",
               index, getValueCapacity());
-      final UInt4Vector.Accessor offsetsAccessor = offsets.getAccessor();
+      UInt4Vector.Accessor offsetsAccessor = offsets.getAccessor();
       holder.start = offsetsAccessor.get(index);
       holder.end = offsetsAccessor.get(index + 1);
     }
-
-    @Override
-    public abstract Object getObject(int index);
 
     @Override
     public int getValueCount() {
@@ -420,7 +406,7 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
 
     @Override
     public int getInnerValueCount() {
-      final int valueCount = getValueCount();
+      int valueCount = getValueCount();
       if (valueCount == 0) {
         return 0;
       }
@@ -455,7 +441,7 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
       emptyPopulator.populate(topLevelValueCount);
       offsets.getMutator().setValueCount(topLevelValueCount == 0 ? 0 : topLevelValueCount + 1);
       int childValueCount = offsets.getAccessor().get(topLevelValueCount);
-      for (final ValueVector v : getChildren()) {
+      for (ValueVector v : getChildren()) {
         v.getMutator().setValueCount(childValueCount);
       }
     }
@@ -469,7 +455,7 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
     }
 
     public int add(int index) {
-      final int prevEnd = offsets.getAccessor().get(index + 1);
+      int prevEnd = offsets.getAccessor().get(index + 1);
       offsets.getMutator().setSafe(index + 1, prevEnd + 1);
       return prevEnd;
     }
@@ -484,7 +470,7 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
     getMutator().reset();
 
     offsets.clear();
-    for(final ValueVector vector : getChildren()) {
+    for (ValueVector vector : getChildren()) {
       vector.clear();
     }
   }
@@ -509,7 +495,7 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
     int entryCount = offsets.getAccessor().get(valueCount);
     int count = offsets.getPayloadByteCount(valueCount);
 
-    for (final ValueVector v : getChildren()) {
+    for (ValueVector v : getChildren()) {
       count += v.getPayloadByteCount(entryCount);
     }
     return count;
@@ -518,7 +504,10 @@ public abstract class AbstractRepeatedMapVector extends AbstractMapVector implem
   @Override
   public abstract Accessor getAccessor();
 
-  abstract int getValueCount();
-
+  /**
+   * Creates an instance of value holder corresponding to the vector.
+   *
+   * @return value holder for the vector
+   */
   abstract RepeatedValueHolder getValueHolder();
 }

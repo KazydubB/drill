@@ -295,9 +295,9 @@ public class NestedLoopJoinBatch extends AbstractBinaryRecordBatch<NestedLoopJoi
         container.addOrGet(field);
 
         JVar inVV = nLJClassGenerator.declareVectorValueSetupAndMember("leftBatch",
-            new TypedFieldId(fieldType, false, fieldId));
+            TypedFieldId.Builder.build(fieldType, false, fieldId));
         JVar outVV = nLJClassGenerator.declareVectorValueSetupAndMember("outgoing",
-            new TypedFieldId(fieldType, false, outputFieldId));
+            TypedFieldId.Builder.build(fieldType, false, outputFieldId));
 
         nLJClassGenerator.getEvalBlock().add(outVV.invoke("copyFromSafe").arg(leftIndex).arg(outIndex).arg(inVV));
         nLJClassGenerator.rotateBlock();
@@ -329,9 +329,9 @@ public class NestedLoopJoinBatch extends AbstractBinaryRecordBatch<NestedLoopJoi
         container.addOrGet(newField);
 
         JVar inVV = nLJClassGenerator.declareVectorValueSetupAndMember("rightContainer",
-            new TypedFieldId(inputType, true, fieldId));
+            TypedFieldId.Builder.build(inputType, true, fieldId));
         JVar outVV = nLJClassGenerator.declareVectorValueSetupAndMember("outgoing",
-            new TypedFieldId(outputType, false, outputFieldId));
+            TypedFieldId.Builder.build(outputType, false, outputFieldId));
         nLJClassGenerator.getEvalBlock().add(outVV.invoke("copyFromSafe")
             .arg(recordIndexWithinBatch)
             .arg(outIndex)

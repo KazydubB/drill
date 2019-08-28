@@ -17,15 +17,19 @@
  */
 package org.apache.drill.exec.expr.holders;
 
+import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
-public abstract class RepeatedValueHolder implements ValueHolder {
+public abstract class RepeatedValueHolder<V extends ValueVector> implements ValueHolder {
 
   /** The first index (inclusive) into the Vector. **/
   public int start;
 
   /** The last index (exclusive) into the Vector. **/
   public int end;
+
+  /** The Vector holding the actual values. **/
+  public V vector;
 
   public FieldReader reader;
 }

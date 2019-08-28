@@ -720,7 +720,9 @@ public class ParquetReaderUtility {
    * Converts list of {@link OriginalType}s to list of {@link org.apache.drill.common.types.TypeProtos.MajorType}s.
    * <b>NOTE</b>: current implementation cares about {@link OriginalType#MAP} only
    * converting it to {@link org.apache.drill.common.types.TypeProtos.MinorType#DICT}.
-   * Other original types are converted to {@code null}.
+   * Other original types are converted to {@code null}, because there is no certain correspondence
+   * (and, actually, a need because these types are used to differentiate between Drill's MAP and DICT types
+   * when constructing {@link org.apache.drill.exec.record.metadata.TupleSchema}) between these two.
    *
    * @param originalTypes list of Parquet's types
    * @return list containing either {@code null} or type with minor
@@ -747,14 +749,45 @@ public class ParquetReaderUtility {
   }
 
   /**
-   * Checks whether group field matches pattern for Logical Map type:
-   *
-   * <map-repetition> group <name> (MAP) {
-   *   repeated group key_value {
-   *     required <key-type> key;
-   *     <value-repetition> <value-type> value;
+   * Checks whether group field approximately matches pattern for Logical Lists:
+   * <pre>
+   * &lt;list-repetition&gt; group &lt;name&gt; (LIST) {
+   *   repeated group list {
+   *     &lt;element-repetition&gt; &lt;element-type&gt; element;
    *   }
    * }
+   * </pre>
+   * (See for more details: https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#lists)
+   *
+   * Note, that standard field names 'list' and 'element' aren't checked intentionally,
+   * because Hive lists have 'bag' and 'array_element' names instead.
+   *
+   * @param groupType type which may have LIST original type
+   * @return whether the type is LIST and nested field is repeated group
+   * @see <a href="https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#lists">Parquet List logical type</a>
+   */
+  public static boolean isLogicalListType(GroupType groupType) {
+    if (groupType.getOriginalType() == OriginalType.LIST && groupType.getFieldCount() == 1) {
+      Type nestedField = groupType.getFields().get(0);
+      return nestedField.isRepetition(Type.Repetition.REPEATED)
+          && !nestedField.isPrimitive()
+          && nestedField.getOriginalType() == null
+          && nestedField.asGroupType().getFieldCount() == 1;
+    }
+    return false;
+  }
+
+  /**
+   * Checks whether group field matches pattern for Logical Map type:
+   *
+   * <pre>
+   * &lt;map-repetition&gt; group &lt;name&gt; (MAP) {
+   *   repeated group key_value {
+   *     required &lt;key-type&gt; key;
+   *     &lt;value-repetition&gt; &lt;value-type&gt; value;
+   *   }
+   * }
+   * </pre>
    *
    * Note, that actual group names are not checked specifically.
    *

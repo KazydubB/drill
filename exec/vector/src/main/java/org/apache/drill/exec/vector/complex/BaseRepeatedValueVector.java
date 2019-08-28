@@ -289,9 +289,9 @@ public abstract class BaseRepeatedValueVector extends BaseValueVector implements
     }
 
     protected void copyValueSafe(int destIndex, int start, int end) {
-      final TransferPair vectorTransfer = children[1];
+      TransferPair vectorTransfer = children[1];
       int newIndex = target.getOffsetVector().getAccessor().get(destIndex);
-      //todo: make this a bulk copy.
+      // TODO: make this a bulk copy.
       for (int i = start; i < end; i++, newIndex++) {
         vectorTransfer.copyValueSafe(i, newIndex);
       }

@@ -21,12 +21,7 @@ import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.vector.complex.MapVector;
 
-public final class RepeatedMapHolder extends RepeatedValueHolder {
+public final class RepeatedMapHolder extends RepeatedValueHolder<MapVector> {
 
     public static final TypeProtos.MajorType TYPE = Types.repeated(TypeProtos.MinorType.MAP);
-
-    public TypeProtos.MajorType getType() {return TYPE;}
-
-    /** The Vector holding the actual values. **/
-    public MapVector vector;
 }

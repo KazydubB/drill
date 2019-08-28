@@ -209,7 +209,7 @@ public class AvroRecordReader extends AbstractRecordReader {
         final GenericArray<?> array = (GenericArray<?>) value;
         Schema elementSchema = array.getSchema().getElementType();
         Type elementType = elementSchema.getType();
-        if (elementType == Schema.Type.RECORD){
+        if (elementType == Schema.Type.RECORD) {
           writer = (MapOrListWriterImpl) writer.list(fieldName).listoftmap(fieldName);
         } else if (elementType == Schema.Type.MAP) {
           writer = (MapOrListWriterImpl) writer.list(fieldName);

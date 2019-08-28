@@ -21,12 +21,7 @@ import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.vector.complex.ListVector;
 
-public final class RepeatedListHolder extends RepeatedValueHolder {
+public final class RepeatedListHolder extends RepeatedValueHolder<ListVector> {
 
     public static final TypeProtos.MajorType TYPE = Types.repeated(TypeProtos.MinorType.LIST);
-
-    public TypeProtos.MajorType getType() {return TYPE;}
-
-    /** The Vector holding the actual values. **/
-    public ListVector vector;
 }

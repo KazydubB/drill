@@ -18,12 +18,10 @@
 package org.apache.drill.exec.record;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.BitSet;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.drill.common.expression.PathSegment;
-import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.expr.BasicTypeHelper;
 import org.apache.drill.exec.vector.ValueVector;
@@ -38,47 +36,51 @@ import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
  */
 
 public class TypedFieldId {
-  final MajorType finalType;
-  final MajorType secondaryFinal;
-  final MajorType intermediateType;
-  final int[] fieldIds;
-  final boolean isHyperReader;
-  final boolean isListVector;
-  final PathSegment remainder;
-  private final Map<Integer, MajorType> types;
 
-  public TypedFieldId(MajorType type, int... fieldIds) {
-    this(type, type, type, false, null, fieldIds);
-  }
+  private final MajorType finalType;
+  private final MajorType secondaryFinal;
+  private final MajorType intermediateType;
+  private final int[] fieldIds;
+  private final boolean isHyperReader;
+  private final boolean isListVector;
+  private final PathSegment remainder;
 
-  public TypedFieldId(MajorType type, IntArrayList breadCrumb, PathSegment remainder) {
-    this(type, type, type, false, remainder, breadCrumb.toArray());
-  }
+  /**
+   * Used to determine if a dict is placed at specific depth
+   */
+  private final BitSet dictBitSet;
 
-  public TypedFieldId(MajorType type, boolean isHyper, int... fieldIds) {
-    this(type, type, type, isHyper, null, fieldIds);
-  }
-
-  public TypedFieldId(MajorType intermediateType, MajorType secondaryFinal, MajorType finalType, boolean isHyper, PathSegment remainder, int... fieldIds) {
-    this(intermediateType, secondaryFinal, finalType, isHyper, false, remainder, new HashMap<>(), fieldIds);
-  }
-
-  public TypedFieldId(MajorType intermediateType, MajorType secondaryFinal, MajorType finalType, boolean isHyper, boolean isListVector,
-                      PathSegment remainder, Map<Integer, MajorType> types, int... fieldIds) {
-    super();
-    this.intermediateType = intermediateType;
-    this.finalType = finalType;
-    this.secondaryFinal = secondaryFinal;
-    this.fieldIds = fieldIds;
-    this.isHyperReader = isHyper;
-    this.isListVector = isListVector;
-    this.remainder = remainder;
-    this.types = types;
+  private TypedFieldId(Builder builder) {
+    this.intermediateType = builder.intermediateType;
+    this.finalType = builder.finalType;
+    this.secondaryFinal = builder.secondaryFinal;
+    this.fieldIds = builder.ids.toArray();
+    this.isHyperReader = builder.hyperReader;
+    this.isListVector = builder.isListVector;
+    this.remainder = builder.remainder;
+    this.dictBitSet = builder.dictBitSet;
   }
 
   public TypedFieldId cloneWithChild(int id) {
     int[] fieldIds = ArrayUtils.add(this.fieldIds, id);
-    return new TypedFieldId(intermediateType, secondaryFinal, finalType, isHyperReader, remainder, fieldIds);
+    return getBuilder().clearAndAddIds(fieldIds)
+        .build();
+  }
+
+  private Builder getBuilder() {
+    Builder builder = new Builder().intermediateType(intermediateType)
+        .finalType(finalType)
+        .secondaryFinal(secondaryFinal)
+        .addIds(fieldIds)
+        .remainder(remainder)
+        .copyDictBitSet(dictBitSet);
+    if (isHyperReader) {
+      builder.hyper();
+    }
+    if (isListVector) {
+      builder.listVector();
+    }
+    return builder;
   }
 
   public PathSegment getLastSegment() {
@@ -93,7 +95,8 @@ public class TypedFieldId {
   }
 
   public TypedFieldId cloneWithRemainder(PathSegment remainder) {
-    return new TypedFieldId(intermediateType, secondaryFinal, finalType, isHyperReader, remainder, fieldIds);
+    return getBuilder().remainder(remainder)
+        .build();
   }
 
   public boolean hasRemainder() {
@@ -116,9 +119,14 @@ public class TypedFieldId {
     return intermediateType;
   }
 
-  public boolean isMap(int depth) {
-    MajorType type = types.get(depth);
-    return type != null && type.getMinorType() == TypeProtos.MinorType.DICT;
+  /**
+   * Check if it is a {@link org.apache.drill.common.types.TypeProtos.MinorType#DICT} type at a given segment's depth
+   *
+   * @param depth depth of interest starting with {@literal 0}
+   * @return {@code true} if it is DICT, {@code false} otherwise
+   */
+  public boolean isDict(int depth) {
+    return dictBitSet.get(depth);
   }
 
   /**
@@ -129,8 +137,7 @@ public class TypedFieldId {
    */
 
   public Class<? extends ValueVector> getIntermediateClass() {
-    return (Class<? extends ValueVector>) BasicTypeHelper.getValueVectorClass(intermediateType.getMinorType(),
-        intermediateType.getMode());
+    return BasicTypeHelper.getValueVectorClass(intermediateType.getMinorType(), intermediateType.getMode());
   }
 
   public MajorType getFinalType() {
@@ -149,16 +156,44 @@ public class TypedFieldId {
     return new Builder();
   }
 
-  public static class Builder{
+  public static class Builder {
     final IntArrayList ids = new IntArrayList();
     MajorType finalType;
     MajorType intermediateType;
     MajorType secondaryFinal;
     PathSegment remainder;
-    boolean hyperReader = false;
-    boolean withIndex = false;
-    boolean isListVector = false;
-    Map<Integer, MajorType> types = new HashMap<>();
+    boolean hyperReader;
+    boolean withIndex;
+    boolean isListVector;
+    BitSet dictBitSet = new BitSet();
+
+    public static TypedFieldId build(MajorType type, int... fieldIds) {
+      return new Builder().intermediateType(type)
+          .finalType(type)
+          .secondaryFinal(type)
+          .addIds(fieldIds)
+          .build();
+    }
+
+    public static TypedFieldId build(MajorType type, IntArrayList breadCrumb, PathSegment remainder) {
+      return new Builder().intermediateType(type)
+          .finalType(type)
+          .secondaryFinal(type)
+          .remainder(remainder)
+          .addIds(breadCrumb.toArray())
+          .build();
+    }
+
+    public static TypedFieldId build(MajorType type, boolean isHyper, int... fieldIds) {
+      Builder builder = new Builder().intermediateType(type)
+          .finalType(type)
+          .secondaryFinal(type)
+          .addIds(fieldIds);
+      if (isHyper) {
+        builder.hyper();
+      }
+      return builder.build();
+    }
 
     public Builder addId(int id) {
       ids.add(id);
@@ -200,8 +235,31 @@ public class TypedFieldId {
       return this;
     }
 
-    public Builder addMajorType(int depth, MajorType type) {
-      this.types.put(depth, type);
+    public Builder setDict(int depth) {
+      this.dictBitSet.set(depth, true);
+      return this;
+    }
+
+    public Builder resetDictBitSet() {
+      dictBitSet.clear();
+      return this;
+    }
+
+    private Builder addIds(int[] ids) {
+      for (int id : ids) {
+        this.ids.add(id);
+      }
+      return this;
+    }
+
+    private Builder clearAndAddIds(int[] ids) {
+      this.ids.clear();
+      addIds(ids);
+      return this;
+    }
+
+    private Builder copyDictBitSet(BitSet dictBitSet) {
+      this.dictBitSet.or(dictBitSet);
       return this;
     }
 
@@ -223,7 +281,7 @@ public class TypedFieldId {
       // TODO: there is a bug here with some things.
       //if(intermediateType != finalType) actualFinalType = finalType.toBuilder().setMode(DataMode.OPTIONAL).build();
 
-      return new TypedFieldId(intermediateType, secondaryFinal, actualFinalType, hyperReader, isListVector, remainder, types, ids.toArray());
+      return new TypedFieldId(this);
     }
   }
 

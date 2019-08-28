@@ -26,11 +26,11 @@ import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 
 public class RepeatedDictReaderImpl extends AbstractFieldReader {
 
-  private static final int NO_VALUES = Integer.MAX_VALUE - 1;
+  private static final int NO_VALUES = Integer.MIN_VALUE;
 
   private final RepeatedDictVector container;
 
-  private DictReader reader;
+  private FieldReader reader;
   private int currentOffset;
   private int maxOffset;
 
@@ -62,7 +62,7 @@ public class RepeatedDictReaderImpl extends AbstractFieldReader {
 
   @Override
   public void setPosition(int index) {
-    if (index < 0 || index == NO_VALUES) {
+    if (index < 0) {
       currentOffset = NO_VALUES;
       return;
     }
@@ -111,7 +111,7 @@ public class RepeatedDictReaderImpl extends AbstractFieldReader {
       }
       reader.setPosition(currentOffset);
     }
-    return (FieldReader) reader;
+    return reader;
   }
 
   public boolean isEmpty() {

@@ -30,8 +30,8 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractMapColumnMetadata extends AbstractColumnMetadata {
 
-  TupleMetadata parentTuple;
-  final TupleSchema schema;
+  protected TupleMetadata parentTuple;
+  protected final TupleSchema schema;
 
   /**
    * Build a new map column from the field provided

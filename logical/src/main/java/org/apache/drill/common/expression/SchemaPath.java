@@ -74,12 +74,22 @@ public class SchemaPath extends LogicalExpressionBase {
     return new SchemaPath(s);
   }
 
-  public static SchemaPath getCompoundPath(int to, String... strings) {
-    Preconditions.checkArgument(to > 0);
+  /**
+   * Constructs {@code SchemaPath} based on given {@code path} array up to {@literal n}th element (inclusively).
+   *
+   * Example: for case when {@code n = 2} and {@code path = {"a", "b", "c", "d", "e", ...}}
+   * the method returns {@code a.b}
+   *
+   * @param n number of elements in {@literal path} array to take when constructing {@code SchemaPath}
+   * @param path column path used to construct schema path
+   * @return schema path containing {@literal n - 1} children
+   */
+  public static SchemaPath getCompoundPath(int n, String... path) {
+    Preconditions.checkArgument(n > 0);
     NameSegment s = null;
     // loop through strings in reverse order
-    for (int i = to - 1; i >= 0; i--) {
-      s = new NameSegment(strings[i], s);
+    for (int i = n - 1; i >= 0; i--) {
+      s = new NameSegment(path[i], s);
     }
     return new SchemaPath(s);
   }

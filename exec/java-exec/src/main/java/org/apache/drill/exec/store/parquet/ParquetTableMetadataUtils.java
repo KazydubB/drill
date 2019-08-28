@@ -501,7 +501,7 @@ public class ParquetTableMetadataUtils {
   }
 
   /**
-   * Returns map of column names with their drill types for every {@code NameSegment} in {@code SchemaPath}
+   * Returns map of column names with their Drill types for every {@code NameSegment} in {@code SchemaPath}
    * in specified {@code rowGroup}. The type for a {@code SchemaPath} can be {@code null} in case when
    * it is not possible to determine its type. Actually, as of now this hierarchy is of interest solely
    * because there is a need to account for {@link org.apache.drill.common.types.TypeProtos.MinorType#DICT}
@@ -515,27 +515,25 @@ public class ParquetTableMetadataUtils {
   public static Map<SchemaPath, TypeProtos.MajorType> getIntermediateFields(
       MetadataBase.ParquetTableMetadataBase parquetTableMetadata, MetadataBase.RowGroupMetadata rowGroup) {
     Map<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
-    for (MetadataBase.ColumnMetadata column : rowGroup.getColumns()) {
-      List<OriginalType> parentOriginalTypes = Collections.emptyList();
-      MetadataVersion metadataVersion = new MetadataVersion(parquetTableMetadata.getMetadataVersion());
-      if (parquetTableMetadata.hasColumnMetadata() && (metadataVersion.compareTo(new MetadataVersion(4, 1)) >= 0)) {
-        parentOriginalTypes = ((Metadata_V4.ColumnMetadata_v4) column).getOriginalTypes();
-      }
 
-      List<TypeProtos.MajorType> drillTypes = ParquetReaderUtility.getComplexTypes(parentOriginalTypes);
+    MetadataVersion metadataVersion = new MetadataVersion(parquetTableMetadata.getMetadataVersion());
+    boolean hasParentTypes = parquetTableMetadata.hasColumnMetadata()
+        && metadataVersion.compareTo(new MetadataVersion(4, 1)) >= 0;
+
+    if (!hasParentTypes) {
+      return Collections.emptyMap();
+    }
+
+    for (MetadataBase.ColumnMetadata column : rowGroup.getColumns()) {
+      Metadata_V4.ColumnTypeMetadata_v4 columnTypeMetadata =
+          ((Metadata_V4.ParquetTableMetadata_v4) parquetTableMetadata).getColumnTypeInfo(column.getName());
+      List<OriginalType> parentTypes = columnTypeMetadata.parentTypes;
+      List<TypeProtos.MajorType> drillTypes = ParquetReaderUtility.getComplexTypes(parentTypes);
 
       for (int i = 0; i < drillTypes.size(); i++) {
         SchemaPath columnPath = SchemaPath.getCompoundPath(i + 1, column.getName());
-        TypeProtos.MajorType majorType = columns.get(columnPath);
         TypeProtos.MajorType drillType = drillTypes.get(i);
-        if (majorType == null) {
-          columns.put(columnPath, drillType);
-        } else if (majorType != drillType) { // these two types are very likely to be the same objects
-          TypeProtos.MinorType leastRestrictiveType = TypeCastRules.getLeastRestrictiveType(Arrays.asList(majorType.getMinorType(), drillType.getMinorType()));
-          if (leastRestrictiveType != majorType.getMinorType()) {
-            columns.put(columnPath, drillType);
-          }
-        }
+        putType(columns, columnPath, drillType);
       }
     }
     return columns;
@@ -581,7 +579,7 @@ public class ParquetTableMetadataUtils {
    * @return map of column names with their drill types
    */
   static Map<SchemaPath, TypeProtos.MajorType> resolveFields(MetadataBase.ParquetTableMetadataBase parquetTableMetadata) {
-    LinkedHashMap<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
+    Map<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
     for (MetadataBase.ParquetFileMetadata file : parquetTableMetadata.getFiles()) {
       // row groups in the file have the same schema, so using the first one
       Map<SchemaPath, TypeProtos.MajorType> fileColumns = getFileFields(parquetTableMetadata, file);
@@ -591,7 +589,7 @@ public class ParquetTableMetadataUtils {
   }
 
   static Map<SchemaPath, TypeProtos.MajorType> resolveIntermediateFields(MetadataBase.ParquetTableMetadataBase parquetTableMetadata) {
-    LinkedHashMap<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
+    Map<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
     for (MetadataBase.ParquetFileMetadata file : parquetTableMetadata.getFiles()) {
       // row groups in the file have the same schema, so using the first one
       Map<SchemaPath, TypeProtos.MajorType> fileColumns = getIntermediateFields(parquetTableMetadata, file.getRowGroups().iterator().next());
@@ -600,11 +598,11 @@ public class ParquetTableMetadataUtils {
     return columns;
   }
 
-  static void putType(Map<SchemaPath, TypeProtos.MajorType> columns, SchemaPath columnPath, TypeProtos.MajorType type) {
+  private static void putType(Map<SchemaPath, TypeProtos.MajorType> columns, SchemaPath columnPath, TypeProtos.MajorType type) {
     TypeProtos.MajorType majorType = columns.get(columnPath);
     if (majorType == null) {
       columns.put(columnPath, type);
-    } else {
+    } else if (!majorType.equals(type)) {
       TypeProtos.MinorType leastRestrictiveType = TypeCastRules.getLeastRestrictiveType(Arrays.asList(majorType.getMinorType(), type.getMinorType()));
       if (leastRestrictiveType != majorType.getMinorType()) {
         columns.put(columnPath, type);

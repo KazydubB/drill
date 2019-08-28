@@ -33,22 +33,20 @@ public class RepeatedMapWriter extends AbstractRepeatedMapWriter<RepeatedMapVect
 
   @Override
   public void start() {
-    // update the repeated vector to state that there is current+1 objects.
-    final RepeatedMapHolder h = new RepeatedMapHolder();
-    final RepeatedMapVector map = container;
-    final RepeatedMapVector.Mutator mutator = map.getMutator();
+    // update the repeated vector to state that there is (current + 1) objects.
 
     // Make sure that the current vector can support the end position of this list.
-    if(container.getValueCapacity() <= idx()) {
-      mutator.setValueCount(idx()+1);
+    if (container.getValueCapacity() <= idx()) {
+      container.getMutator().setValueCount(idx() + 1);
     }
 
-    map.getAccessor().get(idx(), h);
+    RepeatedMapHolder h = new RepeatedMapHolder();
+    container.getAccessor().get(idx(), h);
     if (h.start >= h.end) {
       container.getMutator().startNewValue(idx());
     }
     currentChildIndex = container.getMutator().add(idx());
-    for(final FieldWriter w : fields.values()) {
+    for (FieldWriter w : fields.values()) {
       w.setPosition(currentChildIndex);
     }
   }

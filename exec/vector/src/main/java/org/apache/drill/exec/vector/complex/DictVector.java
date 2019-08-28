@@ -19,7 +19,6 @@ package org.apache.drill.exec.vector.complex;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +35,8 @@ import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.util.JsonStringHashMap;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.impl.SingleDictReaderImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link ValueVector} holding key-value pairs.
@@ -62,9 +63,9 @@ public final class DictVector extends AbstractRepeatedMapVector {
 
   public static final String FIELD_KEY_NAME = "key";
   public static final String FIELD_VALUE_NAME = "value";
-  public static final List<String> fieldNames = Collections.unmodifiableList(Arrays.asList(FIELD_KEY_NAME, FIELD_VALUE_NAME));
+  public static final List<String> fieldNames = Arrays.asList(FIELD_KEY_NAME, FIELD_VALUE_NAME);
 
-  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DictVector.class);
+  private static final Logger logger = LoggerFactory.getLogger(DictVector.class);
 
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
@@ -264,16 +265,6 @@ public final class DictVector extends AbstractRepeatedMapVector {
   }
 
   @Override
-  protected void reset() {
-    mutator.reset();
-  }
-
-  @Override
-  protected int getValueCount() {
-    return accessor.getValueCount();
-  }
-
-  @Override
   public Accessor getAccessor() {
     return accessor;
   }
@@ -281,11 +272,6 @@ public final class DictVector extends AbstractRepeatedMapVector {
   @Override
   public Mutator getMutator() {
     return mutator;
-  }
-
-  @Override
-  RepeatedValueHolder getValueHolder() {
-    return new DictHolder();
   }
 
   public ValueVector getKeys() {
@@ -312,6 +298,11 @@ public final class DictVector extends AbstractRepeatedMapVector {
       valueNullable = Types.isNullable(getValueType());
     }
     return valueNullable;
+  }
+
+  @Override
+  RepeatedValueHolder getValueHolder() {
+    return new DictHolder();
   }
 
   private void setKeyValueTypes(MajorType keyType, MajorType valueType) {

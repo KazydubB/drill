@@ -30,12 +30,12 @@ import org.apache.parquet.schema.Type;
 
 import java.util.Collections;
 
-class DrillMapGroupConverter extends DrillParquetGroupConverter {
+class DrillParquetMapGroupConverter extends DrillParquetGroupConverter {
 
   private final DictWriter writer;
 
-  DrillMapGroupConverter(OutputMutator mutator, DictWriter mapWriter, GroupType schema,
-                    OptionManager options, ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
+  DrillParquetMapGroupConverter(OutputMutator mutator, DictWriter mapWriter, GroupType schema, OptionManager options,
+                                ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
     super(mutator, mapWriter, options, containsCorruptedDates);
     writer = mapWriter;
 
@@ -63,14 +63,21 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
                            ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
       super(mutator, writer, options, containsCorruptedDates);
 
+      converters.add(getKeyConverter(schema));
+      converters.add(getValueConverter(schema, mutator, options, containsCorruptedDates));
+    }
+
+    private Converter getKeyConverter(GroupType schema) {
       Type keyType = schema.getType(INDEX_KEY);
       if (!keyType.isPrimitive()) {
-        throw new DrillRuntimeException("Map supports primitive key only. Found: " + keyType);
+        throw new DrillRuntimeException("Dict supports primitive key only. Found: " + keyType);
       } else {
-        Converter keyConverter = getConverterForType(DictVector.FIELD_KEY_NAME, keyType.asPrimitiveType());
-        converters.add(keyConverter);
+        return getConverterForType(DictVector.FIELD_KEY_NAME, keyType.asPrimitiveType());
       }
+    }
 
+    private Converter getValueConverter(GroupType schema, OutputMutator mutator, OptionManager options,
+                                        ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
       Type valueType = schema.getType(INDEX_VALUE);
       Converter valueConverter;
       if (!valueType.isPrimitive()) {
@@ -78,19 +85,19 @@ class DrillMapGroupConverter extends DrillParquetGroupConverter {
         if (ParquetReaderUtility.isLogicalMapType(groupType)) {
           DictWriter valueWriter = writer.dict(DictVector.FIELD_VALUE_NAME);
           valueConverter =
-            new DrillMapGroupConverter(mutator, valueWriter, groupType, options, containsCorruptedDates);
+              new DrillParquetMapGroupConverter(mutator, valueWriter, groupType, options, containsCorruptedDates);
         } else {
-          boolean isListType = isLogicalListType(groupType);
+          boolean isListType = ParquetReaderUtility.isLogicalListType(groupType);
           BaseWriter valueWriter = isListType
-                  ? writer.list(DictVector.FIELD_VALUE_NAME)
-                  : writer.map(DictVector.FIELD_VALUE_NAME);
+              ? writer.list(DictVector.FIELD_VALUE_NAME)
+              : writer.map(DictVector.FIELD_VALUE_NAME);
           valueConverter = new DrillParquetGroupConverter(mutator, valueWriter, groupType, Collections.emptyList(), options,
-                  containsCorruptedDates, isListType, "KeyValueGroupConverter");
+              containsCorruptedDates, isListType, "KeyValueGroupConverter");
         }
       } else {
         valueConverter = getConverterForType(DictVector.FIELD_VALUE_NAME, valueType.asPrimitiveType());
       }
-      converters.add(valueConverter);
+      return valueConverter;
     }
 
     @Override

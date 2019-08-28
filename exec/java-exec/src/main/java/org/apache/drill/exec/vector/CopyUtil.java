@@ -42,8 +42,8 @@ public class CopyUtil {
         copyMethod = "copyFrom";
       }
       g.rotateBlock();
-      JVar inVV = g.declareVectorValueSetupAndMember("incoming", new TypedFieldId(vv.getField().getType(), vv.isHyper(), fieldId));
-      JVar outVV = g.declareVectorValueSetupAndMember("outgoing", new TypedFieldId(vv.getField().getType(), false, fieldId));
+      JVar inVV = g.declareVectorValueSetupAndMember("incoming", TypedFieldId.Builder.build(vv.getField().getType(), vv.isHyper(), fieldId));
+      JVar outVV = g.declareVectorValueSetupAndMember("outgoing", TypedFieldId.Builder.build(vv.getField().getType(), false, fieldId));
 
       if(hyper){
 

@@ -20,10 +20,7 @@ package org.apache.drill.exec.expr.holders;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.vector.complex.RepeatedDictVector;
 
-public final class RepeatedDictHolder extends RepeatedValueHolder {
+public final class RepeatedDictHolder extends RepeatedValueHolder<RepeatedDictVector> {
 
-  public TypeProtos.MajorType getType() {return RepeatedDictVector.TYPE;}
-
-  /** The Vector holding the actual values. **/
-  public RepeatedDictVector vector;
+  public TypeProtos.MajorType TYPE = RepeatedDictVector.TYPE;
 }

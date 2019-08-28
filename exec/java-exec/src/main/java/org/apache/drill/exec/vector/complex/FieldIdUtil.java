@@ -24,11 +24,13 @@ import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.exec.record.TypedFieldId;
 import org.apache.drill.exec.vector.ValueVector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 public class FieldIdUtil {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FieldIdUtil.class);
+  private static final Logger logger = LoggerFactory.getLogger(FieldIdUtil.class);
 
   public static TypedFieldId getFieldIdIfMatchesUnion(UnionVector unionVector, TypedFieldId.Builder builder, boolean addToBreadCrumb, PathSegment seg) {
     if (seg != null) {
@@ -57,7 +59,16 @@ public class FieldIdUtil {
     return null;
   }
 
-
+  /**
+   * Utility method to obtain {@link TypedFieldId}, providing metadata
+   * for specified field given by value vector used in code generation.
+   *
+   * @param vector a value vector the metadata is obtained for
+   * @param builder a builder instance gathering metadata
+   * @param addToBreadCrumb flag to indicate whether to include intermediate type
+   * @param seg path segment corresponding to the vector
+   * @return type metadata for given vector
+   */
   public static TypedFieldId getFieldIdIfMatches(ValueVector vector, TypedFieldId.Builder builder,
                                                  boolean addToBreadCrumb, PathSegment seg) {
     return getFieldIdIfMatches(vector, builder, addToBreadCrumb, seg, 0);
@@ -66,8 +77,7 @@ public class FieldIdUtil {
   private static TypedFieldId getFieldIdIfMatches(ValueVector vector, TypedFieldId.Builder builder,
                                                   boolean addToBreadCrumb, PathSegment seg, int depth) {
     if (vector instanceof DictVector) {
-      MajorType vectorType = vector.getField().getType();
-      builder.addMajorType(depth, vectorType);
+      builder.setDict(depth);
     } else if (vector instanceof RepeatedMapVector && seg != null && seg.isArray() && !seg.isLastPath()) {
       if (addToBreadCrumb) {
         addToBreadCrumb = false;
@@ -127,6 +137,15 @@ public class FieldIdUtil {
     ValueVector v;
     if (vector instanceof DictVector) {
       v = ((DictVector) vector).getValues();
+      if (addToBreadCrumb) {
+        builder.remainder(seg);
+        builder.intermediateType(vector.getField().getType());
+        addToBreadCrumb = false;
+        // reset bit set and depth as this Dict vector will be the first one in the schema
+        builder.resetDictBitSet();
+        depth = 0;
+        builder.setDict(depth);
+      }
     } else if (vector instanceof AbstractContainerVector) {
       String fieldName = null;
       if (seg.isNamed()) {
@@ -208,7 +227,7 @@ public class FieldIdUtil {
     } else if (vector instanceof ListVector) {
       builder.intermediateType(vector.getField().getType());
       builder.addId(id);
-      return getFieldIdIfMatches(vector, builder, true, expectedPath.getRootSegment().getChild(), 1);
+      return getFieldIdIfMatches(vector, builder, true, expectedPath.getRootSegment().getChild(), 0);
     } else if (vector instanceof DictVector) {
       MajorType vectorType = vector.getField().getType();
       builder.intermediateType(vectorType);
@@ -225,7 +244,7 @@ public class FieldIdUtil {
       // we're looking for a multi path.
       builder.intermediateType(vector.getField().getType());
       builder.addId(id);
-      return getFieldIdIfMatches(vector, builder, true, expectedPath.getRootSegment().getChild(), 1);
+      return getFieldIdIfMatches(vector, builder, true, expectedPath.getRootSegment().getChild(), 0);
     } else if (vector instanceof RepeatedDictVector) {
       MajorType vectorType = vector.getField().getType();
       builder.intermediateType(vectorType);
@@ -236,7 +255,6 @@ public class FieldIdUtil {
       } else {
         PathSegment child = seg.getChild();
         if (!child.isArray()) {
-          // repeated map is accessed not by index, ignore?
           return null;
         } else {
           builder.remainder(child);

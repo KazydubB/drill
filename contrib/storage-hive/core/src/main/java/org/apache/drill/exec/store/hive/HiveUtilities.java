@@ -368,8 +368,8 @@ public class HiveUtilities {
         return typeBuilder.build();
       }
 
-      case MAP:
       case LIST:
+      case MAP:
       case STRUCT:
       case UNION:
       default:

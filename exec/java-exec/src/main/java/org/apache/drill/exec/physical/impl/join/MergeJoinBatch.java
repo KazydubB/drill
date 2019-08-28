@@ -384,9 +384,9 @@ public class MergeJoinBatch extends AbstractBinaryRecordBatch<MergeJoinPOP> {
         }
         // TODO (DRILL-4011): Factor out CopyUtil and use it here.
         JVar vvIn = cg.declareVectorValueSetupAndMember("incomingLeft",
-          new TypedFieldId(inputType, vectorId));
+          TypedFieldId.Builder.build(inputType, vectorId));
         JVar vvOut = cg.declareVectorValueSetupAndMember("outgoing",
-          new TypedFieldId(outputType,vectorId));
+          TypedFieldId.Builder.build(outputType,vectorId));
         // todo: check result of copyFromSafe and grow allocation
         cg.getEvalBlock().add(vvOut.invoke("copyFromSafe")
           .arg(copyLeftMapping.getValueReadIndex())
@@ -413,9 +413,9 @@ public class MergeJoinBatch extends AbstractBinaryRecordBatch<MergeJoinPOP> {
         }
         // TODO (DRILL-4011): Factor out CopyUtil and use it here.
         JVar vvIn = cg.declareVectorValueSetupAndMember("incomingRight",
-          new TypedFieldId(inputType, vectorId - rightVectorBase));
+          TypedFieldId.Builder.build(inputType, vectorId - rightVectorBase));
         JVar vvOut = cg.declareVectorValueSetupAndMember("outgoing",
-          new TypedFieldId(outputType,vectorId));
+          TypedFieldId.Builder.build(outputType,vectorId));
         // todo: check result of copyFromSafe and grow allocation
         cg.getEvalBlock().add(vvOut.invoke("copyFromSafe")
           .arg(copyRightMappping.getValueReadIndex())

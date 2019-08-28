@@ -251,7 +251,7 @@ public class VectorContainer implements VectorAccessible {
     schema = null;
     int i = wrappers.size();
     wrappers.add(SimpleVectorWrapper.create(vv));
-    return new TypedFieldId(vv.getField().getType(), i);
+    return TypedFieldId.Builder.build(vv.getField().getType(), i);
   }
 
   public ValueVector getLast() {

@@ -170,7 +170,7 @@ class DrillAggFuncHolder extends DrillFuncHolder {
         workspaceJVars[i] = g.declareClassField("work", g.getHolderType(getWorkspaceVars()[i].getMajorType()));
 
         //Declare a workspace vector for the workspace var.
-        TypedFieldId typedFieldId = new TypedFieldId(getWorkspaceVars()[i].getMajorType(), g.getWorkspaceTypes().size());
+        TypedFieldId typedFieldId = TypedFieldId.Builder.build(getWorkspaceVars()[i].getMajorType(), g.getWorkspaceTypes().size());
         JVar vv  = g.declareVectorValueSetupAndMember(g.getMappingSet().getWorkspace(), typedFieldId);
 
         g.getWorkspaceTypes().add(typedFieldId);

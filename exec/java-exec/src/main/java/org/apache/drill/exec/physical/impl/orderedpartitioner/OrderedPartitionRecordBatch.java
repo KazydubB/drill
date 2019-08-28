@@ -611,7 +611,7 @@ public class OrderedPartitionRecordBatch extends AbstractRecordBatch<OrderedPart
       ClassGenerator.HoldingContainer left = cg.addExpr(expr, ClassGenerator.BlkCreateMode.FALSE);
       cg.setMappingSet(partitionMapping);
       ClassGenerator.HoldingContainer right = cg.addExpr(
-          new ValueVectorReadExpression(new TypedFieldId(expr.getMajorType(), count++)), ClassGenerator.BlkCreateMode.FALSE);
+          new ValueVectorReadExpression(TypedFieldId.Builder.build(expr.getMajorType(), count++)), ClassGenerator.BlkCreateMode.FALSE);
       cg.setMappingSet(mainMapping);
 
       // next we wrap the two comparison sides and add the expression block for the comparison.

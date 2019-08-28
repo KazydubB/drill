@@ -188,8 +188,8 @@ public class Types {
       // Composite types and other types that are not atomic types (SQL standard
       // or not) except ARRAY types (handled above):
 
-      case MAP:             return "STRUCT"; // Drill map represents struct and in future will be renamed
-      case DICT:        return "MAP";
+      case MAP:             return "STRUCT"; // Drill map represents struct
+      case DICT:            return "MAP";
       case LATE:            return "ANY";
       case NULL:            return "NULL";
       case UNION:           return "UNION";
@@ -732,10 +732,14 @@ public class Types {
    * @return true if type can be used in ORDER BY clause
    */
   public static boolean isSortable(MinorType type) {
-    // Currently only map, list and dict columns are not sortable.
-    return type != MinorType.MAP
-        && type != MinorType.LIST
-        && type != MinorType.DICT;
+    switch (type) {
+      case DICT:
+      case LIST:
+      case MAP:
+        return false;
+      default:
+        return true;
+    }
   }
 
   /**

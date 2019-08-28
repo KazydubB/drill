@@ -71,7 +71,6 @@ import org.apache.parquet.io.api.Converter;
 import org.apache.parquet.io.api.GroupConverter;
 import org.apache.parquet.io.api.PrimitiveConverter;
 import org.apache.parquet.schema.GroupType;
-import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
 import org.apache.parquet.schema.Type.Repetition;
@@ -96,6 +95,14 @@ public class DrillParquetGroupConverter extends GroupConverter {
    */
   private String converterName;
 
+  /**
+   * Constructor is responsible for creation of converter without creation of child converters.
+   *
+   * @param mutator                output mutator, used to share managed buffer with primitive converters
+   * @param baseWriter             map or list writer associated with the group converter
+   * @param options                option manager used to check enabled option when necessary
+   * @param containsCorruptedDates allows to select strategy for dates handling
+   */
   protected DrillParquetGroupConverter(OutputMutator mutator, BaseWriter baseWriter, OptionManager options,
                                        ParquetReaderUtility.DateCorruptionStatus containsCorruptedDates) {
     this.mutator = mutator;
@@ -164,13 +171,14 @@ public class DrillParquetGroupConverter extends GroupConverter {
 
       BaseWriter writer;
       GroupType fieldGroupType = fieldType.asGroupType();
-      if (isLogicalListType(fieldGroupType)) {
+      if (ParquetReaderUtility.isLogicalListType(fieldGroupType)) {
         writer = getWriter(name, MapWriter::list, ListWriter::list);
         converter = new DrillParquetGroupConverter(mutator, writer, fieldGroupType, columns, options,
             containsCorruptedDates, true, converterName);
-      } else if (ParquetReaderUtility.isLogicalMapType(fieldGroupType)) {
+      } else if (options.getOption(ExecConstants.PARQUET_READER_ENABLE_MAP_SUPPORT_VALIDATOR)
+          && ParquetReaderUtility.isLogicalMapType(fieldGroupType)) {
         writer = getWriter(name, MapWriter::dict, ListWriter::dict);
-        converter = new DrillMapGroupConverter(
+        converter = new DrillParquetMapGroupConverter(
           mutator, (DictWriter) writer, fieldGroupType, options, containsCorruptedDates);
       } else if (fieldType.isRepetition(Repetition.REPEATED)) {
         if (skipRepeated) {
@@ -189,32 +197,6 @@ public class DrillParquetGroupConverter extends GroupConverter {
 
     }
     return converter;
-  }
-
-  /**
-   * Checks whether group field approximately matches pattern for Logical Lists:
-   * <list-repetition> group <name> (LIST) {
-   *   repeated group list {
-   *     <element-repetition> <element-type> element;
-   *   }
-   * }
-   * (See for more details: https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#lists)
-   *
-   * Note, that standard field names 'list' and 'element' aren't checked intentionally,
-   * because Hive lists have 'bag' and 'array_element' names instead.
-   *
-   * @param groupType type which may have LIST original type
-   * @return whether the type is LIST and nested field is repeated group
-   */
-  boolean isLogicalListType(GroupType groupType) {
-    if (groupType.getOriginalType() == OriginalType.LIST && groupType.getFieldCount() == 1) {
-      Type nestedField = groupType.getFields().get(0);
-      return nestedField.isRepetition(Repetition.REPEATED)
-          && !nestedField.isPrimitive()
-          && nestedField.getOriginalType() == null
-          && nestedField.asGroupType().getFieldCount() == 1;
-    }
-    return false;
   }
 
   protected PrimitiveConverter getConverterForType(String name, PrimitiveType type) {

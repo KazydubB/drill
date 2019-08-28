@@ -94,16 +94,6 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
    * @see <a href="https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#maps">MAP logical type</a>
    */
   private static final String GROUP_KEY_VALUE_NAME = "key_value";
-  /**
-   * Name of nested group for Parquet's {@code LIST} type.
-   * @see <a href="https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#lists">LIST logical type</a>
-   */
-  private static final String GROUP_LIST_NAME = "list";
-  /**
-   * Name of {@code LIST}'s element type for Parquet's {@code LIST} type.
-   * @see #GROUP_LIST_NAME
-   */
-  private static final String GROUP_LIST_ELEMENT_NAME = "element";
 
   public static final String DRILL_VERSION_PROPERTY = "drill.version";
   public static final String WRITER_VERSION_PROPERTY = "drill-writer.version";
@@ -325,8 +315,8 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
           GroupType elementType = org.apache.parquet.schema.Types.buildGroup(Repetition.OPTIONAL)
               .as(OriginalType.MAP)
               .addField(keyValueGroup)
-              .named(GROUP_LIST_ELEMENT_NAME);
-          GroupType listGroup = new GroupType(Repetition.REPEATED, GROUP_LIST_NAME, elementType);
+              .named(LIST);
+          GroupType listGroup = new GroupType(Repetition.REPEATED, LIST, elementType);
           return org.apache.parquet.schema.Types.buildGroup(Repetition.OPTIONAL)
               .as(OriginalType.LIST)
               .addField(listGroup)
@@ -642,7 +632,7 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
 
     public RepeatedDictParquetConverter(int fieldId, String fieldName, FieldReader reader) {
       super(fieldId, fieldName, reader);
-      dictConverter = new DictParquetConverter(0, GROUP_LIST_ELEMENT_NAME, reader.reader());
+      dictConverter = new DictParquetConverter(0, ELEMENT, reader.reader());
     }
 
     @Override
@@ -653,13 +643,13 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
 
       consumer.startField(fieldName, fieldId);
       consumer.startGroup();
-      consumer.startField(GROUP_LIST_NAME, 0);
+      consumer.startField(LIST, 0);
       while (reader.next()) {
         consumer.startGroup();
         dictConverter.writeField();
         consumer.endGroup();
       }
-      consumer.endField(GROUP_LIST_NAME, 0);
+      consumer.endField(LIST, 0);
       consumer.endGroup();
       consumer.endField(fieldName, fieldId);
     }

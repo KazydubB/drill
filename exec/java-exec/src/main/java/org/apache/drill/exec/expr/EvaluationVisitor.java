@@ -71,7 +71,6 @@ import org.apache.drill.exec.expr.fn.AbstractFuncHolder;
 import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.apache.drill.exec.physical.impl.filter.ReturnValueExpression;
 import org.apache.drill.exec.vector.ValueHolderHelper;
-import org.apache.drill.exec.vector.complex.reader.BaseReader;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
 import org.apache.drill.shaded.guava.com.google.common.base.Function;
@@ -519,12 +518,12 @@ public class EvaluationVisitor {
         JVar valueIndex = eval.decl(generator.getModel().INT, "valueIndex", JExpr.lit(-1));
 
         int depth = 0;
-        boolean isMap = e.getFieldId().isMap(depth);
+        boolean isDict = e.getFieldId().isDict(depth);
 
         while (seg != null) {
           if (seg.isArray()) {
 
-            // stop once we get to the last segment and the final type is neither complex nor repeated (map, list, repeated list).
+            // stop once we get to the last segment and the final type is neither complex nor repeated (map, dict, list, repeated list).
             // In case of non-complex and non-repeated type, we return Holder, in stead of FieldReader.
             if (seg.isLastPath() && !complex && !repeated && !listVector) {
               break;
@@ -532,24 +531,13 @@ public class EvaluationVisitor {
 
             depth++;
 
-            if (isMap) {
+            if (isDict) {
               JExpression keyExpr = JExpr.lit(seg.getArraySegment().getIndex());
 
-              JVar dictReader = generator.declareClassField("dictReader", generator.getModel()._ref(BaseReader.DictReader.class));
-              eval.assign(dictReader, expr);
-              eval.assign(valueIndex, expr.invoke("find").arg(keyExpr));
-
-              JConditional conditional = eval._if(valueIndex.gt(JExpr.lit(-1)));
-              JBlock ifFound = conditional._then().block();
-              expr = dictReader.invoke("reader").arg(JExpr.lit("value"));
-              ifFound.add(expr.invoke("setPosition").arg(valueIndex));
-
-              JBlock elseBlock = conditional._else().block();
-              elseBlock.add(dictReader.invoke("setPosition").arg(valueIndex));
-              elseBlock.assign(isNull, JExpr.lit(1));
+              expr = getDictReaderReadByKeyExpression(generator, eval, expr, keyExpr, valueIndex, isNull);
 
               seg = seg.getChild();
-              isMap = e.getFieldId().isMap(depth);
+              isDict = e.getFieldId().isDict(depth);
               continue;
             }
 
@@ -580,31 +568,21 @@ public class EvaluationVisitor {
             listNum++;
           } else {
 
-            if (e.getFieldId().isMap(depth)) {
+            if (e.getFieldId().isDict(depth)) {
               depth++;
               JExpression keyExpr = JExpr.lit(seg.getNameSegment().getPath());
+
               MajorType finalType = e.getFieldId().getFinalType();
               if (seg.getChild() == null && !(Types.isComplex(finalType) || Types.isRepeated(finalType))) {
                 // This is the last segment:
                 eval.add(expr.invoke("read").arg(keyExpr).arg(out.getHolder()));
                 return out;
               }
-              eval.assign(valueIndex, expr.invoke("find").arg(keyExpr));
 
-              JVar dictReader = generator.declareClassField("dictReader", generator.getModel()._ref(FieldReader.class));
-              eval.assign(dictReader, expr);
-
-              JConditional conditional = eval._if(valueIndex.gt(JExpr.lit(-1)));
-              JBlock ifFound = conditional._then().block();
-              expr = dictReader.invoke("reader").arg(JExpr.lit("value"));
-              ifFound.add(expr.invoke("setPosition").arg(valueIndex));
-
-              JBlock elseBlock = conditional._else().block();
-              elseBlock.add(dictReader.invoke("setPosition").arg(valueIndex));
-              elseBlock.assign(isNull, JExpr.lit(1));
+              expr = getDictReaderReadByKeyExpression(generator, eval, expr, keyExpr, valueIndex, isNull);
 
               seg = seg.getChild();
-              isMap = e.getFieldId().isMap(depth);
+              isDict = e.getFieldId().isDict(depth);
               continue;
             }
 
@@ -616,7 +594,7 @@ public class EvaluationVisitor {
 
         if (complex || repeated) {
 
-          if (isMap) {
+          if (isDict) {
             JVar dictReader = generator.declareClassField("dictReader", generator.getModel()._ref(FieldReader.class));
             eval.assign(dictReader, expr);
 
@@ -647,7 +625,7 @@ public class EvaluationVisitor {
         } else {
           if (seg != null) {
             JExpression holderExpr = out.getHolder();
-            if (e.getFieldId().isMap(depth)) {
+            if (e.getFieldId().isDict(depth)) {
               holderExpr = JExpr.cast(generator.getModel()._ref(ValueHolder.class), holderExpr);
             }
             eval.add(expr.invoke("read").arg(JExpr.lit(seg.getArraySegment().getIndex())).arg(holderExpr));
@@ -679,6 +657,39 @@ public class EvaluationVisitor {
         seg = seg.getChild();
       }
       return false;
+    }
+
+    /**
+     * Adds code to {@code eval} block which reads values by key from {@code expr} which is an instance of
+     * {@link org.apache.drill.exec.vector.complex.reader.BaseReader.DictReader}.
+     *
+     *
+     * @param generator current class generator
+     * @param eval evaluation block the code will be added to
+     * @param expr DICT reader to read values from
+     * @param keyExpr key literal
+     * @param valueIndex current value index (will be reassigned in the method)
+     * @param isNull variable to indicate whether entry with the key exists in the DICT.
+     *               Will be set to {@literal 1} if the key is not present
+     * @return expression corresponding to {@link org.apache.drill.exec.vector.complex.DictVector#FIELD_VALUE_NAME}'s
+     *         reader with its position set to index corresponding to the key
+     */
+    private JExpression getDictReaderReadByKeyExpression(ClassGenerator generator, JBlock eval, JExpression expr,
+                                                         JExpression keyExpr, JVar valueIndex, JVar isNull) {
+      JVar dictReader = generator.declareClassField("dictReader", generator.getModel()._ref(FieldReader.class));
+      eval.assign(dictReader, expr);
+      eval.assign(valueIndex, expr.invoke("find").arg(keyExpr));
+
+      JConditional conditional = eval._if(valueIndex.gt(JExpr.lit(-1)));
+      JBlock ifFound = conditional._then().block();
+      expr = dictReader.invoke("reader").arg(JExpr.lit("value"));
+      ifFound.add(expr.invoke("setPosition").arg(valueIndex));
+
+      JBlock elseBlock = conditional._else().block();
+      elseBlock.add(dictReader.invoke("setPosition").arg(valueIndex));
+      elseBlock.assign(isNull, JExpr.lit(1));
+
+      return expr;
     }
 
     private HoldingContainer visitReturnValueExpression(ReturnValueExpression e, ClassGenerator<?> generator) {

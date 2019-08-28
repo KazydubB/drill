@@ -69,7 +69,7 @@ public class ExpressionTest extends ExecTest {
     final RecordBatch batch = mock(RecordBatch.class);
     final VectorWrapper wrapper = mock(VectorWrapper.class);
     final TypeProtos.MajorType type = Types.optional(MinorType.INT);
-    final TypedFieldId tfid = new TypedFieldId(type, false, 0);
+    final TypedFieldId tfid = TypedFieldId.Builder.build(type, false, 0);
 
     when(wrapper.getValueVector()).thenReturn(new IntVector(MaterializedField.create("result", type), RootAllocatorFactory.newRoot(c)));
 
@@ -83,7 +83,7 @@ public class ExpressionTest extends ExecTest {
   public void testSchemaExpression() throws Exception {
     final RecordBatch batch = mock(RecordBatch.class);
     when(batch.getValueVectorId(new SchemaPath("alpha", ExpressionPosition.UNKNOWN)))
-      .thenReturn(new TypedFieldId(Types.optional(MinorType.BIGINT), false, 0));
+      .thenReturn(TypedFieldId.Builder.build(Types.optional(MinorType.BIGINT), false, 0));
 
     getExpressionCode("1 + alpha", batch);
   }
@@ -116,7 +116,7 @@ public class ExpressionTest extends ExecTest {
 
     FunctionImplementationRegistry funcReg = new FunctionImplementationRegistry(DrillConfig.create());
     final ClassGenerator<Projector> cg = CodeGenerator.get(Projector.TEMPLATE_DEFINITION, null).getRoot();
-    cg.addExpr(new ValueVectorWriteExpression(new TypedFieldId(materializedExpr.getMajorType(), -1), materializedExpr));
+    cg.addExpr(new ValueVectorWriteExpression(TypedFieldId.Builder.build(materializedExpr.getMajorType(), -1), materializedExpr));
     return cg.getCodeGenerator().generateAndGet();
   }
 }

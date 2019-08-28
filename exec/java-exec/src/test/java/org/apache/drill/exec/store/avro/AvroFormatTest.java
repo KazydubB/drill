@@ -637,6 +637,21 @@ public class AvroFormatTest extends BaseTestQuery {
   }
 
   @Test
+  public void testMapSchemaGetByKeyUsingDotNotation() throws Exception {
+    String sql = "select t.map_field.key1 val1, t.map_field.key2 val2 from dfs.`%s` t";
+
+    TestBuilder testBuilder = testBuilder()
+        .sqlQuery(sql, mapTableName)
+        .unOrdered()
+        .baselineColumns("val1", "val2");
+
+    for (long i = 0; i < RECORD_COUNT; i++) {
+      testBuilder.baselineValues(i, i + 1);
+    }
+    testBuilder.go();
+  }
+
+  @Test
   public void testMapArraySchema() throws Exception {
     String sql = "select map_array from dfs.`%s`";
 
