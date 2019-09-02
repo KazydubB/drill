@@ -68,19 +68,14 @@ public class TypedFieldId {
   }
 
   private Builder getBuilder() {
-    Builder builder = new Builder().intermediateType(intermediateType)
+    return new Builder().intermediateType(intermediateType)
         .finalType(finalType)
         .secondaryFinal(secondaryFinal)
         .addIds(fieldIds)
         .remainder(remainder)
-        .copyDictBitSet(dictBitSet);
-    if (isHyperReader) {
-      builder.hyper();
-    }
-    if (isListVector) {
-      builder.listVector();
-    }
-    return builder;
+        .copyDictBitSet(dictBitSet)
+        .hyper(isHyperReader)
+        .listVector(isListVector);
   }
 
   public PathSegment getLastSegment() {
@@ -167,34 +162,6 @@ public class TypedFieldId {
     boolean isListVector;
     BitSet dictBitSet = new BitSet();
 
-    public static TypedFieldId build(MajorType type, int... fieldIds) {
-      return new Builder().intermediateType(type)
-          .finalType(type)
-          .secondaryFinal(type)
-          .addIds(fieldIds)
-          .build();
-    }
-
-    public static TypedFieldId build(MajorType type, IntArrayList breadCrumb, PathSegment remainder) {
-      return new Builder().intermediateType(type)
-          .finalType(type)
-          .secondaryFinal(type)
-          .remainder(remainder)
-          .addIds(breadCrumb.toArray())
-          .build();
-    }
-
-    public static TypedFieldId build(MajorType type, boolean isHyper, int... fieldIds) {
-      Builder builder = new Builder().intermediateType(type)
-          .finalType(type)
-          .secondaryFinal(type)
-          .addIds(fieldIds);
-      if (isHyper) {
-        builder.hyper();
-      }
-      return builder.build();
-    }
-
     public Builder addId(int id) {
       ids.add(id);
       return this;
@@ -210,13 +177,13 @@ public class TypedFieldId {
       return this;
     }
 
-    public Builder hyper() {
-      this.hyperReader = true;
+    public Builder hyper(boolean hyper) {
+      this.hyperReader = hyper;
       return this;
     }
 
-    public Builder listVector() {
-      this.isListVector = true;
+    public Builder listVector(boolean listVector) {
+      this.isListVector = listVector;
       return this;
     }
 
@@ -245,7 +212,7 @@ public class TypedFieldId {
       return this;
     }
 
-    private Builder addIds(int[] ids) {
+    private Builder addIds(int... ids) {
       for (int id : ids) {
         this.ids.add(id);
       }
@@ -264,8 +231,11 @@ public class TypedFieldId {
     }
 
     public TypedFieldId build() {
-      Preconditions.checkNotNull(intermediateType);
       Preconditions.checkNotNull(finalType);
+
+      if (intermediateType == null) {
+        intermediateType = finalType;
+      }
 
       if (secondaryFinal == null) {
         secondaryFinal = finalType;

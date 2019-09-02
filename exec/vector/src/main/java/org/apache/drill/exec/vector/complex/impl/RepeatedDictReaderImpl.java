@@ -135,4 +135,9 @@ public class RepeatedDictReaderImpl extends AbstractFieldReader {
     }
     vector.copyEntry(srcId, container, idx());
   }
+
+  @Override
+  public String getTypeString() {
+    return "ARRAY<" + reader.getTypeString() + '>';
+  }
 }

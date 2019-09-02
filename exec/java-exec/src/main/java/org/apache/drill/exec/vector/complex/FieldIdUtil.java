@@ -107,7 +107,7 @@ public class FieldIdUtil {
           type = ((AbstractContainerVector) vector).getLastPathType();
         } else if (vector instanceof ListVector) {
           type = ((ListVector) vector).getDataVector().getField().getType();
-          builder.listVector();
+          builder.listVector(true);
         } else {
           throw new UnsupportedOperationException("FieldIdUtil does not support vector of type " + vector.getField().getType());
         }
@@ -205,10 +205,7 @@ public class FieldIdUtil {
     }
     PathSegment seg = expectedPath.getRootSegment();
 
-    TypedFieldId.Builder builder = TypedFieldId.newBuilder();
-    if (hyper) {
-      builder.hyper();
-    }
+    TypedFieldId.Builder builder = TypedFieldId.newBuilder().hyper(hyper);
     if (vector instanceof UnionVector) {
       builder.addId(id).remainder(expectedPath.getRootSegment().getChild());
       List<MinorType> minorTypes = ((UnionVector) vector).getSubTypes();

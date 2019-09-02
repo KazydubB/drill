@@ -294,10 +294,16 @@ public class NestedLoopJoinBatch extends AbstractBinaryRecordBatch<NestedLoopJoi
         // Add the vector to the output container
         container.addOrGet(field);
 
-        JVar inVV = nLJClassGenerator.declareVectorValueSetupAndMember("leftBatch",
-            TypedFieldId.Builder.build(fieldType, false, fieldId));
-        JVar outVV = nLJClassGenerator.declareVectorValueSetupAndMember("outgoing",
-            TypedFieldId.Builder.build(fieldType, false, outputFieldId));
+        TypedFieldId inFieldId = new TypedFieldId.Builder().finalType(fieldType)
+            .hyper(false)
+            .addId(fieldId)
+            .build();
+        JVar inVV = nLJClassGenerator.declareVectorValueSetupAndMember("leftBatch", inFieldId);
+        TypedFieldId outFieldId = new TypedFieldId.Builder().finalType(fieldType)
+            .hyper(false)
+            .addId(outputFieldId)
+            .build();
+        JVar outVV = nLJClassGenerator.declareVectorValueSetupAndMember("outgoing", outFieldId);
 
         nLJClassGenerator.getEvalBlock().add(outVV.invoke("copyFromSafe").arg(leftIndex).arg(outIndex).arg(inVV));
         nLJClassGenerator.rotateBlock();
@@ -328,10 +334,16 @@ public class NestedLoopJoinBatch extends AbstractBinaryRecordBatch<NestedLoopJoi
         MaterializedField newField = MaterializedField.create(field.getName(), outputType);
         container.addOrGet(newField);
 
-        JVar inVV = nLJClassGenerator.declareVectorValueSetupAndMember("rightContainer",
-            TypedFieldId.Builder.build(inputType, true, fieldId));
-        JVar outVV = nLJClassGenerator.declareVectorValueSetupAndMember("outgoing",
-            TypedFieldId.Builder.build(outputType, false, outputFieldId));
+        TypedFieldId inFieldId = new TypedFieldId.Builder().finalType(inputType)
+            .hyper(true)
+            .addId(fieldId)
+            .build();
+        JVar inVV = nLJClassGenerator.declareVectorValueSetupAndMember("rightContainer", inFieldId);
+        TypedFieldId outFieldId = new TypedFieldId.Builder().finalType(outputType)
+            .hyper(false)
+            .addId(outputFieldId)
+            .build();
+        JVar outVV = nLJClassGenerator.declareVectorValueSetupAndMember("outgoing", outFieldId);
         nLJClassGenerator.getEvalBlock().add(outVV.invoke("copyFromSafe")
             .arg(recordIndexWithinBatch)
             .arg(outIndex)
