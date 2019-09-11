@@ -111,12 +111,12 @@ public class ComplexCopier {
     case LIST:
       return (FieldWriter) writer.list(name);
     default:
-      throw new UnsupportedOperationException(type.toString());
+      throw new UnsupportedOperationException(String.format("[%s] type is not supported.", type.toString()));
     }
   }
 
-  private static FieldWriter getListWriterForReader(FieldReader reader, ListWriter writer) {
-    switch (reader.getType().getMinorType()) {
+  public static FieldWriter getListWriterForType(TypeProtos.MajorType type, ListWriter writer) {
+    switch (type.getMinorType()) {
     <#list vv.types as type><#list type.minor as minor><#assign name = minor.class?cap_first />
     <#assign fields = minor.fields!type.fields />
     <#assign uncappedName = name?uncap_first/>
@@ -125,7 +125,7 @@ public class ComplexCopier {
       return (FieldWriter) writer.<#if name == "Int">integer<#else>${uncappedName}</#if>();
     <#elseif minor.class?contains("VarDecimal")>
     case ${name?upper_case}:
-      return (FieldWriter) writer.${uncappedName}(reader.getType().getScale(), reader.getType().getPrecision());
+      return (FieldWriter) writer.${uncappedName}(type.getScale(), type.getPrecision());
     </#if>
     </#list></#list>
     case MAP:
@@ -133,11 +133,15 @@ public class ComplexCopier {
     case LIST:
       return (FieldWriter) writer.list();
     default:
-      throw new UnsupportedOperationException(reader.getType().toString());
+      throw new UnsupportedOperationException(String.format("[%s] type is not supported.", type.toString()));
     }
   }
 
   private static FieldWriter getMapWriterForReader(FieldReader reader, BaseWriter.MapWriter writer, String name) {
     return getMapWriterForType(reader.getType(), writer, name);
+  }
+
+  private static FieldWriter getListWriterForReader(FieldReader reader, ListWriter writer) {
+    return getListWriterForType(reader.getType(), writer);
   }
 }
