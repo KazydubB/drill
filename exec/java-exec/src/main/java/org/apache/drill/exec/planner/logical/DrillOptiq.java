@@ -25,6 +25,9 @@ import java.util.List;
 
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.BasicSqlType;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.expression.ExpressionPosition;
@@ -251,6 +254,9 @@ public class DrillOptiq {
         if (call.getOperator() == SqlStdOperatorTable.ITEM) {
           SchemaPath left = (SchemaPath) call.getOperands().get(0).accept(this);
 
+          RelDataType dataType = call.getOperands().get(0).getType();
+          boolean isMap = dataType.getSqlTypeName() == SqlTypeName.MAP;
+
           // Convert expr of item[*, 'abc'] into column expression 'abc'
           String rootSegName = left.getRootSegment().getPath();
           if (StarColumnHelper.isStarColumn(rootSegName)) {
@@ -259,15 +265,116 @@ public class DrillOptiq {
             return SchemaPath.getSimplePath(rootSegName + literal.getValue2().toString());
           }
 
-          final RexLiteral literal = (RexLiteral) call.getOperands().get(1);
-          switch(literal.getTypeName()){
-          case DECIMAL:
-          case INTEGER:
-            return left.getChild(((BigDecimal)literal.getValue()).intValue());
-          case CHAR:
-            return left.getChild(literal.getValue2().toString());
-          default:
-            // fall through
+          final RexLiteral literal;
+          RexNode operand = call.getOperands().get(1);
+          if (operand instanceof RexLiteral) {
+            literal = (RexLiteral) operand;
+          } else {
+            if (isMap && operand.getKind() == SqlKind.CAST) {
+              SqlTypeName castType = operand.getType().getSqlTypeName();
+              SqlTypeName keyType = dataType.getKeyType().getSqlTypeName();
+              Preconditions.checkArgument(castType == keyType,
+                  String.format("Wrong type CAST: expected '%s' but found '%s'", keyType.getName(), castType.getName()));
+              literal = (RexLiteral) ((RexCall) operand).operands.get(0);
+            } else {
+              throw new AssertionError("todo: implement syntax " + syntax + "(" + call + ")");
+            }
+          }
+
+          switch (literal.getTypeName()) {
+            case DECIMAL:
+            case INTEGER:
+              if (isMap) {
+                BigDecimal literalValue = (BigDecimal) literal.getValue();
+                BasicSqlType sqlType = (BasicSqlType) operand.getType();
+                Object originalValue;
+
+                TypeProtos.DataMode mode = sqlType.isNullable() ? TypeProtos.DataMode.OPTIONAL : TypeProtos.DataMode.REQUIRED;
+                boolean arraySegment = false;
+                MajorType type;
+                switch (dataType.getKeyType().getSqlTypeName()) {
+                  case DOUBLE:
+                    type = Types.withMode(MinorType.FLOAT8, mode);
+                    originalValue = literalValue.doubleValue();
+                    break;
+                  case FLOAT:
+                    type = Types.withMode(MinorType.FLOAT4, mode);
+                    originalValue = literalValue.floatValue();
+                    break;
+                  case DECIMAL:
+                    type = Types.withPrecisionAndScale(MinorType.VARDECIMAL, mode, literalValue.precision(), literalValue.scale());
+                    originalValue = literalValue;
+                    break;
+                  case BIGINT:
+                    type = Types.withMode(MinorType.BIGINT, mode);
+                    originalValue = literalValue.longValue();
+                    break;
+                  case INTEGER:
+                    type = Types.withMode(MinorType.INT, mode);
+                    originalValue = literalValue.intValue();
+                    arraySegment = true;
+                    break;
+                  case SMALLINT:
+                    type = Types.withMode(MinorType.SMALLINT, mode);
+                    originalValue = literalValue.shortValue();
+                    arraySegment = true;
+                    break;
+                  case TINYINT:
+                    type = Types.withMode(MinorType.TINYINT, mode);
+                    originalValue = literalValue.byteValue();
+                    arraySegment = true;
+                    break;
+                  default:
+                    throw new AssertionError("Shouldn't reach there. Type: " + dataType.getKeyType().getSqlTypeName());
+                }
+
+                if (arraySegment) {
+                  return left.getChild((int) originalValue, originalValue, type);
+                } else {
+                  return left.getChild(originalValue.toString(), originalValue, type);
+                }
+              }
+
+              return left.getChild(((BigDecimal) literal.getValue()).intValue());
+            case CHAR:
+              if (isMap) {
+                TypeProtos.DataMode mode = operand.getType().isNullable() ? TypeProtos.DataMode.OPTIONAL : TypeProtos.DataMode.REQUIRED;
+                TypeProtos.MajorType type;
+                switch (dataType.getKeyType().getSqlTypeName()) {
+                  case TIMESTAMP:
+                    type = Types.withMode(MinorType.TIMESTAMP, mode);
+                    break;
+                  case DATE:
+                    type = Types.withMode(MinorType.DATE, mode);
+                    break;
+                  case TIME:
+                    type = Types.withMode(MinorType.TIME, mode);
+                    break;
+                  case INTERVAL_DAY:
+                    type = Types.withMode(MinorType.INTERVALDAY, mode);
+                    break;
+                  case INTERVAL_YEAR:
+                    type = Types.withMode(MinorType.INTERVALYEAR, mode);
+                    break;
+                  case INTERVAL_MONTH:
+                    type = Types.withMode(MinorType.INTERVAL, mode);
+                    break;
+                  default:
+                    type = Types.withMode(MinorType.VARCHAR, mode);
+                    break;
+                }
+                return left.getChild(literal.getValue2().toString(), literal.getValue2(), type);
+              }
+              return left.getChild(literal.getValue2().toString());
+            case BOOLEAN:
+              if (isMap) {
+                BasicSqlType sqlType = (BasicSqlType) operand.getType();
+                TypeProtos.DataMode mode = sqlType.isNullable() ? TypeProtos.DataMode.OPTIONAL : TypeProtos.DataMode.REQUIRED;
+                return left.getChild(literal.getValue().toString(), literal.getValue(), Types.withMode(MinorType.BIT, mode));
+              }
+              // fall through
+            default:
+              // fall through
           }
         }
 
@@ -345,21 +452,21 @@ public class DrillOptiq {
       LogicalExpression arg = call.getOperands().get(0).accept(this);
       MajorType castType;
 
-      switch(call.getType().getSqlTypeName().getName()){
-      case "VARCHAR":
-      case "CHAR":
+      switch(call.getType().getSqlTypeName()){
+      case VARCHAR:
+      case CHAR:
         castType = Types.required(MinorType.VARCHAR).toBuilder().setPrecision(call.getType().getPrecision()).build();
         break;
-      case "INTEGER":
+      case INTEGER:
         castType = Types.required(MinorType.INT);
         break;
-      case "FLOAT":
+      case FLOAT:
         castType = Types.required(MinorType.FLOAT4);
         break;
-      case "DOUBLE":
+      case DOUBLE:
         castType = Types.required(MinorType.FLOAT8);
         break;
-      case "DECIMAL":
+      case DECIMAL:
         if (!context.getPlannerSettings().getOptions().getOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY).bool_val) {
           throw UserException
               .unsupportedError()
@@ -379,30 +486,30 @@ public class DrillOptiq {
                 .build();
         break;
 
-        case "INTERVAL_YEAR":
-        case "INTERVAL_YEAR_MONTH":
-        case "INTERVAL_MONTH":
+        case INTERVAL_YEAR:
+        case INTERVAL_YEAR_MONTH:
+        case INTERVAL_MONTH:
           castType = Types.required(MinorType.INTERVALYEAR);
           break;
-        case "INTERVAL_DAY":
-        case "INTERVAL_DAY_HOUR":
-        case "INTERVAL_DAY_MINUTE":
-        case "INTERVAL_DAY_SECOND":
-        case "INTERVAL_HOUR":
-        case "INTERVAL_HOUR_MINUTE":
-        case "INTERVAL_HOUR_SECOND":
-        case "INTERVAL_MINUTE":
-        case "INTERVAL_MINUTE_SECOND":
-        case "INTERVAL_SECOND":
+        case INTERVAL_DAY:
+        case INTERVAL_DAY_HOUR:
+        case INTERVAL_DAY_MINUTE:
+        case INTERVAL_DAY_SECOND:
+        case INTERVAL_HOUR:
+        case INTERVAL_HOUR_MINUTE:
+        case INTERVAL_HOUR_SECOND:
+        case INTERVAL_MINUTE:
+        case INTERVAL_MINUTE_SECOND:
+        case INTERVAL_SECOND:
           castType = Types.required(MinorType.INTERVALDAY);
           break;
-        case "BOOLEAN":
+        case BOOLEAN:
           castType = Types.required(MinorType.BIT);
           break;
-        case "BINARY":
+        case BINARY:
           castType = Types.required(MinorType.VARBINARY);
           break;
-        case "ANY":
+        case ANY:
           return arg; // Type will be same as argument.
         default:
           castType = Types.required(MinorType.valueOf(call.getType().getSqlTypeName().getName()));
