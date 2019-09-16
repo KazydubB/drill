@@ -717,7 +717,7 @@ public class EvaluationVisitor {
      * @return Java Object representation of key wrapped into {@link JVar}
      */
     private JExpression getKeyExpression(PathSegment segment, ClassGenerator generator) {
-      MajorType valueType = segment.getValueType();
+      MajorType valueType = segment.getOriginalValueType();
       JType keyType;
       JExpression newKeyObject;
       JVar dictKey;

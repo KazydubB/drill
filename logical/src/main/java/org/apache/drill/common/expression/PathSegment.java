@@ -31,15 +31,15 @@ public abstract class PathSegment {
    * Indicates the type of original value.
    * @see #originalValue
    */
-  protected final TypeProtos.MajorType valueType;
+  protected final TypeProtos.MajorType originalValueType;
 
   private PathSegment child;
 
   private int hash;
 
-  public PathSegment(PathSegment child, Object originalValue, TypeProtos.MajorType valueType) {
+  public PathSegment(PathSegment child, Object originalValue, TypeProtos.MajorType originalValueType) {
     this.originalValue = originalValue;
-    this.valueType = valueType;
+    this.originalValueType = originalValueType;
     this.child = child;
   }
 
@@ -52,8 +52,8 @@ public abstract class PathSegment {
     return originalValue;
   }
 
-  public TypeProtos.MajorType getValueType() {
-    return valueType;
+  public TypeProtos.MajorType getOriginalValueType() {
+    return originalValueType;
   }
 
   public static final class ArraySegment extends PathSegment {
@@ -138,7 +138,7 @@ public abstract class PathSegment {
     @Override
     public PathSegment clone() {
       int index = this.index < 0 ? -1 : this.index;
-      PathSegment seg = new ArraySegment(index, originalValue, valueType);
+      PathSegment seg = new ArraySegment(index, originalValue, originalValueType);
       if (getChild() != null) {
         seg.setChild(getChild().clone());
       }
@@ -148,7 +148,7 @@ public abstract class PathSegment {
     @Override
     public ArraySegment cloneWithNewChild(PathSegment newChild) {
       int index = this.index < 0 ? -1 : this.index;
-      ArraySegment seg = new ArraySegment(index, originalValue, valueType);
+      ArraySegment seg = new ArraySegment(index, originalValue, originalValueType);
       if (getChild() != null) {
         seg.setChild(getChild().cloneWithNewChild(newChild));
       } else {
@@ -220,7 +220,7 @@ public abstract class PathSegment {
 
     @Override
     public NameSegment clone() {
-      NameSegment s = new NameSegment(this.path, originalValue, valueType);
+      NameSegment s = new NameSegment(this.path, originalValue, originalValueType);
       if (getChild() != null) {
         s.setChild(getChild().clone());
       }
@@ -229,7 +229,7 @@ public abstract class PathSegment {
 
     @Override
     public NameSegment cloneWithNewChild(PathSegment newChild) {
-      NameSegment s = new NameSegment(this.path, originalValue, valueType);
+      NameSegment s = new NameSegment(this.path, originalValue, originalValueType);
       if (getChild() != null) {
         s.setChild(getChild().cloneWithNewChild(newChild));
       } else {
