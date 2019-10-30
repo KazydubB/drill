@@ -52,6 +52,8 @@ public interface ObjectWriter extends ColumnWriter {
 
   VariantWriter variant();
 
+  DictWriter dict();
+
   /**
    * The internal state behind this writer. To be used only by the
    * implementation, not by the client.

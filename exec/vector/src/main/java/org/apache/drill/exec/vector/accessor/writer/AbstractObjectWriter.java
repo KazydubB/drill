@@ -20,6 +20,7 @@ package org.apache.drill.exec.vector.accessor.writer;
 import org.apache.drill.exec.record.metadata.ColumnMetadata;
 import org.apache.drill.exec.vector.accessor.ArrayWriter;
 import org.apache.drill.exec.vector.accessor.ColumnWriter;
+import org.apache.drill.exec.vector.accessor.DictWriter;
 import org.apache.drill.exec.vector.accessor.ObjectType;
 import org.apache.drill.exec.vector.accessor.ObjectWriter;
 import org.apache.drill.exec.vector.accessor.ScalarWriter;
@@ -56,6 +57,11 @@ public abstract class AbstractObjectWriter implements ObjectWriter {
 
   @Override
   public VariantWriter variant() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public DictWriter dict() {
     throw new UnsupportedOperationException();
   }
 

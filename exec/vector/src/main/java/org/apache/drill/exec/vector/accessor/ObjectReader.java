@@ -34,4 +34,5 @@ public interface ObjectReader extends ColumnReader {
   TupleReader tuple();
   ArrayReader array();
   VariantReader variant();
+  DictReader dict();
 }
