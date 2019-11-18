@@ -50,6 +50,13 @@
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
+    <!-- Conditional processing in logback configuration files requires the Janino library
+         (see logback-test.xml, DRILL-7397, DRILL-7448, http://logback.qos.ch/setup.html#janino) -->
+    <dependency>
+      <groupId>org.codehaus.janino</groupId>
+      <artifactId>janino</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <!-- add as provided scope so that we can compile TestTools.  Should only be ever used in a test scenario where someone else is bringing JUnit in. -->
