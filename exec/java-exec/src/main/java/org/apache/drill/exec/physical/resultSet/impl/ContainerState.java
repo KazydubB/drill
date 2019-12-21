@@ -102,7 +102,7 @@ public abstract class ContainerState {
 
     // Allocate vectors if a batch is in progress.
 
-    if (loader().writeable()) {
+    if (loader().writeable()) { // todo: interesting
       colState.allocateVectors();
     }
     return colState;
@@ -171,5 +171,10 @@ public abstract class ContainerState {
     for (ColumnState colState : columnStates()) {
       colState.close();
     }
+  }
+
+  // todo: probably remove the method and find a better way
+  public boolean isDict() {
+    return false;
   }
 }

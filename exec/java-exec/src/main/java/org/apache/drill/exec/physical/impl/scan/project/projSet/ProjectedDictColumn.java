@@ -17,32 +17,29 @@
  */
 package org.apache.drill.exec.physical.impl.scan.project.projSet;
 
-import org.apache.drill.common.exceptions.CustomErrorContext;
 import org.apache.drill.exec.physical.resultSet.ProjectionSet;
+import org.apache.drill.exec.physical.resultSet.project.ProjectionType;
+import org.apache.drill.exec.physical.resultSet.project.RequestedTuple;
 import org.apache.drill.exec.record.metadata.ColumnMetadata;
 
-/**
- * Handles simple cases in which either all columns are projected
- * or no columns are projected.
- */
+public class ProjectedDictColumn extends ProjectedReadColumn {
 
-public class EmptyProjectionSet implements ProjectionSet {
+  private final ProjectionSet mapProjection;
 
-  public static final ProjectionSet PROJECT_NONE = new EmptyProjectionSet();
-
-  @Override
-  public ColumnReadProjection readProjection(ColumnMetadata col) {
-    return new UnprojectedReadColumn(col);
+  public ProjectedDictColumn(ColumnMetadata readSchema,
+                            RequestedTuple.RequestedColumn requestedCol, ColumnMetadata outputSchema,
+                            ProjectionSet mapProjection) {
+    super(readSchema, requestedCol, outputSchema, null);
+    this.mapProjection = mapProjection;
   }
 
   @Override
-  public ColumnReadProjection readDictProjection(ColumnMetadata col) {
-    return readProjection(col);
+  public ProjectionSet mapProjection() {
+    return mapProjection;
   }
 
   @Override
-  public void setErrorContext(CustomErrorContext errorContext) { }
-
-  @Override
-  public boolean isEmpty() { return true; }
+  public ProjectionType projectionType() {
+    return super.projectionType().isArray() ? ProjectionType.DICT_ARRAY : ProjectionType.ARRAY;
+  }
 }

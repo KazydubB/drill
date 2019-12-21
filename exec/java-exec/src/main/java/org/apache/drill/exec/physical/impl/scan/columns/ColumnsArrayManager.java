@@ -102,7 +102,7 @@ public class ColumnsArrayManager implements ReaderProjectionResolver {
   @Override
   public boolean resolveColumn(ColumnProjection col, ResolvedTuple outputTuple,
       TupleMetadata tableSchema) {
-    if (! (col instanceof UnresolvedColumnsArrayColumn)) {
+    if (! (col instanceof UnresolvedColumnsArrayColumn)) { // todo: handle DICT (if should be here)
       return false;
     }
 
