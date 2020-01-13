@@ -737,7 +737,13 @@ public class ParquetReaderUtility {
       if (type == OriginalType.MAP) {
         TypeProtos.MajorType drillType = TypeProtos.MajorType.newBuilder()
             .setMinorType(TypeProtos.MinorType.DICT)
-            .setMode(TypeProtos.DataMode.OPTIONAL)
+            .setMode(TypeProtos.DataMode.REQUIRED)
+            .build();
+        result.add(drillType);
+      } else if (type == OriginalType.LIST) {
+        TypeProtos.MajorType drillType = TypeProtos.MajorType.newBuilder()
+            .setMinorType(TypeProtos.MinorType.LIST)
+            .setMode(TypeProtos.DataMode.REQUIRED)
             .build();
         result.add(drillType);
       } else {
@@ -806,5 +812,28 @@ public class ParquetReaderUtility {
           && nestedField.asGroupType().getFieldCount() == 2;
     }
     return false;
+  }
+
+  /**
+   * Converts Parquet's {@link Type.Repetition} to Drill's {@link TypeProtos.DataMode}.
+   * @param repetition repetition to be converted
+   * @return data mode corresponding to Parquet's repetition
+   */
+  public static TypeProtos.DataMode getDataMode(Type.Repetition repetition) {
+    TypeProtos.DataMode mode;
+    switch (repetition) {
+      case REPEATED:
+        mode = TypeProtos.DataMode.REPEATED;
+        break;
+      case OPTIONAL:
+        mode = TypeProtos.DataMode.OPTIONAL;
+        break;
+      case REQUIRED:
+        mode = TypeProtos.DataMode.REQUIRED;
+        break;
+      default:
+        throw new IllegalArgumentException(String.format("Unknown Repetition: %s.", repetition));
+    }
+    return mode;
   }
 }

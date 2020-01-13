@@ -187,6 +187,10 @@ public class MetadataUtils {
     return new MapColumnMetadata(name, DataMode.REPEATED, (TupleSchema) schema);
   }
 
+  public static DictColumnMetadata newDictArray(String name, TupleMetadata schema) {
+    return new DictColumnMetadata(name, DataMode.REPEATED, (TupleSchema) schema);
+  }
+
   public static PrimitiveColumnMetadata newScalar(String name, MinorType type,
       DataMode mode) {
     assert isScalar(type);

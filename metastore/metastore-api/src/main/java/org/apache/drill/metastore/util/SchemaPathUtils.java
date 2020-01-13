@@ -21,6 +21,7 @@ import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.metadata.ColumnMetadata;
 import org.apache.drill.exec.record.metadata.MetadataUtils;
@@ -50,7 +51,7 @@ public class SchemaPathUtils {
     while (!colPath.isLastPath() && colMetadata != null) {
       if (colMetadata.isDict()) {
         // get dict's value field metadata
-        colMetadata = colMetadata.tupleSchema().metadata(0).tupleSchema().metadata(1);
+        colMetadata = colMetadata.tupleSchema().metadata(1);
         break;
       }
       if (!colMetadata.isMap()) {
@@ -61,6 +62,30 @@ public class SchemaPathUtils {
       colMetadata = colMetadata.tupleSchema().metadata(colPath.getPath());
     }
     return colMetadata;
+  }
+
+  /**
+   * Checks if field indetified by the schema path is child in either {@code DICT} or {@code REPEATED MAP}.
+   * For such fields, nested in {@code DICT} or {@code REPEATED MAP},
+   * filters can't be removed based on Parquet statistics.
+   * @param schemaPath schema path used in filter
+   * @param schema schema containing all the fields in the file
+   * @return {@literal true} if field is nested inside {@code DICT} (is {@code `key`} or {@code `value`})
+   *         or inside {@code REPEATED MAP} field, {@literal false} otherwise.
+   */
+  public static boolean isFieldNestedInDictOrRepeatedMap(SchemaPath schemaPath, TupleMetadata schema) {
+    PathSegment.NameSegment colPath = schemaPath.getUnIndexed().getRootSegment();
+    ColumnMetadata colMetadata = schema.metadata(colPath.getPath());
+    while (!colPath.isLastPath() && colMetadata != null) {
+      if (colMetadata.isDict() || (colMetadata.isMap() && Types.isRepeated(colMetadata.majorType()))) {
+        return true;
+      } else if (!colMetadata.isMap()) {
+        break;
+      }
+      colPath = (PathSegment.NameSegment) colPath.getChild();
+      colMetadata = colMetadata.tupleSchema().metadata(colPath.getPath());
+    }
+    return false;
   }
 
   /**
@@ -81,13 +106,48 @@ public class SchemaPathUtils {
       names.add(colPath.getPath());
       colMetadata = schema.metadata(colPath.getPath());
       TypeProtos.MajorType pathType = types.get(SchemaPath.getCompoundPath(names.toArray(new String[0])));
+
+      boolean isDict = pathType != null && pathType.getMinorType() == TypeProtos.MinorType.DICT;
+      boolean isList = pathType != null && pathType.getMinorType() == TypeProtos.MinorType.LIST;
+      String name = colPath.getPath();
+
+      if (isList) {
+        List<String> nextNames = new ArrayList<>(names);
+        PathSegment.NameSegment bagSegment = colPath.getChild().getNameSegment();
+        PathSegment.NameSegment elementSegment = bagSegment.getChild().getNameSegment();
+        nextNames.add(bagSegment.getPath());
+        nextNames.add(elementSegment.getPath());
+
+        pathType = types.get(SchemaPath.getCompoundPath(nextNames.toArray(new String[0])));
+
+        if (pathType == null && colPath.getChild().getChild().isLastPath()) {
+          // The list is actually a repeated primitive:
+          // will be handled after the while statement
+          break;
+        }
+
+        colPath = elementSegment;
+
+        names.add(bagSegment.getPath());
+        names.add(elementSegment.getPath());
+
+        isDict = pathType != null && pathType.getMinorType() == TypeProtos.MinorType.DICT;
+      }
+
       if (colMetadata == null) {
-        if (pathType != null && pathType.getMinorType() == TypeProtos.MinorType.DICT) {
-          colMetadata = MetadataUtils.newDict(colPath.getPath(), null);
+        if (isDict) {
+          colMetadata = isList ? MetadataUtils.newDictArray(name, null) : MetadataUtils.newDict(name, null);
         } else {
-          colMetadata = MetadataUtils.newMap(colPath.getPath(), null);
+          colMetadata = isList ? MetadataUtils.newMapArray(name, null) : MetadataUtils.newMap(name, null);
         }
         schema.addColumn(colMetadata);
+      }
+
+      if (isDict) {
+        // Parquet's MAP (which corresponds to DICT in Drill) has
+        // an inner group which we want to skip here
+        colPath = (PathSegment.NameSegment) colPath.getChild();
+        names.add(colPath.getPath());
       }
 
       if (!colMetadata.isMap() && !colMetadata.isDict()) {

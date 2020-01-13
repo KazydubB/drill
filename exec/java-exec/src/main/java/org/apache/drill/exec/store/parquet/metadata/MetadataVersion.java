@@ -156,6 +156,11 @@ public class MetadataVersion implements Comparable<MetadataVersion> {
      */
     public static final String V4_1 = "4.1";
 
+  /**
+   *  Version 4.2: Added {@link org.apache.parquet.schema.Type.Repetition} to {@link Metadata_V4.ColumnTypeMetadata_v4}.
+   */
+  public static final String V4_2 = "4.2";
+
     /**
      * All historical versions of the Drill metadata cache files. In case of introducing a new parquet metadata version
      * please follow the {@link MetadataVersion#FORMAT}.
@@ -168,7 +173,8 @@ public class MetadataVersion implements Comparable<MetadataVersion> {
         new MetadataVersion(V3_2),
         new MetadataVersion(V3_3),
         new MetadataVersion(V4),
-        new MetadataVersion(V4_1)
+        new MetadataVersion(V4_1),
+        new MetadataVersion(V4_2)
     );
 
     /**

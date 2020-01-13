@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
+import org.apache.parquet.schema.Type;
 
 import java.util.List;
 import java.util.Map;
@@ -90,6 +91,11 @@ public class MetadataBase {
     @JsonIgnore public abstract String getMetadataVersion();
 
     @JsonIgnore  public abstract List<? extends ColumnTypeMetadata> getColumnTypeInfoList();
+
+    @JsonIgnore
+    public Type.Repetition getRepetition(String[] columnName) {
+      return null;
+    }
   }
 
   public static abstract class ParquetFileMetadata {

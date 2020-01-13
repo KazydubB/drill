@@ -875,4 +875,15 @@ public class TestParquetComplex extends BaseTestQuery {
         .baselineValues(3L, 0L, 3L, 3L)
         .go();
   }
+
+  @Test // DRILL-7509
+  public void selectRepeatedMapWithFilter() throws Exception {
+    String query = "select id, struct_array[1].a as a from cp.`store/parquet/complex/repeated_struct.parquet` where struct_array[1].a is null";
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("id", "a")
+        .baselineValues(2, null)
+        .go();
+  }
 }

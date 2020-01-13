@@ -26,6 +26,7 @@ import org.apache.drill.common.util.DrillVersionInfo;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
+import org.apache.parquet.schema.Type;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -156,6 +157,11 @@ public class Metadata_V4 {
     @Override
     public String getDrillVersion() {
       return metadataSummary.drillVersion;
+    }
+
+    @Override
+    public Type.Repetition getRepetition(String[] columnName) {
+      return getColumnTypeInfo(columnName).repetition;
     }
 
     public MetadataSummary getSummary() {
@@ -309,6 +315,8 @@ public class Metadata_V4 {
     public long totalNullCount = 0;
     @JsonProperty
     public boolean isInteresting = false;
+    @JsonProperty
+    public Type.Repetition repetition;
 
     // Key to find by name only
     @JsonIgnore
@@ -329,6 +337,7 @@ public class Metadata_V4 {
       this.totalNullCount = builder.totalNullCount;
       this.isInteresting = builder.isInteresting;
       this.parentTypes = Collections.unmodifiableList(builder.parentTypes);
+      this.repetition = builder.repetition;
     }
 
     @JsonIgnore
@@ -413,6 +422,7 @@ public class Metadata_V4 {
       private int definitionLevel;
       private long totalNullCount;
       private boolean isInteresting;
+      private Type.Repetition repetition;
 
       public Builder name(String[] name) {
         this.name = name;
@@ -461,6 +471,11 @@ public class Metadata_V4 {
 
       public Builder interesting(boolean isInteresting) {
         this.isInteresting = isInteresting;
+        return this;
+      }
+
+      public Builder repetition(Type.Repetition repetition) {
+        this.repetition = repetition;
         return this;
       }
 

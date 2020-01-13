@@ -185,6 +185,7 @@ public class FileMetadataCollector {
         .totalNullCount(0)
         .interesting(false)
         .parentTypes(colTypeInfo.parentTypes)
+        .repetition(colTypeInfo.repetition)
         .build();
     Metadata_V4.ColumnTypeMetadata_v4.Key columnTypeMetadataKey = new Metadata_V4.ColumnTypeMetadata_v4.Key(columnTypeMetadata.name);
 
@@ -254,15 +255,9 @@ public class FileMetadataCollector {
     int scale;
     int repetitionLevel;
     int definitionLevel;
+    Type.Repetition repetition;
 
-    ColTypeInfo(OriginalType originalType, List<OriginalType> parentTypes,
-                int precision, int scale, int repetitionLevel, int definitionLevel) {
-      this.originalType = originalType;
-      this.parentTypes = parentTypes;
-      this.precision = precision;
-      this.scale = scale;
-      this.repetitionLevel = repetitionLevel;
-      this.definitionLevel = definitionLevel;
+    ColTypeInfo() {
     }
 
     static ColTypeInfo of(MessageType schema, Type type, String[] path, int depth, List<OriginalType> parentTypes) {
@@ -278,17 +273,71 @@ public class FileMetadataCollector {
         int repetitionLevel = schema.getMaxRepetitionLevel(path);
         int definitionLevel = schema.getMaxDefinitionLevel(path);
 
-        return new ColTypeInfo(type.getOriginalType(), parentTypes, precision, scale, repetitionLevel, definitionLevel);
+        Type.Repetition repetition;
+        // Check if the primitive has LIST as parent, if it does - this is an array of primitives.
+        // (See ParquetReaderUtility#isLogicalListType(GroupType) for the REPEATED field structure.)
+        if (parentTypes.size() - 2 >= 0 && parentTypes.get(parentTypes.size() - 2) == OriginalType.LIST) {
+          repetition = Type.Repetition.REPEATED;
+        } else {
+          repetition = primitiveType.getRepetition();
+        }
+
+        return new ColTypeInfo()
+            .setOriginalType(type.getOriginalType())
+            .setParentTypes(parentTypes)
+            .setPrecision(precision)
+            .setScale(scale)
+            .setRepetitionLevel(repetitionLevel)
+            .setDefinitionLevel(definitionLevel)
+            .setRepetition(repetition);
       }
+
       Type t = ((GroupType) type).getType(path[depth]);
       if (!t.isPrimitive()) {
         OriginalType originalType = t.getOriginalType();
         if (originalType == OriginalType.MAP && !ParquetReaderUtility.isLogicalMapType(t.asGroupType())) {
           originalType = null;
+        } else if (originalType == OriginalType.LIST && !ParquetReaderUtility.isLogicalListType(t.asGroupType())) {
+          originalType = null;
         }
         parentTypes.add(originalType);
       }
       return of(schema, t, path, depth + 1, parentTypes);
+    }
+
+    private ColTypeInfo setOriginalType(OriginalType originalType) {
+      this.originalType = originalType;
+      return this;
+    }
+
+    private ColTypeInfo setParentTypes(List<OriginalType> parentTypes) {
+      this.parentTypes = parentTypes;
+      return this;
+    }
+
+    private ColTypeInfo setPrecision(int precision) {
+      this.precision = precision;
+      return this;
+    }
+
+    private ColTypeInfo setScale(int scale) {
+      this.scale = scale;
+      return this;
+    }
+
+    private ColTypeInfo setRepetitionLevel(int repetitionLevel) {
+      this.repetitionLevel = repetitionLevel;
+      return this;
+    }
+
+    private ColTypeInfo setDefinitionLevel(int definitionLevel) {
+      this.definitionLevel = definitionLevel;
+      return this;
+    }
+
+    private ColTypeInfo setRepetition(Type.Repetition repetition) {
+      this.repetition = repetition;
+      return this;
     }
   }
 }
