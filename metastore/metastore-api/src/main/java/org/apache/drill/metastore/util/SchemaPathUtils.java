@@ -24,6 +24,7 @@ import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.metadata.ColumnMetadata;
+import org.apache.drill.exec.record.metadata.DictColumnMetadata;
 import org.apache.drill.exec.record.metadata.MetadataUtils;
 import org.apache.drill.exec.record.metadata.PrimitiveColumnMetadata;
 import org.apache.drill.exec.record.metadata.TupleMetadata;
@@ -50,8 +51,7 @@ public class SchemaPathUtils {
     ColumnMetadata colMetadata = schema.metadata(colPath.getPath());
     while (!colPath.isLastPath() && colMetadata != null) {
       if (colMetadata.isDict()) {
-        // get dict's value field metadata
-        colMetadata = colMetadata.tupleSchema().metadata(1);
+        colMetadata = ((DictColumnMetadata) colMetadata).valueColumnMetadata();
         break;
       }
       if (!colMetadata.isMap()) {
@@ -136,7 +136,7 @@ public class SchemaPathUtils {
 
       if (colMetadata == null) {
         if (isDict) {
-          colMetadata = isList ? MetadataUtils.newDictArray(name, null) : MetadataUtils.newDict(name, null);
+          colMetadata = isList ? MetadataUtils.newDictArray(name) : MetadataUtils.newDict(name);
         } else {
           colMetadata = isList ? MetadataUtils.newMapArray(name, null) : MetadataUtils.newMap(name, null);
         }

@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @Category({ParquetTest.class, UnlikelyTest.class})
@@ -122,5 +123,41 @@ public class TestParquetMetadataVersion extends BaseTest {
           e.getMessage().contains(String.format("Could not parse metadata version '%s'", versionWithLetterInsteadOfNumber)));
       throw e;
     }
+  }
+
+  @Test
+  public void testAtLeast() {
+    MetadataVersion version = new MetadataVersion("v4.2");
+    assertTrue(version.atLeast(4, 0));
+    assertTrue(version.atLeast(4, 1));
+    assertTrue(version.atLeast(4, 2));
+    assertFalse(version.atLeast(4, 3));
+    assertFalse(version.atLeast(5, 1));
+    assertTrue(version.atLeast(3, 0));
+    assertTrue(version.atLeast(1, 0));
+  }
+
+  @Test
+  public void testAfter() {
+    MetadataVersion version = new MetadataVersion(4, 1);
+    assertFalse(version.after(4,1));
+    assertFalse(version.after(4,3));
+    assertFalse(version.after(5,0));
+    assertTrue(version.after(4, 0));
+    assertTrue(version.after(3, 0));
+    assertTrue(version.after(2, 1));
+    assertTrue(version.after(1, 3));
+    assertTrue(version.after(1, 0));
+  }
+
+  @Test
+  public void testIsEqual() {
+    MetadataVersion version = new MetadataVersion(3, 2);
+    assertTrue(version.isEqualTo(3, 2));
+    assertFalse(version.isEqualTo(4, 2));
+    assertFalse(version.isEqualTo(2, 3));
+    assertFalse(version.isEqualTo(1, 0));
+    assertFalse(version.isEqualTo(3, 1));
+    assertFalse(version.isEqualTo(1, 2));
   }
 }

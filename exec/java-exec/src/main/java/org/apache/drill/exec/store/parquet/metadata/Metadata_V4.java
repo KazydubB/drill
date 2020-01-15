@@ -39,7 +39,7 @@ import static org.apache.drill.exec.store.parquet.metadata.MetadataBase.ColumnTy
 import static org.apache.drill.exec.store.parquet.metadata.MetadataBase.ParquetFileMetadata;
 import static org.apache.drill.exec.store.parquet.metadata.MetadataBase.ParquetTableMetadataBase;
 import static org.apache.drill.exec.store.parquet.metadata.MetadataBase.RowGroupMetadata;
-import static org.apache.drill.exec.store.parquet.metadata.MetadataVersion.Constants.V4;
+import static org.apache.drill.exec.store.parquet.metadata.MetadataVersion.Constants.V4_2;
 
 public class Metadata_V4 {
 
@@ -498,7 +498,7 @@ public class Metadata_V4 {
     }
   }
 
-  @JsonTypeName(V4)
+  @JsonTypeName(V4_2)
   public static class MetadataSummary {
 
     @JsonProperty(value = "metadata_version")

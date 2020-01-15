@@ -472,7 +472,7 @@ public class ParquetTableMetadataUtils {
   public static Map<SchemaPath, TypeProtos.MajorType> getRowGroupFields(
       MetadataBase.ParquetTableMetadataBase parquetTableMetadata, MetadataBase.RowGroupMetadata rowGroup) {
     Map<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
-    if (new MetadataVersion(parquetTableMetadata.getMetadataVersion()).compareTo(new MetadataVersion(4, 0)) > 0
+    if (new MetadataVersion(parquetTableMetadata.getMetadataVersion()).after(4, 0)
         && !((Metadata_V4.ParquetTableMetadata_v4) parquetTableMetadata).isAllColumnsInteresting()) {
       // adds non-interesting fields from table metadata
       for (MetadataBase.ColumnTypeMetadata columnTypeMetadata : parquetTableMetadata.getColumnTypeInfoList()) {
@@ -509,7 +509,7 @@ public class ParquetTableMetadataUtils {
     int scale = 0;
     MetadataVersion metadataVersion = new MetadataVersion(parquetTableMetadata.getMetadataVersion());
     // only ColumnTypeMetadata_v3 and ColumnTypeMetadata_v4 store information about scale, precision, repetition level and definition level
-    if (parquetTableMetadata.hasColumnMetadata() && (metadataVersion.compareTo(new MetadataVersion(3, 0)) >= 0)) {
+    if (metadataVersion.atLeast(3, 0)) {
       scale = parquetTableMetadata.getScale(name);
       precision = parquetTableMetadata.getPrecision(name);
     }
@@ -544,17 +544,11 @@ public class ParquetTableMetadataUtils {
   private static TypeProtos.DataMode getDataMode(MetadataBase.ParquetTableMetadataBase tableMetadata,
       MetadataVersion metadataVersion, String[] name) {
     TypeProtos.DataMode mode;
-    if (tableMetadata.hasColumnMetadata()
-        && metadataVersion.compareTo(new MetadataVersion(4, 2)) >= 0) {
+    if (metadataVersion.atLeast(4, 2)) {
       mode = ParquetReaderUtility.getDataMode(tableMetadata.getRepetition(name));
-    } else {
-      int definitionLevel = 1;
-      int repetitionLevel = 0;
-
-      if (tableMetadata.hasColumnMetadata() && (metadataVersion.compareTo(new MetadataVersion(3, 0)) >= 0)) {
-        repetitionLevel = tableMetadata.getRepetitionLevel(name);
-        definitionLevel = tableMetadata.getDefinitionLevel(name);
-      }
+    } else if (metadataVersion.atLeast(3, 0)) {
+      int definitionLevel = tableMetadata.getDefinitionLevel(name);
+      int repetitionLevel = tableMetadata.getRepetitionLevel(name);
 
       if (repetitionLevel >= 1) {
         mode = TypeProtos.DataMode.REPEATED;
@@ -563,6 +557,8 @@ public class ParquetTableMetadataUtils {
       } else {
         mode = TypeProtos.DataMode.OPTIONAL;
       }
+    } else {
+      mode = TypeProtos.DataMode.OPTIONAL;
     }
 
     return mode;
@@ -585,8 +581,7 @@ public class ParquetTableMetadataUtils {
     Map<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
 
     MetadataVersion metadataVersion = new MetadataVersion(parquetTableMetadata.getMetadataVersion());
-    boolean hasParentTypes = parquetTableMetadata.hasColumnMetadata()
-        && metadataVersion.compareTo(new MetadataVersion(4, 1)) >= 0;
+    boolean hasParentTypes = metadataVersion.atLeast(4, 1);
 
     if (!hasParentTypes) {
       return Collections.emptyMap();
