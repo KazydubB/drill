@@ -18,7 +18,6 @@
 package org.apache.drill.exec.store.parquet;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.drill.PlanTestBase;
 import org.apache.drill.categories.ParquetTest;
 import org.apache.drill.categories.UnlikelyTest;
 import org.apache.drill.exec.ExecConstants;
@@ -27,7 +26,6 @@ import org.apache.drill.test.ClusterFixtureBuilder;
 import org.apache.drill.test.ClusterTest;
 import org.junit.After;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -189,7 +187,6 @@ public class TestPushDownAndPruningForDecimal extends ClusterTest {
         table, column);
 
       String plan = client.queryBuilder().sql(query).explainText();
-      // push down does not work for old int decimal types because stats is not read: PARQUET-1322
       assertThat(plan, containsString("numRowGroups=2"));
       assertThat(plan, containsString("usedMetadataFile=false"));
 
@@ -240,7 +237,6 @@ public class TestPushDownAndPruningForDecimal extends ClusterTest {
         table, column);
 
       String plan = client.queryBuilder().sql(query).explainText();
-      // push down does not work for old int decimal types because stats is not read: PARQUET-1322
       assertThat(plan, containsString("numRowGroups=2"));
       assertThat(plan, containsString("usedMetadataFile=true"));
 
@@ -667,7 +663,6 @@ public class TestPushDownAndPruningForDecimal extends ClusterTest {
     }
   }
 
-  @Ignore("Statistics for DECIMAL that has all nulls is not available (PARQUET-1341). Requires upgrade to Parquet 1.11.0")
   @Test
   public void testDecimalPruningWithNullPartition() throws Exception {
     List<String> ctasQueries = new ArrayList<>();
@@ -692,13 +687,19 @@ public class TestPushDownAndPruningForDecimal extends ClusterTest {
 
         long actualRowCount = client.queryBuilder().sql(query).run().recordCount();
         assertEquals("Row count does not match the expected value", expectedRowCount, actualRowCount);
-        PlanTestBase.testPlanMatchingPatterns(query, new String[]{"usedMetadataFile=false"}, new String[]{"Filter"});
+
+        String plan = client.queryBuilder().sql(query).explainText();
+        assertThat(plan, containsString("usedMetadataFile=false"));
+        assertThat(plan, not(containsString("Filter")));
 
         queryBuilder().sql(String.format("refresh table metadata %s", decimalPartitionTable)).run();
 
         actualRowCount = client.queryBuilder().sql(query).run().recordCount();
         assertEquals("Row count does not match the expected value", expectedRowCount, actualRowCount);
-        PlanTestBase.testPlanMatchingPatterns(query, new String[]{"usedMetadataFile=true"}, new String[]{"Filter"});
+
+        plan = client.queryBuilder().sql(query).explainText();
+        assertThat(plan, containsString("usedMetadataFile=true"));
+        assertThat(plan, not(containsString("Filter")));
       } finally {
         client.runSqlSilently(String.format("drop table if exists %s", decimalPartitionTable));
       }
