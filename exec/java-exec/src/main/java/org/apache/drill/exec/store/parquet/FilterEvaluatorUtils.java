@@ -113,9 +113,16 @@ public class FilterEvaluatorUtils {
       StatisticsProvider<T> rangeExprEvaluator = new StatisticsProvider(columnsStatistics, rowCount);
       rowsMatch = parquetPredicate.matches(rangeExprEvaluator);
     }
-    return rowsMatch == RowsMatch.ALL
-        && (isRepeated(schemaPathsInExpr, fileMetadata) || isDictOrRepeatedMapChild(schemaPathsInExpr, fileMetadata))
-        ? RowsMatch.SOME : rowsMatch;
+
+    if (rowsMatch == RowsMatch.ALL && isMetaNotApplicable(schemaPathsInExpr, fileMetadata)) {
+      rowsMatch = RowsMatch.SOME;
+    }
+
+    return rowsMatch;
+  }
+
+  private static boolean isMetaNotApplicable(Set<SchemaPath> schemaPathsInExpr, TupleMetadata fileMetadata) {
+    return isRepeated(schemaPathsInExpr, fileMetadata) || isDictOrRepeatedMapChild(schemaPathsInExpr, fileMetadata);
   }
 
   private static boolean isRepeated(Set<SchemaPath> fields, TupleMetadata fileMetadata) {
