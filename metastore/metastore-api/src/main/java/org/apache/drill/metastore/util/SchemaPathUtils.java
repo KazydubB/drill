@@ -113,6 +113,9 @@ public class SchemaPathUtils {
 
       if (isList) {
         List<String> nextNames = new ArrayList<>(names);
+
+        // Parquet's LIST group (which represents an array) has
+        // an inner group (bagSegment) which we want to skip here
         PathSegment.NameSegment bagSegment = colPath.getChild().getNameSegment();
         PathSegment.NameSegment elementSegment = bagSegment.getChild().getNameSegment();
         nextNames.add(bagSegment.getPath());

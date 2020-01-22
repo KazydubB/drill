@@ -128,26 +128,26 @@ public class TestParquetMetadataVersion extends BaseTest {
   @Test
   public void testAtLeast() {
     MetadataVersion version = new MetadataVersion("v4.2");
-    assertTrue(version.atLeast(4, 0));
-    assertTrue(version.atLeast(4, 1));
-    assertTrue(version.atLeast(4, 2));
-    assertFalse(version.atLeast(4, 3));
-    assertFalse(version.atLeast(5, 1));
-    assertTrue(version.atLeast(3, 0));
-    assertTrue(version.atLeast(1, 0));
+    assertTrue(version.isAtLeast(4, 0));
+    assertTrue(version.isAtLeast(4, 1));
+    assertTrue(version.isAtLeast(4, 2));
+    assertFalse(version.isAtLeast(4, 3));
+    assertFalse(version.isAtLeast(5, 1));
+    assertTrue(version.isAtLeast(3, 0));
+    assertTrue(version.isAtLeast(1, 0));
   }
 
   @Test
   public void testAfter() {
     MetadataVersion version = new MetadataVersion(4, 1);
-    assertFalse(version.after(4,1));
-    assertFalse(version.after(4,3));
-    assertFalse(version.after(5,0));
-    assertTrue(version.after(4, 0));
-    assertTrue(version.after(3, 0));
-    assertTrue(version.after(2, 1));
-    assertTrue(version.after(1, 3));
-    assertTrue(version.after(1, 0));
+    assertFalse(version.isHigherThan(4,1));
+    assertFalse(version.isHigherThan(4,3));
+    assertFalse(version.isHigherThan(5,0));
+    assertTrue(version.isHigherThan(4, 0));
+    assertTrue(version.isHigherThan(3, 0));
+    assertTrue(version.isHigherThan(2, 1));
+    assertTrue(version.isHigherThan(1, 3));
+    assertTrue(version.isHigherThan(1, 0));
   }
 
   @Test

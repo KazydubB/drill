@@ -240,7 +240,7 @@ public class ParquetReaderUtility {
   public static void correctDatesInMetadataCache(ParquetTableMetadataBase parquetTableMetadata) {
     MetadataVersion metadataVersion = new MetadataVersion(parquetTableMetadata.getMetadataVersion());
     DateCorruptionStatus cacheFileCanContainsCorruptDates =
-        metadataVersion.atLeast(3, 0) ?
+        metadataVersion.isAtLeast(3, 0) ?
         DateCorruptionStatus.META_SHOWS_NO_CORRUPTION : DateCorruptionStatus.META_UNCLEAR_TEST_VALUES;
     if (cacheFileCanContainsCorruptDates == DateCorruptionStatus.META_UNCLEAR_TEST_VALUES) {
       // Looking for the DATE data type of column names in the metadata cache file ("metadata_version" : "v2")
@@ -320,7 +320,7 @@ public class ParquetReaderUtility {
     int maxNumColumns = 0;
 
     // Setting Min / Max values for V2, V3 and V4 versions; for versions V3_3 and above need to do decoding
-    boolean needDecoding = metadataVersion.atLeast(3, 3);
+    boolean needDecoding = metadataVersion.isAtLeast(3, 3);
     for (ParquetFileMetadata file : parquetTableMetadata.getFiles()) {
       if ( timer != null ) { // for debugging only
         maxRowGroups = Math.max(maxRowGroups, file.getRowGroups().size());

@@ -472,7 +472,7 @@ public class ParquetTableMetadataUtils {
   public static Map<SchemaPath, TypeProtos.MajorType> getRowGroupFields(
       MetadataBase.ParquetTableMetadataBase parquetTableMetadata, MetadataBase.RowGroupMetadata rowGroup) {
     Map<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
-    if (new MetadataVersion(parquetTableMetadata.getMetadataVersion()).after(4, 0)
+    if (new MetadataVersion(parquetTableMetadata.getMetadataVersion()).isHigherThan(4, 0)
         && !((Metadata_V4.ParquetTableMetadata_v4) parquetTableMetadata).isAllColumnsInteresting()) {
       // adds non-interesting fields from table metadata
       for (MetadataBase.ColumnTypeMetadata columnTypeMetadata : parquetTableMetadata.getColumnTypeInfoList()) {
@@ -509,7 +509,7 @@ public class ParquetTableMetadataUtils {
     int scale = 0;
     MetadataVersion metadataVersion = new MetadataVersion(parquetTableMetadata.getMetadataVersion());
     // only ColumnTypeMetadata_v3 and ColumnTypeMetadata_v4 store information about scale, precision, repetition level and definition level
-    if (metadataVersion.atLeast(3, 0)) {
+    if (metadataVersion.isAtLeast(3, 0)) {
       scale = parquetTableMetadata.getScale(name);
       precision = parquetTableMetadata.getPrecision(name);
     }
@@ -544,9 +544,9 @@ public class ParquetTableMetadataUtils {
   private static TypeProtos.DataMode getDataMode(MetadataBase.ParquetTableMetadataBase tableMetadata,
       MetadataVersion metadataVersion, String[] name) {
     TypeProtos.DataMode mode;
-    if (metadataVersion.atLeast(4, 2)) {
+    if (metadataVersion.isAtLeast(4, 2)) {
       mode = ParquetReaderUtility.getDataMode(tableMetadata.getRepetition(name));
-    } else if (metadataVersion.atLeast(3, 0)) {
+    } else if (metadataVersion.isAtLeast(3, 0)) {
       int definitionLevel = tableMetadata.getDefinitionLevel(name);
       int repetitionLevel = tableMetadata.getRepetitionLevel(name);
 
@@ -581,7 +581,7 @@ public class ParquetTableMetadataUtils {
     Map<SchemaPath, TypeProtos.MajorType> columns = new LinkedHashMap<>();
 
     MetadataVersion metadataVersion = new MetadataVersion(parquetTableMetadata.getMetadataVersion());
-    boolean hasParentTypes = metadataVersion.atLeast(4, 1);
+    boolean hasParentTypes = metadataVersion.isAtLeast(4, 1);
 
     if (!hasParentTypes) {
       return Collections.emptyMap();

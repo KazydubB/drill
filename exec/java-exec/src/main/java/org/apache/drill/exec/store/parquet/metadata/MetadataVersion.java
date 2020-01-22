@@ -112,7 +112,7 @@ public class MetadataVersion implements Comparable<MetadataVersion> {
    * @return {@literal true} if the version is equal to or higher than
    *         the one it is being checked against
    */
-  public boolean atLeast(int major, int minor) {
+  public boolean isAtLeast(int major, int minor) {
     return this.major > major || (this.major == major && this.minor >= minor);
   }
 
@@ -138,7 +138,7 @@ public class MetadataVersion implements Comparable<MetadataVersion> {
    * @return {@literal true} if the version is defined later than
    *         the one it is being checked against
    */
-  public boolean after(int major, int minor) {
+  public boolean isHigherThan(int major, int minor) {
     return this.major > major || (this.major == major && this.minor > minor);
   }
 
