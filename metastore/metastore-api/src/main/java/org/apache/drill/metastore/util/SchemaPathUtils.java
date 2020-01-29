@@ -65,9 +65,19 @@ public class SchemaPathUtils {
   }
 
   /**
-   * Checks if field indetified by the schema path is child in either {@code DICT} or {@code REPEATED MAP}.
+   * Checks if field identified by the schema path is child in either {@code DICT} or {@code REPEATED MAP}.
    * For such fields, nested in {@code DICT} or {@code REPEATED MAP},
    * filters can't be removed based on Parquet statistics.
+   *
+   * <p>The need for the check arises because statistics data is not obtained for such fields as their representation
+   * differs from the 'canonical' one. For example, field {@code `a`} in Parquet's {@code STRUCT ARRAY} is represented
+   * as {@code `struct_array`.`bag`.`array_element`.`a`} but once it is used in a filter, {@code ... WHERE struct_array[0].a = 1},
+   * it has different representation (with indexes stripped): {@code `struct_array`.`a`} which is not present in statistics.
+   * The same happens with DICT's {@code value}: for {@code SELECT ... WHERE dict_col['a'] = 0}, statistics exist for
+   * {@code `dict_col`.`key_value`.`value`} but the field in filter is translated to {@code `dict_col`.`a`} and hence it is
+   * considered not present in statistics. If the fields (such as ones shown in examples) are {@code OPTIONAL INT} then
+   * the field is considered not present in a table and is treated as {@code NULL}. To avoid this situation, the method is used.</p>
+   *
    * @param schemaPath schema path used in filter
    * @param schema schema containing all the fields in the file
    * @return {@literal true} if field is nested inside {@code DICT} (is {@code `key`} or {@code `value`})
@@ -98,21 +108,30 @@ public class SchemaPathUtils {
    * @param type       type of the column which should be added
    * @param types      list of column's parent types
    */
-  public static void addColumnMetadata(TupleMetadata schema, SchemaPath schemaPath, TypeProtos.MajorType type, Map<SchemaPath, TypeProtos.MajorType> types) {
+  public static void addColumnMetadata(TupleMetadata schema, SchemaPath schemaPath,
+        TypeProtos.MajorType type, Map<SchemaPath, TypeProtos.MajorType> types) {
     PathSegment.NameSegment colPath = schemaPath.getUnIndexed().getRootSegment();
     List<String> names = new ArrayList<>(types.size());
+    // Used in case of LIST; defined here to avoid many instantiations inside while-loop
+    List<String> nextNames = new ArrayList<>(names.size());
     ColumnMetadata colMetadata;
     while (!colPath.isLastPath()) {
       names.add(colPath.getPath());
       colMetadata = schema.metadata(colPath.getPath());
       TypeProtos.MajorType pathType = types.get(SchemaPath.getCompoundPath(names.toArray(new String[0])));
 
+      // The following types, DICT and LIST, contain a nested segment in Parquet representation
+      // (see ParquetReaderUtility#isLogicalListType(GroupType) and ParquetReaderUtility#isLogicalMapType(GroupType))
+      // which we should skip when creating corresponding TupleMetadata representation. Additionally,
+      // there is a need to track if the field is LIST to create appropriate column metadata based
+      // on the info: whether to create singular MAP/DICT or MAP/DICT array.
       boolean isDict = pathType != null && pathType.getMinorType() == TypeProtos.MinorType.DICT;
       boolean isList = pathType != null && pathType.getMinorType() == TypeProtos.MinorType.LIST;
       String name = colPath.getPath();
 
       if (isList) {
-        List<String> nextNames = new ArrayList<>(names);
+        nextNames.clear();
+        nextNames.addAll(names);
 
         // Parquet's LIST group (which represents an array) has
         // an inner group (bagSegment) which we want to skip here
@@ -134,6 +153,7 @@ public class SchemaPathUtils {
         names.add(bagSegment.getPath());
         names.add(elementSegment.getPath());
 
+        // Check whether LIST's element type is DICT
         isDict = pathType != null && pathType.getMinorType() == TypeProtos.MinorType.DICT;
       }
 
