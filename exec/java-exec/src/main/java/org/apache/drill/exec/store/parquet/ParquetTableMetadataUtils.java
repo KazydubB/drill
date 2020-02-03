@@ -264,7 +264,8 @@ public class ParquetTableMetadataUtils {
       SchemaPath colPath = SchemaPath.getCompoundPath(column.getName());
 
       Long nulls = column.getNulls();
-      if (!column.isNumNullsSet() || nulls == null) {
+      if (!column.isNumNullsSet() || nulls == null
+          || (column.getMinValue() == null && column.getMaxValue() == null && nulls < 1)) {
         nulls = Statistic.NO_COLUMN_STATS;
       }
       PrimitiveType.PrimitiveTypeName primitiveType = getPrimitiveTypeName(tableMetadata, column);
