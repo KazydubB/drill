@@ -54,7 +54,6 @@ import org.apache.drill.shaded.guava.com.google.common.collect.LinkedListMultima
 import org.apache.drill.shaded.guava.com.google.common.collect.Multimap;
 import org.apache.drill.shaded.guava.com.google.common.primitives.Longs;
 import org.apache.hadoop.fs.Path;
-import org.apache.parquet.CorruptStatistics;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
@@ -266,13 +265,12 @@ public class ParquetTableMetadataUtils {
       SchemaPath colPath = SchemaPath.getCompoundPath(column.getName());
 
       Long nulls = column.getNulls();
-      PrimitiveType.PrimitiveTypeName primitiveType = getPrimitiveTypeName(tableMetadata, column);
       if (!column.isNumNullsSet() || nulls == null
-          // || (column.getMinValue() == null && column.getMaxValue() == null && nulls < 1)) {
-          || CorruptStatistics.shouldIgnoreStatistics(null, primitiveType)) {
+           || (column.getMinValue() == null && column.getMaxValue() == null && nulls == 0
+          && tableMetadata.getRepetition(column.getName()) == Type.Repetition.REQUIRED)) {
         nulls = Statistic.NO_COLUMN_STATS;
       }
-//      PrimitiveType.PrimitiveTypeName primitiveType = getPrimitiveTypeName(tableMetadata, column);
+      PrimitiveType.PrimitiveTypeName primitiveType = getPrimitiveTypeName(tableMetadata, column);
       OriginalType originalType = getOriginalType(tableMetadata, column);
       TypeProtos.MinorType type = ParquetReaderUtility.getMinorType(primitiveType, originalType);
 
