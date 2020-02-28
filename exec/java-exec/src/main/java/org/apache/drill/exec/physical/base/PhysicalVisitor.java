@@ -18,6 +18,7 @@
 package org.apache.drill.exec.physical.base;
 
 import org.apache.drill.exec.physical.config.BroadcastSender;
+import org.apache.drill.exec.physical.config.Except;
 import org.apache.drill.exec.physical.config.Filter;
 import org.apache.drill.exec.physical.config.FlattenPOP;
 import org.apache.drill.exec.physical.config.HashAggregate;
@@ -45,6 +46,8 @@ import org.apache.drill.exec.physical.config.UnorderedReceiver;
 import org.apache.drill.exec.physical.config.UnpivotMaps;
 import org.apache.drill.exec.physical.config.Values;
 import org.apache.drill.exec.physical.config.WindowPOP;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Visitor class designed to traversal of a operator tree.  Basis for a number of operator manipulations including fragmentation and materialization.
@@ -53,7 +56,8 @@ import org.apache.drill.exec.physical.config.WindowPOP;
  * @param <EXCEP> An optional exception class that can be thrown when a portion of a modification or traversal fails.  Must extend Throwable.  In the case where the visitor does not throw any caught exception, this can be set as RuntimeException.
  */
 public interface PhysicalVisitor<RETURN, EXTRA, EXCEP extends Throwable> {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PhysicalVisitor.class);
+
+  Logger logger = LoggerFactory.getLogger(PhysicalVisitor.class);
 
 
   public RETURN visitExchange(Exchange exchange, EXTRA value) throws EXCEP;
@@ -94,4 +98,6 @@ public interface PhysicalVisitor<RETURN, EXTRA, EXCEP extends Throwable> {
   public RETURN visitLateralJoin(LateralJoinPOP lateralJoinPOP, EXTRA value) throws EXCEP;
 
   public RETURN visitIteratorValidator(IteratorValidator op, EXTRA value) throws EXCEP;
+
+  RETURN visitExcept(Except except, EXTRA value) throws EXCEP;
 }

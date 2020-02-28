@@ -23,6 +23,7 @@ import org.apache.drill.common.logical.data.NamedExpression;
 import org.apache.drill.exec.physical.base.AbstractMultiple;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.PhysicalVisitor;
+import org.apache.drill.exec.planner.common.SetOperatorControl;
 import org.apache.drill.exec.proto.UserBitShared.CoreOperatorType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -31,13 +32,11 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@JsonTypeName("except-all") // todo: introduce one for not-all?
-public class ExceptAll extends AbstractMultiple {
+@JsonTypeName("except")
+public class Except extends AbstractMultiple {
 
-  static final Logger logger = LoggerFactory.getLogger(ExceptAll.class);
+  static final Logger logger = LoggerFactory.getLogger(Except.class);
 
-//  private final List<NamedExpression> groupByExprs;
-//  private final List<NamedExpression> valueExprs;
   private final List<String> leftFields;
   private final List<String> rightFields;
 
@@ -47,24 +46,17 @@ public class ExceptAll extends AbstractMultiple {
   private final boolean all;
 
   @JsonCreator
-  public ExceptAll(@JsonProperty("children") List<PhysicalOperator> children,
-//                   @JsonProperty("keys") List<NamedExpression> groupByExprs,
-                   @JsonProperty("leftFields") List<String> leftFields,
-//                   @JsonProperty("values") List<NamedExpression> valueExprs,
-                   @JsonProperty("rightFields") List<String> rightFields,
-                   @JsonProperty("expressions") List<NamedExpression> leftExpressions,
-                   @JsonProperty("expressions") List<NamedExpression> rightExpressions,
-                   @JsonProperty("all") boolean all) {
+  public Except(@JsonProperty("children") List<PhysicalOperator> children,
+                @JsonProperty("leftFields") List<String> leftFields,
+                @JsonProperty("rightFields") List<String> rightFields,
+                @JsonProperty("expressions") List<NamedExpression> leftExpressions,
+                @JsonProperty("expressions") List<NamedExpression> rightExpressions,
+                @JsonProperty("all") boolean all) {
     super(children);
-//    this.groupByExprs = groupByExprs;
-//    this.valueExprs = valueExprs;
-
     this.leftFields = leftFields;
     this.rightFields = rightFields;
-
     this.leftExpressions = leftExpressions;
     this.rightExpressions = rightExpressions;
-
     this.all = all;
   }
 
@@ -75,8 +67,7 @@ public class ExceptAll extends AbstractMultiple {
 
   @Override
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) {
-//    return new ExceptAll(children, groupByExprs, valueExprs, all);
-    return new ExceptAll(children, leftFields, rightFields, leftExpressions, rightExpressions, all);
+    return new Except(children, leftFields, rightFields, leftExpressions, rightExpressions, all);
   }
 
   @Override
@@ -100,13 +91,9 @@ public class ExceptAll extends AbstractMultiple {
     return rightExpressions;
   }
 
-//  public List<NamedExpression> getGroupByExprs() {
-//    return groupByExprs;
-//  }
-//
-//  public List<NamedExpression> getValueExprs() {
-//    return valueExprs;
-//  }
+  public SetOperatorControl createOperatorControl() {
+    return SetOperatorControl.except(all);
+  }
 
   public boolean isAll() {
     return all;

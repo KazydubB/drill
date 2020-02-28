@@ -21,9 +21,6 @@ import java.util.List;
 
 import org.apache.calcite.linq4j.Ord;
 
-import org.apache.calcite.plan.RelOptCost;
-import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.drill.common.logical.data.Except;
 import org.apache.drill.common.logical.data.LogicalOperator;
 import org.apache.drill.exec.planner.common.DrillExceptRelBase;
@@ -41,7 +38,6 @@ public class DrillExceptRel extends DrillExceptRelBase implements DrillRel {
   public DrillExceptRel(RelOptCluster cluster, RelTraitSet traits,
                        List<RelNode> inputs, boolean all, boolean checkCompatibility) throws InvalidRelException {
     super(cluster, traits, inputs, all, checkCompatibility);
-//    System.out.println("DrillExceptRel");
   }
 
   @Override
@@ -62,11 +58,11 @@ public class DrillExceptRel extends DrillExceptRelBase implements DrillRel {
 //  }
 
 
-  @Override
-  public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-    return super.computeSelfCost(planner, mq).multiplyBy(10.0); // todo: ???
-//    return planner.getCostFactory().makeInfiniteCost();
-  }
+//  @Override
+//  public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
+//    return super.computeSelfCost(planner, mq).multiplyBy(10.0); // todo: ???
+////    return planner.getCostFactory().makeInfiniteCost();
+//  }
 
   @Override
   public LogicalOperator implement(DrillImplementor implementor) {
@@ -74,8 +70,8 @@ public class DrillExceptRel extends DrillExceptRelBase implements DrillRel {
     for (Ord<RelNode> input : Ord.zip(inputs)) {
       builder.addInput(implementor.visitChild(this, input.i, input.e));
     }
-    builder.setDistinct(!all);
-    return builder.build();
+    return builder.setDistinct(!all)
+        .build();
   }
 
   public static DrillExceptRel convert(Except except, ConversionContext context) {

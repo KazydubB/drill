@@ -30,7 +30,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 
-//@Deprecated
 public abstract class ExceptPrel extends DrillExceptRelBase implements Prel {
 
 //  protected final List<NamedExpression> keys = new LinkedList<>();

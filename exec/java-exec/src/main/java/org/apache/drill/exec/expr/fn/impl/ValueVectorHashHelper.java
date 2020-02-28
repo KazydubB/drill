@@ -66,7 +66,7 @@ public class ValueVectorHashHelper {
   public Hash64 getHash64(LogicalExpression[] hashFieldsExp, TypedFieldId[] hashFieldIds) throws ClassTransformationException, IOException, SchemaChangeException {
     CodeGenerator<Hash64> codeGenerator = CodeGenerator.get(TEMPLATE_DEFINITION);
     codeGenerator.plainJavaCapable(true);
-    //codeGenerator.saveCodeForDebugging(true);
+    codeGenerator.saveCodeForDebugging(true);
     codeGenerator.preferPlainJava(true); // use a subclass
 
     ClassGenerator<Hash64> cg = codeGenerator.getRoot();

@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.apache.calcite.rel.core.Minus;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
-import org.apache.drill.exec.physical.config.ExceptAll;
+import org.apache.drill.exec.physical.config.Except;
 import org.apache.drill.exec.planner.cost.DrillCostBase;
 import org.apache.drill.exec.planner.cost.DrillCostBase.DrillCostFactory;
 import org.apache.drill.exec.record.BatchSchema.SelectionVectorMode;
@@ -78,8 +78,8 @@ public class ExceptDistinctPrel extends ExceptPrel {
 
     ///TODO: change this to ExceptDistinct once implemented end-to-end..
 //    ExceptAll exceptAll = new ExceptAll(inputPops, keys, values, false);
-    ExceptAll exceptAll = new ExceptAll(inputPops, leftFields, rightFields, leftExpressions, rightExpressions, false);
-    return creator.addMetadata(this, exceptAll);
+    Except except = new Except(inputPops, leftFields, rightFields, leftExpressions, rightExpressions, false);
+    return creator.addMetadata(this, except);
   }
 
   @Override

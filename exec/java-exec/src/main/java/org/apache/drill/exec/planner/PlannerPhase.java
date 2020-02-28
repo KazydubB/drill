@@ -18,6 +18,9 @@
 package org.apache.drill.exec.planner;
 
 import org.apache.drill.exec.planner.logical.ConvertMetadataAggregateToDirectScanRule;
+import org.apache.drill.exec.planner.logical.DrillExceptRule;
+import org.apache.drill.exec.planner.physical.ExceptAllPrule;
+import org.apache.drill.exec.planner.physical.ExceptDistinctPrule1;
 import org.apache.drill.exec.planner.physical.MetadataAggPrule;
 import org.apache.drill.exec.planner.physical.MetadataControllerPrule;
 import org.apache.drill.exec.planner.physical.MetadataHandlerPrule;
@@ -352,8 +355,11 @@ public enum PlannerPhase {
       DrillUnionAllRule.INSTANCE,
       DrillValuesRule.INSTANCE,
       DrillUnnestRule.INSTANCE,
-      DrillCorrelateRule.INSTANCE
-      ).build();
+      DrillCorrelateRule.INSTANCE,
+      // DrillExceptRule.INSTANCE,
+      // DrillExceptRewriteRule.INSTANCE
+      DrillExceptRule.INSTANCE
+  ).build();
 
   /**
    * Get an immutable list of rules that will always be used when running
@@ -522,6 +528,9 @@ public enum PlannerPhase {
     ruleList.add(DirectScanPrule.INSTANCE);
     ruleList.add(RowKeyJoinPrule.INSTANCE);
     ruleList.add(AnalyzePrule.INSTANCE);
+    ruleList.add(ExceptAllPrule.INSTANCE);
+    ruleList.add(ExceptDistinctPrule1.INSTANCE);
+//    ruleList.add(DrillExceptRewriteRule.INSTANCE);
 
     ruleList.add(MetadataControllerPrule.INSTANCE);
     ruleList.add(MetadataHandlerPrule.INSTANCE);

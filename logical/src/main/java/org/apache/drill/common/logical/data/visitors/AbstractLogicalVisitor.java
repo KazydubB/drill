@@ -17,6 +17,7 @@
  */
 package org.apache.drill.common.logical.data.visitors;
 
+import org.apache.drill.common.logical.data.Except;
 import org.apache.drill.common.logical.data.LateralJoin;
 import org.apache.drill.common.logical.data.Unnest;
 import org.apache.drill.common.logical.data.Analyze;
@@ -134,5 +135,10 @@ public abstract class AbstractLogicalVisitor<T, X, E extends Throwable> implemen
     @Override
     public T visitLateralJoin(LateralJoin lateralJoin, X value) throws E {
         return visitOp(lateralJoin, value);
+    }
+
+    @Override // todo: indents?
+    public T visitExcept(Except except, X value) throws E {
+        return visitOp(except, value);
     }
 }

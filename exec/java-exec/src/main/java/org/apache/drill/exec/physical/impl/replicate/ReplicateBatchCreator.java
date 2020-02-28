@@ -15,20 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.physical.impl.except;
+package org.apache.drill.exec.physical.impl.replicate;
 
-//import org.apache.drill.exec.compile.TemplateClassDefinition;
-//import org.apache.drill.exec.exception.SchemaChangeException;
-//import org.apache.drill.exec.ops.FragmentContext;
-//import org.apache.drill.exec.record.RecordBatch;
-//import org.apache.drill.exec.record.TransferPair;
-//
 //import java.util.List;
 //
-//@Deprecated
-//public interface ExceptAller {
-//  TemplateClassDefinition<ExceptAller> TEMPLATE_DEFINITION = new TemplateClassDefinition<>(ExceptAller.class, ExceptAllerTemplate.class);
+//import org.apache.drill.common.exceptions.ExecutionSetupException;
+//import org.apache.drill.exec.ops.ExecutorFragmentContext;
+//import org.apache.drill.exec.record.RecordBatch;
 //
-//  void setup(FragmentContext context, RecordBatch incoming,  RecordBatch outgoing, List<TransferPair> transfers)  throws SchemaChangeException;
-//  int exceptRecords(int startIndex, int recordCount, int firstOutputIndex);
+//import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
+//
+//public class ReplicateBatchCreator implements BatchCreator<ReplicatePOP> {
+//  @Override
+//  public ReplicateRecordBatch getBatch(ExecutorFragmentContext context, ReplicatePOP config, List<RecordBatch> children)
+//      throws ExecutionSetupException {
+//    Preconditions.checkArgument(children.size() == 1);
+//    return new ReplicateRecordBatch(config, children.iterator().next(), context);
+//  }
 //}

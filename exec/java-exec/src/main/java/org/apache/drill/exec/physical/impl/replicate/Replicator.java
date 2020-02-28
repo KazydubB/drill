@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.physical.impl.except;
+package org.apache.drill.exec.physical.impl.replicate;
 
 //import org.apache.drill.exec.compile.TemplateClassDefinition;
 //import org.apache.drill.exec.exception.SchemaChangeException;
@@ -25,10 +25,31 @@ package org.apache.drill.exec.physical.impl.except;
 //
 //import java.util.List;
 //
-//@Deprecated
-//public interface ExceptAller {
-//  TemplateClassDefinition<ExceptAller> TEMPLATE_DEFINITION = new TemplateClassDefinition<>(ExceptAller.class, ExceptAllerTemplate.class);
+//public interface Replicator {
+//  TemplateClassDefinition<Replicator> TEMPLATE_DEFINITION =
+//      new TemplateClassDefinition<Replicator>(Replicator.class, ReplicatorTemplate.class);
 //
-//  void setup(FragmentContext context, RecordBatch incoming,  RecordBatch outgoing, List<TransferPair> transfers)  throws SchemaChangeException;
-//  int exceptRecords(int startIndex, int recordCount, int firstOutputIndex);
+//  void setup(FragmentContext context, RecordBatch incoming, RecordBatch outgoing, List<TransferPair> transfers)  throws SchemaChangeException;
+//
+//  interface Monitor {
+//    /**
+//     * Get the required buffer size for the specified number of records.
+//     * {@see ValueVector#getBufferSizeFor(int)} for the meaning of this.
+//     *
+//     * @param recordCount the number of records processed so far
+//     * @return the buffer size the vectors report as being in use
+//     */
+//    int getBufferSizeFor(int recordCount);
+//  }
+//
+//  int replicateRecords(int n, int index);
+//
+////  int flattenRecords(int recordCount, int firstOutputIndex, Monitor monitor);
+//
+////  void setFlattenField(RepeatedValueVector repeatedColumn);
+////  void setOutputCount(int outputCount);
+//
+////  RepeatedValueVector getFlattenField();
+//
+//  void resetGroupIndex();
 //}

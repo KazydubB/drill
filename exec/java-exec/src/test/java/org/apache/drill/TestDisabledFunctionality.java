@@ -66,6 +66,7 @@ public class TestDisabledFunctionality extends BaseTestQuery {
     }
   }
 
+  // todo: remove
   @Test(expected = UnsupportedRelOperatorException.class) // see DRILL-1921
   public void testDisabledExceptALL() throws Exception {
     try {

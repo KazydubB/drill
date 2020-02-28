@@ -30,7 +30,7 @@ import org.apache.calcite.util.trace.CalciteTrace;
 
 import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 import org.slf4j.Logger;
-
+// todo: it looks as if this class is not used anewhere (UnionAllPrule is used)
 public class UnionDistinctPrule extends Prule {
   public static final RelOptRule INSTANCE = new UnionDistinctPrule();
   protected static final Logger tracer = CalciteTrace.getPlannerTracer();

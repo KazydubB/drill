@@ -61,7 +61,7 @@ public interface RuleInstance {
 
   UnionToDistinctRule UNION_TO_DISTINCT_RULE =
       new UnionToDistinctRule(LogicalUnion.class,
-          DrillRelFactories.LOGICAL_BUILDER);
+          DrillRelFactories.LOGICAL_BUILDER); // todo: something like this?
 
   SemiJoinRule SEMI_JOIN_PROJECT_RULE = new SemiJoinRule.ProjectToSemiJoinRule(Project.class, Join.class, Aggregate.class,
           DrillRelFactories.LOGICAL_BUILDER, "DrillSemiJoinRule:project") {

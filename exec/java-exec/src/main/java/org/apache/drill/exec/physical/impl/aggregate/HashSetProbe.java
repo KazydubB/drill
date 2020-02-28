@@ -21,45 +21,20 @@ import org.apache.drill.exec.compile.TemplateClassDefinition;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.physical.impl.common.HashPartition;
 import org.apache.drill.exec.physical.impl.set.HashSetRecordBatch;
+import org.apache.drill.exec.planner.common.SetOperatorControl;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.VectorContainer;
 
 public interface HashSetProbe {
+
   TemplateClassDefinition<HashSetProbe> TEMPLATE_DEFINITION = new TemplateClassDefinition<>(HashSetProbe.class, HashSetProbeTemplate.class);
 
-  /* The probe side of the hash join can be in the following two states
-   * 1. PROBE_PROJECT: Inner join case, we probe our hash table to see if we have a
-   *    key match and if we do we project the record
-   * 2. PROJECT_RIGHT: Right Outer or Full Outer joins where we are projecting the records
-   *    from the build side that did not match any records on the probe side. For Left outer
-   *    case we handle it internally by projecting the record if there isn't a match on the build side
-   * 3. DONE: Once we have projected all possible records we are done
-   */
-  @Deprecated
-  enum ProbeState {
-    // PROBE_PROJECT, PROJECT_RIGHT, DONE
-    PROBE_EXCEPT, // todo: all?
-    PROBE_INTERSECT,
-    DONE
-  }
-
-  @Deprecated
-  enum SetType { // todo: should this even exist?
-    EXCEPT, INTERSECT
-  }
-
-  @Deprecated
-  enum Type {
-    ALL,
-    DISTINCT
-  }
-
-  void setupHashSetProbe(RecordBatch probeBatch, HashSetRecordBatch outgoing, Type type, /*boolean semiJoin,*/
+  void setupHashSetProbe(RecordBatch probeBatch, HashSetRecordBatch outgoing, SetOperatorControl operatorControl,
                          RecordBatch.IterOutcome leftStartState, HashPartition[] partitions, int cycleNum,
                          VectorContainer container, HashSetRecordBatch.HashSetSpilledPartition[] spilledInners,
                          boolean buildSideIsEmpty, int numPartitions, int rightHVColPosition);
   int  probeAndProject() throws SchemaChangeException;
-  void changeToFinalProbeState();
+  void markAsDone();
   void setTargetOutputCount(int targetOutputCount);
   int getOutputCount();
 }

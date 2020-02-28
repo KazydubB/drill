@@ -18,6 +18,7 @@
 package org.apache.drill.exec.physical.base;
 
 import org.apache.drill.exec.physical.config.BroadcastSender;
+import org.apache.drill.exec.physical.config.Except;
 import org.apache.drill.exec.physical.config.Filter;
 import org.apache.drill.exec.physical.config.FlattenPOP;
 import org.apache.drill.exec.physical.config.HashAggregate;
@@ -233,10 +234,14 @@ public abstract class AbstractPhysicalVisitor<T, X, E extends Throwable> impleme
   }
 
   @Override
+  public T visitExcept(Except except, X value) throws E {
+    return visitOp(except, value);
+  }
+
+  @Override
   public T visitOp(PhysicalOperator op, X value) throws E{
     throw new UnsupportedOperationException(String.format(
         "The PhysicalVisitor of type %s does not currently support visiting the PhysicalOperator type %s.", this
             .getClass().getCanonicalName(), op.getClass().getCanonicalName()));
   }
-
 }

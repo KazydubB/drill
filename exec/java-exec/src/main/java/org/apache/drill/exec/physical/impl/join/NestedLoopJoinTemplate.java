@@ -36,6 +36,7 @@ import static org.apache.drill.exec.record.JoinBatchMemoryManager.LEFT_INDEX;
  * Template class that combined with the runtime generated source implements the NestedLoopJoin interface. This
  * class contains the main nested loop join logic.
  */
+// todo: also look somewhere here
 public abstract class NestedLoopJoinTemplate implements NestedLoopJoin {
 
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(NestedLoopJoinBatch.class);

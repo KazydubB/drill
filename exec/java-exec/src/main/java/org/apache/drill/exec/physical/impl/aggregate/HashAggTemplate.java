@@ -1294,7 +1294,7 @@ public abstract class HashAggTemplate implements HashAggregator {
     int hashCode;
     try {
       // htables[0].updateBatches();
-      hashCode = htables[0].getBuildHashCode(incomingRowIdx);
+      hashCode = htables[0].getBuildHashCode(incomingRowIdx); // todo: add count here?
     } catch (SchemaChangeException e) {
       throw new UnsupportedOperationException("Unexpected schema change", e);
     }
@@ -1324,7 +1324,7 @@ public abstract class HashAggTemplate implements HashAggregator {
     // Insert the key columns into the hash table
     // ==========================================
     try {
-
+      // todo: this is of interest
       putStatus = htables[currentPartition].put(incomingRowIdx, htIdxHolder, hashCode, getTargetBatchCount());
 
     } catch (RetryAfterSpillException re) {
@@ -1396,7 +1396,7 @@ public abstract class HashAggTemplate implements HashAggregator {
     int currentIdx = htIdxHolder.value;
     BatchHolder bh = batchHolders[currentPartition].get((currentIdx >>> 16) & BATCH_MASK);
     int idxWithinBatch = currentIdx & BATCH_MASK;
-    if (bh.updateAggrValues(incomingRowIdx, idxWithinBatch)) {
+    if (bh.updateAggrValues(incomingRowIdx, idxWithinBatch)) { // todo: this is it?
       numGroupedRecords++;
     }
 

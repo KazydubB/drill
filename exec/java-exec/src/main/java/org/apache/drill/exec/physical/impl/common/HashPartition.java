@@ -75,7 +75,7 @@ import com.carrotsearch.hppc.IntArrayList;
  *  currHVVector, writer, spillFile, partitionBatchesCount) for the outer.
  *  </p>
  */
-public class HashPartition implements HashJoinMemoryCalculator.PartitionStat {
+public class HashPartition implements HashJoinMemoryCalculator.PartitionStat { // todo: create something similar to it for Set Operators
   static final Logger logger = LoggerFactory.getLogger(HashPartition.class);
 
   public static final String HASH_VALUE_COLUMN_NAME = "$Hash_Values$";
@@ -107,7 +107,7 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat {
    * Keeps information about which build records have a corresponding
    * matching key in the probe side (for outer, right joins)
    */
-  private HashJoinHelper hjHelper;
+  private HashJoinHelper hjHelper; // todo: important as well as hashTable
 
   // Underlying hashtable used by the hash join
   private HashTable hashTable;
@@ -131,6 +131,7 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat {
   private long numInMemoryRecords;
   private boolean updatedRecordsPerBatch;
   private final boolean semiJoin;
+  private boolean except;
 
   public HashPartition(FragmentContext context, BufferAllocator allocator, ChainedHashTable baseHashTable,
                        RecordBatch buildBatch, RecordBatch probeBatch, boolean semiJoin,
@@ -395,7 +396,7 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat {
      * side. Set the bit corresponding to this index so if we are doing a FULL or RIGHT
      * join we keep track of which records we need to project at the end
      */
-    boolean matchExists = hjHelper.setRecordMatched(compositeIndex);
+    boolean matchExists = hjHelper.setRecordMatched(compositeIndex); // todo: this happens here!
     return Pair.of(compositeIndex, matchExists);
   }
 
@@ -410,6 +411,10 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat {
 
   public IntArrayList getNextUnmatchedIndex() {
     return hjHelper.getNextUnmatchedIndex();
+  }
+
+  public IntArrayList getNextDistinctUnmatchedIndex() {
+    return hjHelper.getNextDistinctUnmatchedIndex();
   }
 
   //
@@ -520,7 +525,9 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat {
       final int currentRecordCount = nextBatch.getRecordCount();
 
       // For every incoming build batch, we create a matching helper batch
-      if (! semiJoin) { hjHelper.addNewBatch(currentRecordCount); }
+      if (!semiJoin) {
+        hjHelper.addNewBatch(currentRecordCount);
+      }
 
       // Holder contains the global index where the key is hashed into using the hash table
       final IndexPointer htIndex = new IndexPointer();
@@ -532,10 +539,11 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat {
 
       IntVector HV_vector = (IntVector) nextBatch.getLast();
 
+      HashTable.PutStatus putStatus;
       for (int recInd = 0; recInd < currentRecordCount; recInd++) {
         int hashCode = HV_vector.getAccessor().get(recInd);
         try {
-          hashTable.put(recInd, htIndex, hashCode, BATCH_SIZE);
+          putStatus = hashTable.put(recInd, htIndex, hashCode, BATCH_SIZE);
         } catch (RetryAfterSpillException RE) {
           throw new OutOfMemoryException("HT put");
         } // Hash Join does not retry
@@ -543,7 +551,15 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat {
          * the current record index and batch index. This will be used
          * later when we probe and find a match.
          */
-        if (! semiJoin) { hjHelper.setCurrentIndex(htIndex.value, curr /* buildBatchIndex */, recInd); }
+
+        if (putStatus == HashTable.PutStatus.KEY_PRESENT) {
+          // store info about duplicates
+          hjHelper.setDuplicate(recInd, htIndex.value);
+        }
+
+        if (!semiJoin) {
+          hjHelper.setCurrentIndex(htIndex.value, curr /* buildBatchIndex */, recInd);
+        }
       }
 
       containers.add(nextBatch);

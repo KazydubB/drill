@@ -400,7 +400,7 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
     cg.plainJavaCapable(true);
     cg.saveCodeForDebugging(codegenDump);
     // Uncomment out this line to debug the generated code.
-    // cg.saveCodeForDebugging(true);
+    cg.saveCodeForDebugging(true);
     ClassGenerator<PriorityQueue> g = cg.getRoot();
     g.setMappingSet(mainMapping);
 

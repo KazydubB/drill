@@ -122,7 +122,7 @@ public class PlannerSettings implements Context{
       INITIAL_OFF_HEAP_ALLOCATION_IN_BYTES, MAX_OFF_HEAP_ALLOCATION_IN_BYTES,
       new OptionDescription("Defines the maximum amount of direct memory allocated to a query for planning. When multiple queries run concurrently, each query is allocated the amount of memory set by this parameter.Increase the value of this parameter and rerun the query if partition pruning failed due to insufficient memory."));
   public static final String UNIONALL_DISTRIBUTE_KEY = "planner.enable_unionall_distribute";
-  public static final BooleanValidator UNIONALL_DISTRIBUTE = new BooleanValidator(UNIONALL_DISTRIBUTE_KEY, null);
+  public static final BooleanValidator UNIONALL_DISTRIBUTE = new BooleanValidator(UNIONALL_DISTRIBUTE_KEY, null); // todo: this is of interest
 
   // ------------------------------------------- Index planning related options BEGIN --------------------------------------------------------------
   public static final String USE_SIMPLE_OPTIMIZER_KEY = "planner.use_simple_optimizer";

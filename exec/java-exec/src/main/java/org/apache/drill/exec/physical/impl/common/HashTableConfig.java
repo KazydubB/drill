@@ -36,6 +36,7 @@ public class HashTableConfig  {
   private final List<NamedExpression> keyExprsProbe;
   private final List<Comparator> comparators;
   private final int joinControl;
+  private final boolean retainCount;
 
   public HashTableConfig(
       int initialCapacity,
@@ -45,6 +46,17 @@ public class HashTableConfig  {
       List<Comparator> comparators
   ) {
     this(initialCapacity, false, loadFactor, keyExprsBuild, keyExprsProbe, comparators, JoinControl.DEFAULT);
+  }
+
+  public HashTableConfig(
+      int initialCapacity,
+      float loadFactor,
+      List<NamedExpression> keyExprsBuild,
+      List<NamedExpression> keyExprsProbe,
+      List<Comparator> comparators,
+      boolean retainCount
+  ) {
+    this(initialCapacity, false, loadFactor, keyExprsBuild, keyExprsProbe, comparators, JoinControl.DEFAULT, retainCount);
   }
 
   @JsonCreator
@@ -77,6 +89,19 @@ public class HashTableConfig  {
                          @JsonProperty("comparators") List<Comparator> comparators,
                          @JsonProperty("joinControl") int joinControl
   ) {
+    this(initialCapacity, initialSizeIsFinal, loadFactor, keyExprsBuild, keyExprsProbe, comparators, joinControl, false);
+  }
+
+  @JsonCreator
+  public HashTableConfig(@JsonProperty("initialCapacity") int initialCapacity,
+                         @JsonProperty("initialCapacity") boolean initialSizeIsFinal,
+                         @JsonProperty("loadFactor") float loadFactor,
+                         @JsonProperty("keyExprsBuild") List<NamedExpression> keyExprsBuild,
+                         @JsonProperty("keyExprsProbe") List<NamedExpression> keyExprsProbe,
+                         @JsonProperty("comparators") List<Comparator> comparators,
+                         @JsonProperty("joinControl") int joinControl,
+                         @JsonProperty("retainCount") boolean retainCount
+  ) {
     this.initialCapacity = initialCapacity;
     this.initialSizeIsFinal = initialSizeIsFinal;
     this.loadFactor = loadFactor;
@@ -84,6 +109,7 @@ public class HashTableConfig  {
     this.keyExprsProbe = keyExprsProbe;
     this.comparators = comparators;
     this.joinControl = joinControl;
+    this.retainCount = retainCount;
   }
 
   public HashTableConfig withInitialCapacity(int initialCapacity) {
@@ -93,7 +119,8 @@ public class HashTableConfig  {
       keyExprsBuild,
       keyExprsProbe,
       comparators,
-      JoinControl.DEFAULT
+      JoinControl.DEFAULT,
+      retainCount
     );
   }
 
@@ -123,5 +150,9 @@ public class HashTableConfig  {
 
   public int getJoinControl() {
     return joinControl;
+  }
+
+  public boolean isRetainCount() {
+    return retainCount;
   }
 }

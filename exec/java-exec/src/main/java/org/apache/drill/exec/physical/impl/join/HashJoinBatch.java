@@ -541,7 +541,7 @@ public class HashJoinBatch extends AbstractBinaryRecordBatch<HashJoinPOP> implem
        */
       if (state == BatchState.FIRST) {
         // Build the hash table, using the build side record batches.
-        IterOutcome buildExecuteTermination = executeBuildPhase();
+        IterOutcome buildExecuteTermination = executeBuildPhase(); // todo: important
 
         if (buildExecuteTermination != null) {
           // A termination condition was reached while executing the build phase.

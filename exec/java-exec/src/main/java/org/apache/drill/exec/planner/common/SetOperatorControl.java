@@ -19,50 +19,56 @@ package org.apache.drill.exec.planner.common;
 
 public class SetOperatorControl {
 
-//  public final static int DEFAULT = 0;
-//  public final static int INTERSECT_DISTINCT = 0x01;//0001
-//  public final static int INTERSECT_ALL = 0x03; //0011
-//  public final static int INTERSECT_MASK = 0x03;
-//  public final static int EXCEPT_DISTINCT = 0x04;
-//  public final static int EXCEPT_ALL = 0x05;
-//  private final int joinControl;
+  private enum Type {
+    EXCEPT,
+    INTERSECT
+  }
 
-  public final static int EXCEPT = 0;
-  public final static int INTERSECT = 1;
-
-  private final int type;
+  private final Type type;
   private final boolean all;
 
-  public SetOperatorControl(int type, boolean all) {
+  private SetOperatorControl(Type type, boolean all) {
     this.type = type;
     this.all = all;
   }
 
   public boolean isIntersect() {
-    return isIntersectAll() || isIntersectDistinct();
+    return type == Type.INTERSECT;
   }
 
   public boolean isIntersectDistinct() {
-    return type == INTERSECT && !all;
+    return type == Type.INTERSECT && !all;
   }
 
   public boolean isIntersectAll() {
-    return type == INTERSECT && all;
+    return type == Type.INTERSECT && all;
   }
 
   public boolean isExcept() {
-    return isExceptAll() || isExceptDistinct();
+    return type == Type.EXCEPT;
   }
 
   public boolean isExceptDistinct() {
-    return type == EXCEPT && !all;
+    return type == Type.EXCEPT && !all;
   }
 
   public boolean isExceptAll() {
-    return type == EXCEPT && all;
+    return type == Type.EXCEPT && all;
   }
 
   public boolean isAll() {
     return all;
+  }
+
+  public boolean isDistinct() {
+    return !all;
+  }
+
+  public static SetOperatorControl except(boolean all) {
+    return new SetOperatorControl(Type.EXCEPT, all);
+  }
+
+  public static SetOperatorControl intersect(boolean all) {
+    return new SetOperatorControl(Type.INTERSECT, all);
   }
 }

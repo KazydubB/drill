@@ -63,6 +63,8 @@ public class HashJoinHelper {
   FragmentContext context;
   BufferAllocator allocator;
 
+  private BitSet duplicateSet = new BitSet();
+
   // Constant to indicate index is empty.
   static final int INDEX_EMPTY = -1;
 
@@ -75,7 +77,7 @@ public class HashJoinHelper {
   public HashJoinHelper(FragmentContext context, BufferAllocator allocator) {
     this.context = context;
     this.allocator = allocator;
-}
+  }
 
   public void addStartIndexBatch() throws SchemaChangeException {
     startIndices.add(getNewSV4(HashTable.BATCH_SIZE));
@@ -165,6 +167,18 @@ public class HashJoinHelper {
   }
 
   public IntArrayList getNextUnmatchedIndex() {
+    return getNextUnmatchedIndex(false);
+  }
+
+  /**
+   * todo:
+   * @return
+   */
+  public IntArrayList getNextDistinctUnmatchedIndex() {
+    return getNextUnmatchedIndex(true);
+  }
+
+  public IntArrayList getNextUnmatchedIndex(boolean distinct) {
     IntArrayList compositeIndexes = new IntArrayList();
 
     for (int i = 0; i < buildInfoList.size(); i++) {
@@ -172,8 +186,11 @@ public class HashJoinHelper {
       int fromIndex = 0;
 
       while (((fromIndex = info.getKeyMatchBitVector().nextClearBit(fromIndex)) != -1) && (fromIndex < info.recordCount)) {
-          compositeIndexes.add((i << SHIFT_SIZE) | (fromIndex & HashTable.BATCH_MASK));
-          fromIndex++;
+        int index = (i << SHIFT_SIZE) | (fromIndex & HashTable.BATCH_MASK);
+        if (!distinct || !duplicateSet.get(index)) {
+          compositeIndexes.add(index);
+        }
+        fromIndex++;
       }
     }
     return compositeIndexes;
@@ -185,9 +202,9 @@ public class HashJoinHelper {
 
     // Get the BitVector for the appropriate batch and set the bit to indicate the record matched
     BuildInfo info = buildInfoList.get(batchIdx);
-    BitSet bitVector = info.getKeyMatchBitVector();
+    BitSet bitVector = info.getKeyMatchBitVector(); // todo: here!
 
-    if(bitVector.get(recordIdx)) {
+    if (bitVector.get(recordIdx)) {
       return true;
     }
     bitVector.set(recordIdx);
@@ -201,7 +218,7 @@ public class HashJoinHelper {
      * denotes the global index where the key for this record is
      * stored in the hash table
      */
-    if (keyIndex < 0) {
+    if (keyIndex < 0) { // todo: make sure I get this right
       //receive a negative index, meaning we are not going to add this index (in distinct case when key already present)
       return;
     }
@@ -245,6 +262,10 @@ public class HashJoinHelper {
         link.set(offsetIdx, batchIndex, recordIndex);
       }
     }
+  }
+
+  public void setDuplicate(int keyIndex, int htIndex) {
+    duplicateSet.set(keyIndex, true); // todo:
   }
 
   public void clear() {

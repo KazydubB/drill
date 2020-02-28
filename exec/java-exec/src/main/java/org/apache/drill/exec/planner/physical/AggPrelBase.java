@@ -92,7 +92,7 @@ public abstract class AggPrelBase extends DrillAggregateRelBase implements Prel 
   /**
    * Specialized aggregate function for SUMing the COUNTs.  Since return type of
    * COUNT is non-nullable and return type of SUM is nullable, this class enables
-   * creating a SUM whose return type is non-nullable.
+   * creating a SUM whose return type is non-nullable. // todo: may be used
    *
    */
   public class SqlSumCountAggFunction extends SqlAggFunction {

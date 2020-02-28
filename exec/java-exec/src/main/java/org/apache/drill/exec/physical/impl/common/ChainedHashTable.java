@@ -155,7 +155,7 @@ public class ChainedHashTable {
     // Uncomment out this line to debug the generated code.
     // This code is called from generated code, so to step into this code,
     // persist the code generated in HashAggBatch also.
-    // top.saveCodeForDebugging(true);
+    top.saveCodeForDebugging(true);
     top.preferPlainJava(true); // use a subclass
     ClassGenerator<HashTable> cg = top.getRoot();
     ClassGenerator<HashTable> cgInner = cg.getInnerGenerator("BatchHolder");
@@ -239,7 +239,7 @@ public class ChainedHashTable {
     setupOutputRecordKeys(cgInner, htKeyFieldIds, outKeyFieldIds);
 
     setupGetHash(cg /* use top level code generator for getHash */, GetHashIncomingBuildMapping, incomingBuild, keyExprsBuild);
-    setupGetHash(cg /* use top level code generator for getHash */, GetHashIncomingProbeMapping, incomingProbe, keyExprsProbe);
+    setupGetHash(cg /* use top level code generator for getHash */, GetHashIncomingProbeMapping, incomingProbe, keyExprsProbe); // todo: this one is null...
 
     HashTable ht = context.getImplementationClass(top);
     ht.setup(htConfig, allocator, incomingBuild.getContainer(), incomingProbe, outgoing, htContainerOrig, context, cgInner);

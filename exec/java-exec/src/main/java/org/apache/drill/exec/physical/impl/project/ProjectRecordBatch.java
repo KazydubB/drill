@@ -293,7 +293,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
           batchBuilder, unionTypeEnabled);
       boolean saveCode = false;
       // Uncomment this line to debug the generated code.
-      // saveCode = true;
+      saveCode = true;
       projector = em.generateProjector(context, saveCode);
       projector.setup(context, incomingBatch, this, batchBuilder.transfers());
     } catch (ClassTransformationException | IOException e) {

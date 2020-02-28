@@ -556,7 +556,6 @@
        "EQUALS",
        "ESCAPE",
        "EVERY",
-#       "EXCEPT", # must be reserved
        "EXCEPTION",
        "EXEC",
        "EXECUTE",
@@ -657,7 +656,6 @@
 #       "MERGE",
         "METHOD",
         "MIN",
-#       "MINUS",
         "MINUTE",
 #       # "MINUTES", # not a keyword in Calcite
         "MOD",

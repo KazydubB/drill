@@ -357,12 +357,12 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
             "Flatten does not support inputs of non-list values.").build(logger);
       }
       logger.error("Cannot cast {} to RepeatedValueVector", flattenField);
-      //when incoming recordCount is 0, don't throw exception since the type being seen here is not solid
+      // when incoming recordCount is 0, don't throw exception since the type being seen here is not solid
       ValueVector vv = new RepeatedMapVector(flattenField.getField(), oContext.getAllocator(), null);
-      tp = RepeatedValueVector.class.cast(vv).getTransferPair(
+      tp = vv.getTransferPair(
           reference.getAsNamePart().getName(), oContext.getAllocator());
     } else {
-      ValueVector vvIn = RepeatedValueVector.class.cast(flattenField).getDataVector();
+      ValueVector vvIn = ((RepeatedValueVector) flattenField).getDataVector();
       // vvIn may be null because of fast schema return for repeated list vectors
       if (vvIn != null) {
         tp = vvIn.getTransferPair(reference.getAsNamePart().getName(), oContext.getAllocator());
@@ -382,6 +382,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     ClassGenerator<Flattener> cg = CodeGenerator.getRoot(
         Flattener.TEMPLATE_DEFINITION, context.getOptions());
     cg.getCodeGenerator().plainJavaCapable(true);
+    cg.getCodeGenerator().saveCodeForDebugging(true);
     IntHashSet transferFieldIds = new IntHashSet();
 
     NamedExpression flattenExpr = new NamedExpression(popConfig.getColumn(),
@@ -416,7 +417,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
       result.clear();
 
       String outputName = getRef(namedExpression).getRootSegment().getPath();
-      if (result != null && result.outputNames != null && result.outputNames.size() > 0) {
+      if (result.outputNames != null && result.outputNames.size() > 0) {
         for (int j = 0; j < result.outputNames.size(); j++) {
           if (!result.outputNames.get(j).equals(EMPTY_STRING)) {
             outputName = result.outputNames.get(j);

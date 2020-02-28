@@ -18,6 +18,7 @@
 package org.apache.drill.common.logical.data.visitors;
 
 
+import org.apache.drill.common.logical.data.Except;
 import org.apache.drill.common.logical.data.LateralJoin;
 import org.apache.drill.common.logical.data.Unnest;
 import org.apache.drill.common.logical.data.Analyze;
@@ -36,6 +37,8 @@ import org.apache.drill.common.logical.data.Transform;
 import org.apache.drill.common.logical.data.Union;
 import org.apache.drill.common.logical.data.Window;
 import org.apache.drill.common.logical.data.Writer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Visitor class designed to traversal of a operator tree.  Basis for a number of operator manipulations including fragmentation and materialization.
@@ -44,7 +47,7 @@ import org.apache.drill.common.logical.data.Writer;
  * @param <EXCEP> An optional exception class that can be thrown when a portion of a modification or traversal fails.  Must extend Throwable.  In the case where the visitor does not throw any caught exception, this can be set as RuntimeException.
  */
 public interface LogicalVisitor<RETURN, EXTRA, EXCEP extends Throwable> {
-    static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LogicalVisitor.class);
+    Logger logger = LoggerFactory.getLogger(LogicalVisitor.class);
 
 
     public RETURN visitScan(Scan scan, EXTRA value) throws EXCEP;
@@ -67,4 +70,6 @@ public interface LogicalVisitor<RETURN, EXTRA, EXCEP extends Throwable> {
 
     public RETURN visitUnnest(Unnest unnest, EXTRA value) throws EXCEP;
     public RETURN visitLateralJoin(LateralJoin lateralJoin, EXTRA value) throws EXCEP;
+
+    RETURN visitExcept(Except except, EXTRA value) throws EXCEP;
 }

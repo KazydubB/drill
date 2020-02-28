@@ -44,7 +44,7 @@ import org.apache.drill.exec.planner.torel.ConversionContext;
  * Logical Join implemented in Drill.
  */
 public class DrillJoinRel extends DrillJoinRelBase implements DrillRel {
-  public static final String EQUALITY_CONDITION = "==";
+  public static final String EQUALITY_CONDITION = "=="; // todo: should one be present for INEQUALITY case?
 
   /** Creates a DrillJoinRel.
    * We do not throw InvalidRelException in Logical planning phase. It's up to the post-logical planning check or physical planning

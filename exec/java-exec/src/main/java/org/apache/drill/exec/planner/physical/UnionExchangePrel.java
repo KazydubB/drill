@@ -31,7 +31,7 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
-
+// todo: is there a need for ExceptExchangePrel? I think yes, but I am not sure the class does what I think it does.
 public class UnionExchangePrel extends ExchangePrel {
 
   public UnionExchangePrel(RelOptCluster cluster, RelTraitSet traitSet, RelNode input) {

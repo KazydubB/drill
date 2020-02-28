@@ -17,53 +17,53 @@
  */
 package org.apache.drill.exec.physical.impl.except;
 
-import java.util.List;
-
-import javax.inject.Named;
-
-import org.apache.drill.exec.exception.SchemaChangeException;
-import org.apache.drill.exec.ops.FragmentContext;
-import org.apache.drill.exec.record.RecordBatch;
-import org.apache.drill.exec.record.TransferPair;
-import org.apache.drill.shaded.guava.com.google.common.collect.ImmutableList;
-
-@Deprecated
-public abstract class ExceptAllerTemplate implements ExceptAller {
-
-  private ImmutableList<TransferPair> transfers;
-
-  @Override
-  public final int exceptRecords(int startIndex, final int recordCount, int firstOutputIndex) {
-    try {
-      System.out.println("exceptRecords");
-      for (int i = startIndex; i < startIndex + recordCount; i++, firstOutputIndex++) {
-        doEval(i, firstOutputIndex);
-      }
-    } catch (SchemaChangeException e) {
-      throw new UnsupportedOperationException(e);
-    }
-
-    // transfers.get(0).getTo().allocateNew();
-    // todo: this is needed
-    for (TransferPair t : transfers) {
-      t.splitAndTransfer(startIndex, recordCount);
-    }
-    return recordCount;
-  }
-
-  @Override
-  public final void setup(FragmentContext context, RecordBatch incoming, RecordBatch outgoing,
-                          List<TransferPair> transfers) throws SchemaChangeException{
-    this.transfers = ImmutableList.copyOf(transfers);
-    doSetup(context, incoming, outgoing);
-  }
-
-  public abstract void doSetup(@Named("context") FragmentContext context,
-                               @Named("incoming") RecordBatch incoming,
-                               @Named("outgoing") RecordBatch outgoing)
-      throws SchemaChangeException;
-
-  public abstract void doEval(@Named("inIndex") int inIndex,
-                              @Named("outIndex") int outIndex)
-      throws SchemaChangeException;
-}
+//import java.util.List;
+//
+//import javax.inject.Named;
+//
+//import org.apache.drill.exec.exception.SchemaChangeException;
+//import org.apache.drill.exec.ops.FragmentContext;
+//import org.apache.drill.exec.record.RecordBatch;
+//import org.apache.drill.exec.record.TransferPair;
+//import org.apache.drill.shaded.guava.com.google.common.collect.ImmutableList;
+//
+//@Deprecated
+//public abstract class ExceptAllerTemplate implements ExceptAller {
+//
+//  private ImmutableList<TransferPair> transfers;
+//
+//  @Override
+//  public final int exceptRecords(int startIndex, final int recordCount, int firstOutputIndex) {
+//    try {
+//      System.out.println("exceptRecords");
+//      for (int i = startIndex; i < startIndex + recordCount; i++, firstOutputIndex++) {
+//        doEval(i, firstOutputIndex);
+//      }
+//    } catch (SchemaChangeException e) {
+//      throw new UnsupportedOperationException(e);
+//    }
+//
+//    // transfers.get(0).getTo().allocateNew();
+//    // todo: this is needed
+//    for (TransferPair t : transfers) {
+//      t.splitAndTransfer(startIndex, recordCount);
+//    }
+//    return recordCount;
+//  }
+//
+//  @Override
+//  public final void setup(FragmentContext context, RecordBatch incoming, RecordBatch outgoing,
+//                          List<TransferPair> transfers) throws SchemaChangeException{
+//    this.transfers = ImmutableList.copyOf(transfers);
+//    doSetup(context, incoming, outgoing);
+//  }
+//
+//  public abstract void doSetup(@Named("context") FragmentContext context,
+//                               @Named("incoming") RecordBatch incoming,
+//                               @Named("outgoing") RecordBatch outgoing)
+//      throws SchemaChangeException;
+//
+//  public abstract void doEval(@Named("inIndex") int inIndex,
+//                              @Named("outIndex") int outIndex)
+//      throws SchemaChangeException;
+//}

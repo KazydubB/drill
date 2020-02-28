@@ -23,6 +23,7 @@ import java.util.Set;
 
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.LogicalPlan;
+import org.apache.drill.common.logical.data.Except;
 import org.apache.drill.common.logical.data.Values;
 import org.apache.drill.common.logical.data.Filter;
 import org.apache.drill.common.logical.data.GroupingAggregate;
@@ -184,6 +185,14 @@ public class ScanFieldDeterminer extends AbstractLogicalVisitor<Void, ScanFieldD
   public Void visitUnion(Union union, FieldList value) {
     for (LogicalOperator o : union.getInputs()) {
       o.accept(this, value.clone());
+    }
+    return null;
+  }
+
+  @Override
+  public Void visitExcept(Except except, FieldList value) {
+    for (LogicalOperator op : except.getInputs()) {
+      op.accept(this, value.clone());
     }
     return null;
   }

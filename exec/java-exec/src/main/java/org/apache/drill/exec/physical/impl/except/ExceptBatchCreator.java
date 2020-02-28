@@ -21,32 +21,31 @@ import java.util.List;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.ExecutorFragmentContext;
-import org.apache.drill.exec.physical.config.ExceptAll;
+import org.apache.drill.exec.physical.config.Except;
 import org.apache.drill.exec.physical.impl.BatchCreator;
-//import org.apache.drill.exec.physical.impl.set.ExceptRecordBatch;
 import org.apache.drill.exec.physical.impl.set.HashSetRecordBatch;
+import org.apache.drill.exec.planner.common.SetOperatorControl;
 import org.apache.drill.exec.record.CloseableRecordBatch;
 import org.apache.drill.exec.record.RecordBatch;
 
 import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 
-//public class ExceptAllBatchCreator implements BatchCreator<ExceptAll> {
-@Deprecated
-public class ExceptAllBatchCreator implements BatchCreator<ExceptAll> {
-
-//  @Override
-//  public ExceptRecordBatch getBatch(ExecutorFragmentContext context, ExceptAll config, List<RecordBatch> children)
-//      throws ExecutionSetupException {
-//    Preconditions.checkArgument(children.size() == 2); // todo: 2?
-//    // return new ExceptAllRecordBatch(config, children, context); // todo: this worked, but...
-//    return new ExceptRecordBatch(config, children.get(0), children.get(1), context);
-//  }
-
+public class ExceptBatchCreator implements BatchCreator<Except> {
 
   @Override
-  public CloseableRecordBatch getBatch(ExecutorFragmentContext context, ExceptAll config, List<RecordBatch> children) throws ExecutionSetupException {
-    Preconditions.checkArgument(children.size() == 2); // todo: 2?
-//    // return new ExceptAllRecordBatch(config, children, context); // todo: this worked, but...
+  public CloseableRecordBatch getBatch(ExecutorFragmentContext context, Except config,
+        List<RecordBatch> children) throws ExecutionSetupException {
+    Preconditions.checkArgument(children.size() == 2);
+    SetOperatorControl control = config.createOperatorControl();
+//    RecordBatch left;
+//    RecordBatch right;
+//    if (control.isDistinct() /*|| control.isAll()*/) {
+//      left = children.get(1);
+//      right = children.get(0);
+//    } else {
+//      left = children.get(0);
+//      right = children.get(1);
+//    }
     return new HashSetRecordBatch(config, context, children.get(0), children.get(1));
   }
 }

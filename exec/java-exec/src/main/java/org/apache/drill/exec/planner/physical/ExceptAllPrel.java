@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.apache.calcite.rel.core.Minus;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
-import org.apache.drill.exec.physical.config.ExceptAll;
+import org.apache.drill.exec.physical.config.Except;
 import org.apache.drill.exec.planner.cost.DrillCostBase;
 import org.apache.drill.exec.planner.cost.DrillCostBase.DrillCostFactory;
 import org.apache.drill.exec.record.BatchSchema.SelectionVectorMode;
@@ -72,15 +72,15 @@ public class ExceptAllPrel extends ExceptPrel {
   @Override
   public PhysicalOperator getPhysicalOperator(PhysicalPlanCreator creator) throws IOException {
     List<PhysicalOperator> inputPops = new ArrayList<>();
-    System.out.println("ExceptAllPrel#getPhysicalOperator");
+//    System.out.println("ExceptAllPrel#getPhysicalOperator");
 
     for (int i = 0; i < this.getInputs().size(); i++) {
       inputPops.add(((Prel) this.getInputs().get(i)).getPhysicalOperator(creator));
     }
     // todo: there is a distinction between files, though (inputPops.get(i) is instanceof EasyGroupScan)
 //    ExceptAll exceptAll = new ExceptAll(inputPops, keys, values, true);
-    ExceptAll exceptAll = new ExceptAll(inputPops, leftFields, rightFields, leftExpressions, rightExpressions,true);
-    return creator.addMetadata(this, exceptAll);
+    Except except = new Except(inputPops, leftFields, rightFields, leftExpressions, rightExpressions,true);
+    return creator.addMetadata(this, except);
   }
 
   @Override

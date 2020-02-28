@@ -178,7 +178,7 @@ public class FilterRecordBatch extends AbstractSingleRecordBatch<Filter> {
     final ClassGenerator<Filterer> cg = CodeGenerator.getRoot(Filterer.TEMPLATE_DEFINITION2, context.getOptions());
     cg.getCodeGenerator().plainJavaCapable(true);
     // Uncomment the following line to enable saving generated code file for debugging
-    // cg.getCodeGenerator().saveCodeForDebugging(true);
+    cg.getCodeGenerator().saveCodeForDebugging(true);
 
     final LogicalExpression expr = ExpressionTreeMaterializer.materialize(popConfig.getExpr(), incoming, collector,
             context.getFunctionRegistry(), false, unionTypeEnabled);
