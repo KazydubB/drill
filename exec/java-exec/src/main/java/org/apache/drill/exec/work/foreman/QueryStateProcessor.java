@@ -25,6 +25,8 @@ import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.work.foreman.Foreman.ForemanResult;
 
 import com.codahale.metrics.Counter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Is responsible for query transition from one state to another,
@@ -32,15 +34,17 @@ import com.codahale.metrics.Counter;
  */
 public class QueryStateProcessor implements AutoCloseable {
 
-  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(QueryStateProcessor.class);
+  private static final Logger logger = LoggerFactory.getLogger(QueryStateProcessor.class);
 
-  private static final Counter planningQueries = DrillMetrics.getRegistry().counter("drill.queries.planning");
-  private static final Counter enqueuedQueries = DrillMetrics.getRegistry().counter("drill.queries.enqueued");
-  private static final Counter runningQueries = DrillMetrics.getRegistry().counter("drill.queries.running");
-  private static final Counter completedQueries = DrillMetrics.getRegistry().counter("drill.queries.completed");
-  private static final Counter succeededQueries = DrillMetrics.getRegistry().counter("drill.queries.succeeded");
-  private static final Counter failedQueries = DrillMetrics.getRegistry().counter("drill.queries.failed");
-  private static final Counter canceledQueries = DrillMetrics.getRegistry().counter("drill.queries.canceled");
+  private static final String METRICS_PREFIX = "drill.queries.";
+
+  private final Counter planningQueries = DrillMetrics.getRegistry().counter(METRICS_PREFIX + "planning");
+  private final Counter enqueuedQueries = DrillMetrics.getRegistry().counter(METRICS_PREFIX + "enqueued");
+  private final Counter runningQueries = DrillMetrics.getRegistry().counter(METRICS_PREFIX + "running");
+  private final Counter completedQueries = DrillMetrics.getRegistry().counter(METRICS_PREFIX + "completed");
+  private final Counter succeededQueries = DrillMetrics.getRegistry().counter(METRICS_PREFIX + "succeeded");
+  private final Counter failedQueries = DrillMetrics.getRegistry().counter(METRICS_PREFIX + "failed");
+  private final Counter canceledQueries = DrillMetrics.getRegistry().counter(METRICS_PREFIX + "canceled");
 
   private final StateSwitch stateSwitch = new StateSwitch();
 
@@ -50,6 +54,16 @@ public class QueryStateProcessor implements AutoCloseable {
   private final ForemanResult foremanResult;
 
   private volatile QueryState state;
+
+  public static void registerCounters() {
+    DrillMetrics.getRegistry().counter(METRICS_PREFIX + "planning");
+    DrillMetrics.getRegistry().counter(METRICS_PREFIX + "enqueued");
+    DrillMetrics.getRegistry().counter(METRICS_PREFIX + "running");
+    DrillMetrics.getRegistry().counter(METRICS_PREFIX + "completed");
+    DrillMetrics.getRegistry().counter(METRICS_PREFIX + "succeeded");
+    DrillMetrics.getRegistry().counter(METRICS_PREFIX + "failed");
+    DrillMetrics.getRegistry().counter(METRICS_PREFIX + "canceled");
+  }
 
   public QueryStateProcessor(String queryIdString, QueryManager queryManager, DrillbitContext drillbitContext, ForemanResult foremanResult) {
     this.queryIdString = queryIdString;

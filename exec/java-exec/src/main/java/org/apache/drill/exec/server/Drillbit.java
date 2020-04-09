@@ -49,6 +49,7 @@ import org.apache.drill.exec.store.sys.store.provider.LocalPersistentStoreProvid
 import org.apache.drill.common.util.GuavaPatcher;
 import org.apache.drill.common.util.ProtobufPatcher;
 import org.apache.drill.exec.work.WorkManager;
+import org.apache.drill.exec.work.foreman.QueryStateProcessor;
 import org.apache.drill.shaded.guava.com.google.common.annotations.VisibleForTesting;
 import org.apache.drill.shaded.guava.com.google.common.base.Stopwatch;
 import org.apache.zookeeper.Environment;
@@ -194,6 +195,9 @@ public class Drillbit implements AutoCloseable {
     }
 
     engine = new ServiceEngine(manager, context, allowPortHunting, isDistributedMode);
+
+    // Register counter metrics for query states
+    QueryStateProcessor.registerCounters();
 
     stateManager = new DrillbitStateManager(DrillbitState.STARTUP);
     logger.info("Construction completed ({} ms).", w.elapsed(TimeUnit.MILLISECONDS));
