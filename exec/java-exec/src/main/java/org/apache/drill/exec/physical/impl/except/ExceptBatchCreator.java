@@ -23,8 +23,7 @@ import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.ExecutorFragmentContext;
 import org.apache.drill.exec.physical.config.Except;
 import org.apache.drill.exec.physical.impl.BatchCreator;
-import org.apache.drill.exec.physical.impl.set.HashSetRecordBatch;
-import org.apache.drill.exec.planner.common.SetOperatorControl;
+import org.apache.drill.exec.physical.impl.set.HashExceptRecordBatch;
 import org.apache.drill.exec.record.CloseableRecordBatch;
 import org.apache.drill.exec.record.RecordBatch;
 
@@ -36,16 +35,6 @@ public class ExceptBatchCreator implements BatchCreator<Except> {
   public CloseableRecordBatch getBatch(ExecutorFragmentContext context, Except config,
         List<RecordBatch> children) throws ExecutionSetupException {
     Preconditions.checkArgument(children.size() == 2);
-    SetOperatorControl control = config.createOperatorControl();
-//    RecordBatch left;
-//    RecordBatch right;
-//    if (control.isDistinct() /*|| control.isAll()*/) {
-//      left = children.get(1);
-//      right = children.get(0);
-//    } else {
-//      left = children.get(0);
-//      right = children.get(1);
-//    }
-    return new HashSetRecordBatch(config, context, children.get(0), children.get(1));
+    return new HashExceptRecordBatch(config, context, children.get(0), children.get(1));
   }
 }

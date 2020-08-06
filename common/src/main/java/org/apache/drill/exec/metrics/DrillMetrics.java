@@ -51,7 +51,7 @@ public final class DrillMetrics {
     static {
       REGISTRY = new MetricRegistry();
       registerSystemMetrics();
-      JMX_REPORTER = getJmxReporter();
+      JMX_REPORTER = getJmxReporter(); // todo: is this JMX_REPORTER really used?
       LOG_REPORTER = getLogReporter();
     }
 

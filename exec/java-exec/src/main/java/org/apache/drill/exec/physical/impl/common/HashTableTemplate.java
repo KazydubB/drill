@@ -59,7 +59,7 @@ public abstract class HashTableTemplate implements HashTable {
   private static final int EMPTY_SLOT = -1;
 
   /**
-   * todo:
+   * todo: remove
    */
   private static final int ABSENT_COUNT = 1;
 
@@ -243,19 +243,8 @@ public abstract class HashTableTemplate implements HashTable {
       assert (currentIdxWithinBatch < batchHolders.get((currentIndex >>> 16) & BATCH_MASK).getTargetBatchRowCount());
       assert (incomingRowIdx < HashTable.BATCH_SIZE);
 
-      if (isProbe) { // todo: probably move this to child class
-//        int count = -1;
-//        boolean isCountOK = true;
-//        if (htConfig.isRetainCount()) {
-//          count = counts.getAccessor().get(currentIdxWithinBatch);
-//          System.out.println("Is key match, count: " + count);
-//          if (count > 0) {
-//            counts.getMutator().set(currentIdxWithinBatch, count - 1);
-//          }
-//        }
-
+      if (isProbe) {
         boolean keyMatchCount = checkCountAndDecrementIfNeeded(currentIdxWithinBatch);
-//        System.out.println("Is the key match due to count: " + keyMatchCount);
         return keyMatchCount && isKeyMatchInternalProbe(incomingRowIdx, currentIdxWithinBatch);
       }
 
@@ -264,44 +253,21 @@ public abstract class HashTableTemplate implements HashTable {
       // be used (not putting it into the helper would take a bigger code change, and some performance cost, hence
       // not worth it).  In the past such a new null key was added into the Hash-Table (i.e., no match), which
       // created long costly chains - SEE DRILL-6880)
-      if ( areBothKeysNull(incomingRowIdx, currentIdxWithinBatch) ) { return true; }
+      if (areBothKeysNull(incomingRowIdx, currentIdxWithinBatch)) {
+        return true;
+      }
 
       return isKeyMatchInternalBuild(incomingRowIdx, currentIdxWithinBatch);
     }
 
     private boolean checkCountAndDecrementIfNeeded(int currentIdxWithinBatch) {
-      int count;
-      final boolean retainCount = htConfig.isRetainCount();
-
-      if (!retainCount) {
+      if (!htConfig.isRetainCount()) {
         return true;
       }
 
-//      if (retainCount /*|| htConfig.isNegativeCount()*/) {
-        count = counts.getAccessor().get(currentIdxWithinBatch);
-//        System.out.println("Is key match, count: " + count);
-//        if (count > 0) {
-
-//        int newCount;// = htConfig.isNegativeCount() ? ABSENT_COUNT : count - 1;
-        /*if (htConfig.isNegativeCount()) {
-          if (count <= 0) {
-            newCount = ABSENT_COUNT;
-          } else {
-            newCount = count;
-          }
-        } else {*/
-//          newCount = count - 1;
-//        }
-
-          counts.getMutator().set(currentIdxWithinBatch, count - 1); // todo: perform the decrement after it is known it was used!
-//        counts.getMutator().set(currentIdxWithinBatch, newCount); // todo: perform the decrement after it is known it was used!
-        // todo:
-//        }
-//      }
-
-//      return !htConfig.isRetainCount() || count > 0;
-//      return !retainCount || count > 0;
-      return /*!retainCount ||*/ count > 0;
+      int count = counts.getAccessor().get(currentIdxWithinBatch);
+      counts.getMutator().set(currentIdxWithinBatch, count - 1); // todo: perform the decrement after it is known it was used!
+      return count > 0;
     }
 
     // This method should only be used in an "iterator like" next() fashion, to traverse a hash table chain looking for a match.
@@ -310,14 +276,12 @@ public abstract class HashTableTemplate implements HashTable {
     // _isKeyMatch()_ should be called on that next element; and so on until a match is found - where the loop is exited with the found result.
     // (This was not implemented as a real Java iterator as each index may point to another BatchHolder).
     private int nextLinkInHashChain(int currentIndex) {
-//      System.out.println("nextLinkInHashChain");
       return links.getAccessor().get(currentIndex & BATCH_MASK);
     }
 
     // Insert a new <key1, key2...keyN> entry coming from the incoming batch into the hash table
     // container at the specified index
     private void insertEntry(int incomingRowIdx, int currentIdx, int hashValue, BatchHolder lastEntryBatch, int lastEntryIdxWithinBatch) throws SchemaChangeException {
-//      System.out.println("insertEntry");
       int currentIdxWithinBatch = currentIdx & BATCH_MASK;
 
       setValue(incomingRowIdx, currentIdxWithinBatch);
@@ -332,8 +296,8 @@ public abstract class HashTableTemplate implements HashTable {
       // since this is the last entry in the hash chain, the links array at position currentIdx
       // will point to a null (empty) slot
       links.getMutator().set(currentIdxWithinBatch, EMPTY_SLOT);
-      hashValues.getMutator().set(currentIdxWithinBatch, hashValue); // todo: counts here?
-      counts.getMutator().set(currentIdxWithinBatch, 1); // todo: was 0
+      hashValues.getMutator().set(currentIdxWithinBatch, hashValue);
+      counts.getMutator().set(currentIdxWithinBatch, 1);
 
       maxOccupiedIdx = Math.max(maxOccupiedIdx, currentIdxWithinBatch);
 
@@ -348,9 +312,6 @@ public abstract class HashTableTemplate implements HashTable {
     }
 
     private void rehash(int numbuckets, IntVector newStartIndices, int batchStartIdx) {
-
-      System.out.println("\n\n\n\n\n\n\n-----------------------\nREHASH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n----------------------\n\n\n\n\n\n\n");
-
       logger.debug("Rehashing entries within the batch: {}; batchStartIdx = {}, total numBuckets in hash table = {}.", batchIndex, batchStartIdx, numbuckets);
 
       int size = links.getAccessor().getValueCount();
@@ -444,9 +405,8 @@ public abstract class HashTableTemplate implements HashTable {
     }
 
     private boolean outputKeys(VectorContainer outContainer, int numRecords) {
-//      System.out.println("outputKeys");
       // set the value count for htContainer's value vectors before the transfer ..
-      setValueCount(); // todo: set correct value for except distinct case
+      setValueCount(); // todo: set correct value for except distinct case. THIS SHOULD BE OK?
 
       Iterator<VectorWrapper<?>> outgoingIter = outContainer.iterator();
 
@@ -467,23 +427,6 @@ public abstract class HashTableTemplate implements HashTable {
       }
       htContainer.setRecordCount(maxOccupiedIdx+1);
     }
-
-//    private boolean outputNotMatchedKeys(VectorContainer outContainer, int numRecords) {
-//      System.out.println("outputKeys");
-//      // set the value count for htContainer's value vectors before the transfer ..
-//      setValueCount(); // todo: set correct value for except distinct case
-//
-//      Iterator<VectorWrapper<?>> outgoingIter = outContainer.iterator();
-//
-//      for (VectorWrapper<?> sourceWrapper : htContainer) {
-//        ValueVector sourceVV = sourceWrapper.getValueVector();
-//        ValueVector targetVV = outgoingIter.next().getValueVector();
-//        TransferPair tp = sourceVV.makeTransferPair(targetVV);
-//        // The normal case: The whole column key(s) are transfered as is
-//        tp.transfer();
-//      }
-//      return true;
-//    }
 
     private void dump(int idx) {
       while (true) {
@@ -559,10 +502,6 @@ public abstract class HashTableTemplate implements HashTable {
     protected void outputRecordKeys(@Named("htRowIdx") int htRowIdx, @Named("outRowIdx") int outRowIdx) throws SchemaChangeException {
     }
 
-//    @RuntimeOverridden
-//    protected void outputNotMatchedKeys(@Named("htRowIdx") int htRowIdx, @Named("outRowIdx") int outRowIdx) throws SchemaChangeException {
-//    }
-
     public long getActualSize() {
       Set<AllocationManager.BufferLedger> ledgers = Sets.newHashSet();
       links.collectLedgers(ledgers);
@@ -588,7 +527,6 @@ public abstract class HashTableTemplate implements HashTable {
   public void setup(HashTableConfig htConfig, BufferAllocator allocator, VectorContainer incomingBuild,
                     RecordBatch incomingProbe, RecordBatch outgoing, VectorContainer htContainerOrig,
                     FragmentContext context, ClassGenerator<?> cg) {
-//    System.out.println("setup HashTable");
     float loadf = htConfig.getLoadFactor();
     int initialCap = htConfig.getInitialCapacity();
 
@@ -654,7 +592,6 @@ public abstract class HashTableTemplate implements HashTable {
 
   @Override
   public void updateBatches() throws SchemaChangeException {
-//    System.out.println("HashTableTemplate#updateBatches");
     doSetup(incomingBuild, incomingProbe);
     for (BatchHolder batchHolder : batchHolders) {
       batchHolder.setup();
@@ -791,8 +728,6 @@ public abstract class HashTableTemplate implements HashTable {
     BatchHolder lastEntryBatch = null;
     int lastEntryIdxWithinBatch = EMPTY_SLOT;
 
-//    System.out.println("put");
-
     // if startIdx is non-empty, follow the hash chain links until we find a matching
     // key or reach the end of the chain (and remember the last link there)
     for ( int currentIndex = startIdx;
@@ -801,14 +736,13 @@ public abstract class HashTableTemplate implements HashTable {
       // remember the current link, which would be the last when the next link is empty
       lastEntryBatch = batchHolders.get((currentIndex >>> 16) & BATCH_MASK); // todo: here
       lastEntryIdxWithinBatch = currentIndex & BATCH_MASK;
-
+// todo: REMOVE COMMENTS
       if (lastEntryBatch.isKeyMatch(incomingRowIdx, currentIndex, false)) { // todo: play with this somehow?
         htIdxHolder.value = currentIndex; // todo: incomingRowIdx should be mapped to currentIndex (using BitSet perhaps)
-        // isDuplicate.set(incomingRowIdx, currentIndex);
+        // isDuplicate.set(incomingRowIdx, currentIndex); // todo: this is not the place to track it
         if (htConfig.isRetainCount()) {
           int currentIdxWithinBatch = currentIndex & BATCH_MASK; // todo: I hope this one is OK
           int prevCount = lastEntryBatch.counts.getAccessor().get(currentIdxWithinBatch);
-//          System.out.println("put entry with current count: " + prevCount);
           lastEntryBatch.counts.getMutator().set(currentIdxWithinBatch, prevCount + 1); // todo: should be handled here: see bh.insertEntry(...)
         }
         return PutStatus.KEY_PRESENT;
@@ -895,11 +829,10 @@ public abstract class HashTableTemplate implements HashTable {
   // currentIdx; since each BatchHolder can hold up to BATCH_SIZE entries, if the currentIdx exceeds
   // the capacity, we will add a new BatchHolder. Return true if a new batch was added.
   private boolean addBatchIfNeeded(int currentIdx, int batchRowCount) throws SchemaChangeException {
-     // Add a new batch if this is the first batch or
-     // index is greater than current batch target count i.e. we reached the limit of current batch.
-     if (batchHolders.size() == 0 || (currentIdx >= currentIndexSize)) {
-       final int allocationSize = allocationTracker.getNextBatchHolderSize(batchRowCount); // todo: uncomment
-//      final int allocationSize = 1024;
+    // Add a new batch if this is the first batch or
+    // index is greater than current batch target count i.e. we reached the limit of current batch.
+    if (batchHolders.size() == 0 || currentIdx >= currentIndexSize) {
+      final int allocationSize = allocationTracker.getNextBatchHolderSize(batchRowCount);
       final BatchHolder bh = newBatchHolder(batchHolders.size(), allocationSize);
       batchHolders.add(bh);
       prevIndexSize = batchHolders.size() > 1 ? (batchHolders.size()-1)*BATCH_SIZE : 0;
@@ -1028,7 +961,6 @@ public abstract class HashTableTemplate implements HashTable {
   public void updateIncoming(VectorContainer newIncoming, RecordBatch newIncomingProbe) {
     incomingBuild = newIncoming;
     incomingProbe = newIncomingProbe;
-    // reset();
     try {
       updateBatches();  // Needed to update the value vectors in the generated code with the new incoming
     } catch (SchemaChangeException e) {
@@ -1036,19 +968,11 @@ public abstract class HashTableTemplate implements HashTable {
     }
   }
 
-  @Override // todo: this is what I need
+  @Override // todo: this is what I need // todo: REMOVE THE COMMENT
   public boolean outputKeys(int batchIdx, VectorContainer outContainer, int numRecords) {
     assert batchIdx < batchHolders.size();
     return batchHolders.get(batchIdx).outputKeys(outContainer, numRecords);
   }
-
-//  @Override // todo: remove
-//  @Deprecated
-//  public boolean outputNotMatchedKeys(int batchIdx, VectorContainer outContainer, int numRecords) {
-//    assert batchIdx < batchHolders.size();
-////    return batchHolders.get(batchIdx).outputRecordKeys(); // todo: outputRecordKeys(...)?
-//    return batchHolders.get(batchIdx).outputNotMatchedKeys(outContainer, numRecords);
-//  }
 
   private IntVector allocMetadataVector(int size, int initialValue) {
     IntVector vector = (IntVector) TypeHelper.getNewVector(dummyIntField, allocator);

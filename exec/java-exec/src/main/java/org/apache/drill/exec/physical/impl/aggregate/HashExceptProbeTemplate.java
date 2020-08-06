@@ -17,13 +17,10 @@
  */
 package org.apache.drill.exec.physical.impl.aggregate;
 
-import java.util.ArrayList;
-
 import com.carrotsearch.hppc.IntArrayList;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.physical.impl.common.HashPartition;
-import org.apache.drill.exec.physical.impl.set.HashSetRecordBatch;
-import org.apache.drill.exec.planner.common.SetOperatorControl;
+import org.apache.drill.exec.physical.impl.set.HashExceptRecordBatch;
 import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.RecordBatch.IterOutcome;
@@ -31,75 +28,58 @@ import org.apache.drill.exec.record.VectorContainer;
 import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.vector.IntVector;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.commons.lang3.tuple.Pair;
 
-import static org.apache.drill.exec.record.JoinBatchMemoryManager.LEFT_INDEX;
-
-public class HashSetProbeTemplate implements HashSetProbe {
+public class HashExceptProbeTemplate implements HashExceptProbe {
 
   public static final int LEFT_INPUT = 0;
   public static final int RIGHT_INPUT = 1;
 
-  VectorContainer container; // the outgoing container
+  private VectorContainer container; // the outgoing container
 
   // Probe side record batch
   private RecordBatch probeBatch; // todo: do not modify its container
 
   private BatchSchema probeSchema;
 
-  // Join type, INNER, LEFT, RIGHT or OUTER
-  // private JoinRelType joinType;
+  private boolean all;
 
-  // joinControl determines how to handle INTERSECT_DISTINCT vs. INTERSECT_ALL
-//  @Deprecated
-//  private JoinControl joinControl;
-
-  protected SetOperatorControl operatorControl;
-
-  protected HashSetRecordBatch outgoingJoinBatch; // todo: rename
+  private HashExceptRecordBatch outgoingJoinBatch; // todo: rename
 
   // Number of records to process on the probe side
-  protected int recordsToProcess;
+  private int recordsToProcess;
 
   // Number of records processed on the probe side
-  protected int recordsProcessed;
+  private int recordsProcessed;
 
   // Number of records in the output container
   protected int outputRecords;
 
   // Indicate if we should drain the next record from the probe side
-  protected boolean getNextRecord = true;
+  private boolean getNextRecord = true;
 
   // Contains both batch idx and record idx of the matching record in the build side
-  protected int currentCompositeIdx = -1;
+  private int currentCompositeIdx = -1;
 
-  // Current state the hash join algorithm is in
-//  private ProbeState probeState; // = ProbeState.PROBE_EXCEPT;
   private boolean isDone;
 
-  // For outer or right joins, this is a list of unmatched records that needs to be projected
-  private IntArrayList unmatchedBuildIndexes; // todo: actually, outer join should be the behaviour I need for EXCEPT DISTINCT?
+  // a list of unmatched records that needs to be projected
+  private IntArrayList unmatchedBuildIndexes;
 
-  @Deprecated // todo:?
   private HashPartition[] partitions;
 
   // While probing duplicates, retain current build-side partition in case need to continue
   // probing later on the same chain of duplicates
-  private HashPartition currPartition; // todo: this may be useful!
+  private HashPartition currPartition;
 
-  @Deprecated
-  private int currRightPartition; // for returning RIGHT/FULL
+  private int currPartitionIndex;
   private IntVector readLeftHVVector; // HV vector that was read from the spilled batch
   private int cycleNum; // 1-primary, 2-secondary, 3-tertiary, etc.
-  private HashSetRecordBatch.HashSetSpilledPartition[] spilledInners; // for the outer to find the partition
+  private HashExceptRecordBatch.SpilledPartition[] spilledInners; // for the outer to find the partition
   private boolean buildSideIsEmpty = true;
   private int numPartitions = 1; // must be 2 to the power of bitsInMask
   private int partitionMask; // numPartitions - 1
   private int bitsInMask; // number of bits in the MASK
-  @Deprecated
-  private int numberOfBuildSideColumns;
   private int targetOutputRecords;
-//  private boolean semiJoin;
 
   @Override
   public void setTargetOutputCount(int targetOutputRecords) {
@@ -111,25 +91,11 @@ public class HashSetProbeTemplate implements HashSetProbe {
     return outputRecords;
   }
 
-  /**
-   *  Setup the Hash Join Probe object
-   *
-   * @param probeBatch
-   * @param outgoing
-   * @param leftStartState
-   * @param partitions
-   * @param cycleNum
-   * @param container
-   * @param spilledInners
-   * @param buildSideIsEmpty
-   * @param numPartitions
-   * @param rightHVColPosition
-   */
   @Override
-  public void setupHashSetProbe(RecordBatch probeBatch, HashSetRecordBatch outgoing, SetOperatorControl operatorControl/*Type type*/, // todo: change Type to operatorControl
+  public void setupHashSetProbe(RecordBatch probeBatch, HashExceptRecordBatch outgoing, boolean all,
                                 IterOutcome leftStartState, HashPartition[] partitions, int cycleNum,
-                                VectorContainer container, HashSetRecordBatch.HashSetSpilledPartition[] spilledInners,
-                                boolean buildSideIsEmpty, int numPartitions, int rightHVColPosition) {
+                                VectorContainer container, HashExceptRecordBatch.SpilledPartition[] spilledInners,
+                                boolean buildSideIsEmpty, int numPartitions, int rightHVColPosition) { // todo: remove the last agument?
     this.container = container;
     this.spilledInners = spilledInners;
     this.probeBatch = probeBatch;
@@ -139,20 +105,16 @@ public class HashSetProbeTemplate implements HashSetProbe {
     this.cycleNum = cycleNum;
     this.buildSideIsEmpty = buildSideIsEmpty;
     this.numPartitions = numPartitions;
-    this.numberOfBuildSideColumns = true ? 0 : rightHVColPosition; // position (0 based) of added column == #columns
 
     partitionMask = numPartitions - 1; // e.g. 32 --> 0x1F
     bitsInMask = Integer.bitCount(partitionMask); // e.g. 0x1F -> 5
 
-//    control = SetOperatorControl.except(outgoingJoinBatch.getPopConfig().isAll());
-    this.operatorControl = operatorControl;
-
-    // probeState = ProbeState.PROBE_PROJECT;
+    this.all = all;
     this.recordsToProcess = 0;
     this.recordsProcessed = 0;
 
     // A special case - if the left was an empty file
-    if (leftStartState == IterOutcome.NONE){
+    if (leftStartState == IterOutcome.NONE) {
       markAsDone();
     } else {
       this.recordsToProcess = probeBatch.getRecordCount();
@@ -164,7 +126,7 @@ public class HashSetProbeTemplate implements HashSetProbe {
       partition.allocateNewCurrentBatchAndHV();
     }
 
-    currRightPartition = 0; // In case it's a Right/Full outer join
+    currPartitionIndex = 0; // In case it's a Right/Full outer join // todo: remove join references and reword it in EXCEPT context
 
     // Initialize the HV vector for the first (already read) left batch
     if (this.cycleNum > 0) {
@@ -177,61 +139,20 @@ public class HashSetProbeTemplate implements HashSetProbe {
     }
   }
 
-  /**
-   * Append the given build side row into the outgoing container
-   * @param buildSrcContainer The container for the right/inner side
-   * @param buildSrcIndex build side index
-   */
-  @Deprecated // todo: remove?
-  private void appendBuild(VectorContainer buildSrcContainer, int buildSrcIndex) {
-    for (int vectorIndex = 0; vectorIndex < numberOfBuildSideColumns; vectorIndex++) {
-      ValueVector destVector = container.getValueVector(vectorIndex).getValueVector();
-      ValueVector srcVector = buildSrcContainer.getValueVector(vectorIndex).getValueVector();
-      destVector.copyEntry(container.getRecordCount(), srcVector, buildSrcIndex);
-    }
-  }
-
   /**todo:
    * Append the given probe side row into the outgoing container, following the build side part
    * @param probeSrcContainer The container for the left/outer side
    * @param probeSrcIndex probe side index
    */
   private void appendProbe(VectorContainer probeSrcContainer, int probeSrcIndex) {
-    for (int vectorIndex = numberOfBuildSideColumns; vectorIndex < container.getNumberOfColumns(); vectorIndex++) { // todo: notice change in number of columns
-//    for (int vectorIndex = numberOfBuildSideColumns; vectorIndex < probeSrcContainer.getNumberOfColumns(); vectorIndex++) {
+    for (int vectorIndex = 0; vectorIndex < container.getNumberOfColumns(); vectorIndex++) { // todo: notice change in number of columns
       ValueVector destVector = container.getValueVector(vectorIndex).getValueVector();
-      ValueVector srcVector = probeSrcContainer.getValueVector(vectorIndex - numberOfBuildSideColumns).getValueVector();
+      ValueVector srcVector = probeSrcContainer.getValueVector(vectorIndex).getValueVector();
       destVector.copyEntry(container.getRecordCount(), srcVector, probeSrcIndex);
     }
   }
 
-  /**
-   *  A special version of the VectorContainer's appendRow for the HashJoin; (following a probe) it
-   *  copies the build and probe sides into the outgoing container. (It uses a composite
-   *  index for the build side). If any of the build/probe source containers is null, then that side
-   *  is not appended (effectively outputing nulls for that side's columns).
-   * @param buildSrcContainers The containers list for the right/inner side
-   * @param compositeBuildSrcIndex Composite build index
-   * @param probeSrcContainer The single container for the left/outer side
-   * @param probeSrcIndex Index in the outer container
-   * @return Number of rows in this container (after the append)
-   */
-  @Deprecated // todo:
-  private int outputRow(ArrayList<VectorContainer> buildSrcContainers, int compositeBuildSrcIndex,
-                        VectorContainer probeSrcContainer, int probeSrcIndex) { // todo: change it to have proper output
-
-    if (buildSrcContainers != null) {
-      int buildBatchIndex = compositeBuildSrcIndex >>> 16;
-      int buildOffset = compositeBuildSrcIndex & 65535;
-      appendProbe(buildSrcContainers.get(buildBatchIndex), buildOffset); // todo: this was switched with the line above
-    }
-    if (probeSrcContainer != null) {
-      appendProbe(probeSrcContainer, probeSrcIndex);
-    }
-    return container.incRecordCount();
-  }
-
-  private int outputRow(VectorContainer probeSrcContainer, int probeSrcIndex) { // todo: change it to have proper output
+  private int outputRow(VectorContainer probeSrcContainer, int probeSrcIndex) {
     if (probeSrcContainer != null) {
       appendProbe(probeSrcContainer, probeSrcIndex);
     }
@@ -250,7 +171,6 @@ public class HashSetProbeTemplate implements HashSetProbe {
           wrapper.getValueVector().clear();
         }
 
-//        IterOutcome leftUpstream = outgoingJoinBatch.next(HashJoinHelper.LEFT_INPUT, probeBatch);
         IterOutcome leftUpstream = outgoingJoinBatch.next(LEFT_INPUT, probeBatch);
 
         switch (leftUpstream) {
@@ -260,7 +180,6 @@ public class HashSetProbeTemplate implements HashSetProbe {
             recordsProcessed = 0;
             recordsToProcess = 0;
             markAsDone();
-//            isDone = true;
             // in case some outer partitions were spilled, need to spill their last batches
             for (HashPartition partition : partitions) {
               if (!partition.isSpilled()) { // skip non-spilled
@@ -268,7 +187,7 @@ public class HashSetProbeTemplate implements HashSetProbe {
               }
               partition.completeAnOuterBatch(false);
               // update the partition's spill record with the outer side
-              HashSetRecordBatch.HashSetSpilledPartition sp = spilledInners[partition.getPartitionNum()];
+              HashExceptRecordBatch.SpilledPartition sp = spilledInners[partition.getPartitionNum()];
               sp.updateOuter(partition.getPartitionBatchesCount(), partition.getSpillFile());
 
               partition.closeWriter();
@@ -286,7 +205,7 @@ public class HashSetProbeTemplate implements HashSetProbe {
                   probeSchema, probeBatch.getSchema());
             }
           case OK:
-            outgoingJoinBatch.getBatchMemoryManager().update(probeBatch, LEFT_INDEX, outputRecords);
+            outgoingJoinBatch.getBatchMemoryManager().update(probeBatch, LEFT_INPUT, outputRecords);
             setTargetOutputCount(outgoingJoinBatch.getBatchMemoryManager().getCurrentOutgoingMaxRowCount()); // calculated by update()
             recordsToProcess = probeBatch.getRecordCount();
             recordsProcessed = 0;
@@ -304,7 +223,7 @@ public class HashSetProbeTemplate implements HashSetProbe {
       // Check if we need to drain the next row in the probe side
       if (getNextRecord) {
 
-        int hashCode = -1;
+        int hashCode;
         if (!buildSideIsEmpty) { // todo: must handle the case when build side is empty and EXCEPT DISTINCT...
           hashCode = (cycleNum == 0) ?
               partitions[0].getProbeHashCode(recordsProcessed)
@@ -338,7 +257,7 @@ public class HashSetProbeTemplate implements HashSetProbe {
           recordsProcessed++;
         } else { // No matching key // todo: this seems to be the place to handle except; change the comment
 
-          if (operatorControl.isExcept() && operatorControl.isAll()) {
+          if (all) {
             outputRecords = // output only the probe side (the build side would be all nulls) // todo: change comment
                 outputRow(probeBatch.getContainer(), recordsProcessed);
           }
@@ -347,12 +266,10 @@ public class HashSetProbeTemplate implements HashSetProbe {
         }
       } else { // match the next inner row with the same key
 
-        System.out.println("getNextRecords=false. Should the code even reach there?");
-
         currPartition.setRecordMatched(currentCompositeIdx);
 
         outputRecords =
-            outputRow(// currPartition.getContainers(), currentCompositeIdx,
+            outputRow(// currPartition.getContainers(), currentCompositeIdx, // todo: remove comment
                 probeBatch.getContainer(), recordsProcessed);
 
         currentCompositeIdx = currPartition.getNextIndex(currentCompositeIdx);
@@ -360,14 +277,9 @@ public class HashSetProbeTemplate implements HashSetProbe {
         if (currentCompositeIdx == -1) {
           // We don't have any more rows matching the current key on the build side, move on to the next probe row
           getNextRecord = true;
-//          recordsProcessed++;
-        } /*else {
-          recordsProcessed++;
-        }*/
+        }
         recordsProcessed++;
       }
-
-//      System.out.println("recordsProcessed=" + recordsProcessed);
     }
   }
 
@@ -390,59 +302,55 @@ public class HashSetProbeTemplate implements HashSetProbe {
 
     executeProbePhase();
 
-    if (operatorControl.isExcept() && (operatorControl.isDistinct() /*|| operatorControl.isAll()*/)) {
-      // Inner probe is done; now we are here because we still have a RIGHT OUTER (or a FULL) join
-
+    if (!all) { // distinct
+      // after probing is done, output distinct unmatched records
+      // Inner probe is done; now we are here because we still have a RIGHT OUTER (or a FULL) join // todo: remove?
       do {
 
         if (unmatchedBuildIndexes == null) { // first time for this partition ?
           if (buildSideIsEmpty) { // in case of an empty right // todo: or left?
             return outputRecords;
           }
-          // Get this partition's list of build indexes that didn't match any record on the probe side
-          unmatchedBuildIndexes = operatorControl.isDistinct() ? partitions[currRightPartition].getNextDistinctUnmatchedIndex() : partitions[currRightPartition].getNextUnmatchedIndex();
+          // Get this partition's list of build indexes that didn't match any record on the probe side // todo: mention distinct
+          HashPartition currentPartition = partitions[currPartitionIndex];
+          unmatchedBuildIndexes = currentPartition.getNextDistinctUnmatchedIndex();
           recordsProcessed = 0;
           recordsToProcess = unmatchedBuildIndexes.size();
         }
 
         // Project the list of unmatched records on the build side
-
-        // assert false;
-        executeProjectRightPhase(currRightPartition);
+        projectDistinct(currPartitionIndex);
 
         if (recordsProcessed < recordsToProcess) { // more records in this partition?
           return outputRecords;  // outgoing is full; report and come back later
         } else {
-          currRightPartition++; // on to the next right partition
+          currPartitionIndex++; // on to the next right partition
           unmatchedBuildIndexes = null;
         }
 
-      } while (currRightPartition < numPartitions);
+      } while (currPartitionIndex < numPartitions);
 
-      isDone = true; // last right partition was handled; we are done now
+      isDone = true; // last partition was handled; we are done now
     }
 
     return outputRecords;
   }
 
   /**
+   * todo: re-phrase
    * After the "inner" probe phase, finish up a Right (of Full) Join by projecting the unmatched rows of the build side
-   * @param currBuildPart Which partition
+   * @param buildPartitionIndex Which partition
    */
-  private void executeProjectRightPhase(int currBuildPart) { // todo: this might be useful actually
-    assert operatorControl.isDistinct();
+  private void projectDistinct(int buildPartitionIndex) {
+    assert !all; // distinct
     while (outputRecords < targetOutputRecords && recordsProcessed < recordsToProcess) {
       int compositeBuildSrcIndex = unmatchedBuildIndexes.get(recordsProcessed);
       int buildBatchIndex = compositeBuildSrcIndex >>> 16;
       int buildOffset = compositeBuildSrcIndex & 65535;
-      VectorContainer container = partitions[currBuildPart].getContainers().get(buildBatchIndex);
+      VectorContainer container = partitions[buildPartitionIndex].getContainers().get(buildBatchIndex);
       outputRecords = outputRow(container, buildOffset);
-//          outputRow(partitions[currBuildPart].getContainers(), unmatchedBuildIndexes.get(recordsProcessed),
-//              null /* no probeBatch */, 0 /* no probe index */);
       recordsProcessed++;
     }
-
-    System.out.println("\n\n\n\n--------------\nunmatchedBuildIndexes: " + unmatchedBuildIndexes + "\n-------------------------\n\n\n\n");
   }
 
   @Override

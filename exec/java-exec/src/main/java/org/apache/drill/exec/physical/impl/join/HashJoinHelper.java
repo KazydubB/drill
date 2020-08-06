@@ -30,8 +30,7 @@ import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.common.HashTable;
 import org.apache.drill.exec.record.selection.SelectionVector4;
 
-
-/*
+/**
  * Helper class for hash join. Keeps track of information about the build side batches.
  *
  * Hash join is a blocking operator, so we consume all the batches on the build side and
@@ -63,7 +62,8 @@ public class HashJoinHelper {
   FragmentContext context;
   BufferAllocator allocator;
 
-  private BitSet duplicateSet = new BitSet();
+  //
+  private final BitSet duplicateSet = new BitSet();
 
   // Constant to indicate index is empty.
   static final int INDEX_EMPTY = -1;
@@ -202,7 +202,7 @@ public class HashJoinHelper {
 
     // Get the BitVector for the appropriate batch and set the bit to indicate the record matched
     BuildInfo info = buildInfoList.get(batchIdx);
-    BitSet bitVector = info.getKeyMatchBitVector(); // todo: here!
+    BitSet bitVector = info.getKeyMatchBitVector();
 
     if (bitVector.get(recordIdx)) {
       return true;
@@ -264,8 +264,13 @@ public class HashJoinHelper {
     }
   }
 
+  /**
+   * todo:
+   * @param keyIndex index of an entry in current partition
+   * @param htIndex index of an entry in hash table
+   */
   public void setDuplicate(int keyIndex, int htIndex) {
-    duplicateSet.set(keyIndex, true); // todo:
+    duplicateSet.set(keyIndex, true);
   }
 
   public void clear() {

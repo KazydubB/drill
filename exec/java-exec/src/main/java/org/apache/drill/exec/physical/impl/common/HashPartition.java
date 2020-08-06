@@ -107,7 +107,7 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat { /
    * Keeps information about which build records have a corresponding
    * matching key in the probe side (for outer, right joins)
    */
-  private HashJoinHelper hjHelper; // todo: important as well as hashTable
+  private HashJoinHelper hjHelper;
 
   // Underlying hashtable used by the hash join
   private HashTable hashTable;
@@ -131,7 +131,7 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat { /
   private long numInMemoryRecords;
   private boolean updatedRecordsPerBatch;
   private final boolean semiJoin;
-  private boolean except;
+  private boolean except; // todo; use?
 
   public HashPartition(FragmentContext context, BufferAllocator allocator, ChainedHashTable baseHashTable,
                        RecordBatch buildBatch, RecordBatch probeBatch, boolean semiJoin,
@@ -225,7 +225,9 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat { /
    *  Allocate a new current Vector Container and current HV vector
    */
   public void allocateNewCurrentBatchAndHV() {
-    if (outerBatchAllocNotNeeded) { return; } // skip when the inner is whole in memory
+    if (outerBatchAllocNotNeeded) { // skip when the inner is whole in memory
+      return;
+    }
     currentBatch = allocateNewVectorContainer(processingOuter ? probeBatch : buildBatch);
     currHVVector = new IntVector(MaterializedField.create(HASH_VALUE_COLUMN_NAME, HVtype), allocator);
     currHVVector.allocateNew(recordsPerBatch);
@@ -332,13 +334,16 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat { /
   }
 
   public void spillThisPartition() {
-    if (tmpBatchesList.size() == 0) { return; } // in case empty - nothing to spill
+    if (tmpBatchesList.isEmpty()) { // in case if empty - nothing to spill
+      return;
+    }
+
     logger.debug("HashJoin: Spilling partition {}, current cycle {}, part size {} batches", partitionNum, cycleNum, tmpBatchesList.size());
 
     // If this is the first spill for this partition, create an output stream
     if (writer == null) {
       final String side = processingOuter ? "outer" : "inner";
-      final String suffix = cycleNum > 0 ? side + "_" + Integer.toString(cycleNum) : side;
+      final String suffix = cycleNum > 0 ? side + "_" + cycleNum : side;
       spillFile = spillSet.getNextSpillFile(suffix);
 
       try {
@@ -396,7 +401,7 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat { /
      * side. Set the bit corresponding to this index so if we are doing a FULL or RIGHT
      * join we keep track of which records we need to project at the end
      */
-    boolean matchExists = hjHelper.setRecordMatched(compositeIndex); // todo: this happens here!
+    boolean matchExists = hjHelper.setRecordMatched(compositeIndex);
     return Pair.of(compositeIndex, matchExists);
   }
 
@@ -517,7 +522,9 @@ public class HashPartition implements HashJoinMemoryCalculator.PartitionStat { /
    * have been consumed.
    */
   public void buildContainersHashTableAndHelper() throws SchemaChangeException {
-    if (isSpilled) { return; } // no building for spilled partitions
+    if (isSpilled) { // no building for spilled partitions
+      return;
+    }
     containers = new ArrayList<>();
     hashTable.updateInitialCapacity((int) getNumInMemoryRecords());
     for (int curr = 0; curr < partitionBatchesCount; curr++) {

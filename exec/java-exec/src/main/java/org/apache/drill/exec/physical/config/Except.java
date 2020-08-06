@@ -23,7 +23,6 @@ import org.apache.drill.common.logical.data.NamedExpression;
 import org.apache.drill.exec.physical.base.AbstractMultiple;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.PhysicalVisitor;
-import org.apache.drill.exec.planner.common.SetOperatorControl;
 import org.apache.drill.exec.proto.UserBitShared.CoreOperatorType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -49,8 +48,8 @@ public class Except extends AbstractMultiple {
   public Except(@JsonProperty("children") List<PhysicalOperator> children,
                 @JsonProperty("leftFields") List<String> leftFields,
                 @JsonProperty("rightFields") List<String> rightFields,
-                @JsonProperty("expressions") List<NamedExpression> leftExpressions,
-                @JsonProperty("expressions") List<NamedExpression> rightExpressions,
+                @JsonProperty("leftExpressions") List<NamedExpression> leftExpressions,
+                @JsonProperty("rightExpressions") List<NamedExpression> rightExpressions,
                 @JsonProperty("all") boolean all) {
     super(children);
     this.leftFields = leftFields;
@@ -91,11 +90,11 @@ public class Except extends AbstractMultiple {
     return rightExpressions;
   }
 
-  public SetOperatorControl createOperatorControl() {
-    return SetOperatorControl.except(all);
-  }
-
   public boolean isAll() {
     return all;
+  }
+
+  public boolean isDistinct() {
+    return !all;
   }
 }

@@ -20,20 +20,20 @@ package org.apache.drill.exec.physical.impl.aggregate;
 import org.apache.drill.exec.compile.TemplateClassDefinition;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.physical.impl.common.HashPartition;
-import org.apache.drill.exec.physical.impl.set.HashSetRecordBatch;
-import org.apache.drill.exec.planner.common.SetOperatorControl;
+import org.apache.drill.exec.physical.impl.set.HashExceptRecordBatch;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.VectorContainer;
 
-public interface HashSetProbe {
+public interface HashExceptProbe {
 
-  TemplateClassDefinition<HashSetProbe> TEMPLATE_DEFINITION = new TemplateClassDefinition<>(HashSetProbe.class, HashSetProbeTemplate.class);
+  TemplateClassDefinition<HashExceptProbe> TEMPLATE_DEFINITION =
+      new TemplateClassDefinition<>(HashExceptProbe.class, HashExceptProbeTemplate.class);
 
-  void setupHashSetProbe(RecordBatch probeBatch, HashSetRecordBatch outgoing, SetOperatorControl operatorControl,
+  void setupHashSetProbe(RecordBatch probeBatch, HashExceptRecordBatch outgoing, boolean all,
                          RecordBatch.IterOutcome leftStartState, HashPartition[] partitions, int cycleNum,
-                         VectorContainer container, HashSetRecordBatch.HashSetSpilledPartition[] spilledInners,
-                         boolean buildSideIsEmpty, int numPartitions, int rightHVColPosition);
-  int  probeAndProject() throws SchemaChangeException;
+                         VectorContainer container, HashExceptRecordBatch.SpilledPartition[] spilledInners,
+                         boolean buildSideIsEmpty, int numPartitions, int rightHVColPosition); // todo: remove the last argument?
+  int probeAndProject() throws SchemaChangeException;
   void markAsDone();
   void setTargetOutputCount(int targetOutputCount);
   int getOutputCount();
